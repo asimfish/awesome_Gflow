@@ -1,0 +1,1067 @@
+                                                              Trajectory balance:
+                                                    Improved credit assignment in GFlowNets
+
+
+                                                      Esmeralda S. Whitammer                                Moksh Jain
+                                                      Mila, Université de Montréal                   Mila, Université de Montréal
+                                                       Montréal, Québec, Canada                       Montréal, Québec, Canada
+
+
+
+
+arXiv:2201.13259v4 [cs.LG] 28 Aug 2026
+                                                           Emmanuel Bengio                                     Chen Sun
+                                                    Mila, McGill University, Recursion                 Mila, Université de Montréal
+                                                        Montréal, Québec, Canada                        Montréal, Québec, Canada
+
+                                                                                    Yoshua Bengio
+                                                                              Mila, Université de Montréal
+                                                                               Montréal, Québec, Canada
+                                                   {esmeralda.whitammer,moksh.jain,chen.sun,yoshua.bengio}@mila.quebec
+                                                                   emmanuel.bengio@recursionpharma.com
+
+
+
+                                                                                       Abstract
+                                                  Generative flow networks (GFlowNets) are a method for learning a stochastic
+                                                  policy for generating compositional objects, such as graphs or strings, from a
+                                                  given unnormalized density by sequences of actions, where many possible action
+                                                  sequences may lead to the same object. We find previously proposed learning
+                                                  objectives for GFlowNets, flow matching and detailed balance, which are analogous
+                                                  to temporal difference learning, to be prone to inefficient credit propagation across
+                                                  long action sequences. We thus propose a new learning objective for GFlowNets,
+                                                  trajectory balance, as a more efficient alternative to previously used objectives.
+                                                  We prove that any global minimizer of the trajectory balance objective can define
+                                                  a policy that samples exactly from the target distribution. In experiments on
+                                                  four distinct domains, we empirically demonstrate the benefits of the trajectory
+                                                  balance objective for GFlowNet convergence, diversity of generated samples, and
+                                                  robustness to long action sequences and large action spaces.
+
+
+                                         1   Introduction
+                                         Generative flow networks [GFlowNets; 3, 4] are models that exploit generalizable structure in an
+                                         energy function E to amortize sampling from the corresponding probability density function on a
+                                         space of compositional objects X , for example, graphs composed of nodes and edges. A GFlowNet
+                                         learns a stochastic policy that generates such structured objects by producing a stochastic sequence of
+                                         actions that incrementally modify a partial object (state), e.g., by adding an edge or a node to a graph,
+                                         starting from a universal initial state (like an empty graph). A special ‘exit’ action signals that the
+                                         construction of the object x ∈ X is completed, and the policy is trained so as to make the likelihood
+                                         of generating x proportional to the given unnormalized probability or reward R(x) = e−E(x) .
+                                         Like other models in deep reinforcement learning [RL; 25], GFlowNets are trained with a parametric
+                                         policy that can be given desired inductive biases (e.g., a particular deep net architecture) and allows
+                                         generalization to states not seen in training. Natural domains for applying GFlowNets are those
+                                         where exact sampling is intractable and local exploration (MCMC) methods perform poorly, but
+
+                                         36th Conference on Neural Information Processing Systems (NeurIPS 2022).
+diversity of samples is desired [3, 32, 14, 8]. For example, GFlowNets have been used [3] to generate
+graphical descriptions of molecules by incremental addition of simple building blocks, where the
+reward R(x) is the estimated strength of binding the constructed molecule to a protein target: the
+number of candidates grows rapidly with the molecule size and the reward has many separated modes.
+Like all RL models that iteratively sample action sequences for training, GFlowNets pose the learning
+challenges of exploration/exploitation and credit assignment, i.e., propagation of a reward signal over
+an action sequence [27, 2, 17]. The efficiency of credit assignment and training in GFlowNets is the
+focus of the present paper.
+The learning problem solved by GFlowNets also has two fundamental differences with the standard
+reward-maximization paradigm of RL. First, a GFlowNet aims to make the likelihood of reaching a
+terminating state proportional to the reward, not to concentrate it at a maximal-reward state. Thus, a
+GFlowNet must model the diversity in the target distribution, not only its dominant mode. Reward
+maximization in RL can be turned into sampling proportionally to the reward with appropriate entropy
+maximization regularization, if there is only one way to reach every state [3]. The second difference
+with reward-maximization in RL is indeed that the GFlowNet training objectives still lead to correct
+sampling even when multiple action sequences lead to the same terminating state. Note that the
+likelihood of reaching a state is the sum of likelihoods of all action sequences leading to it, and that
+the number of such paths may be exponential in their length.
+The set of all achievable sequences of actions and states can be conceptually organized in a directed
+graph G = (S, A) in which the vertices S are states (some of them designated as terminal states, in
+bijection with X ) and the edges u→v in A each correspond to applying an action while in a state
+u ∈ S and landing in state v. In [3], a GFlowNet is described by a nonnegative function on the
+edges, called the edge flow F : A → R≥0 , where F (u→v) is an unnormalized likelihood of taking
+the action that modifies state u to state
+                                     P v. The GFlowNet policy samples the transition u→v from
+state u with probability F (u→v)/ v′ F (u→v ′ ) where the denominator sums over the outgoing
+edges from u. By analogy with the classical notion of flows in networks [9], one can think of this
+flow like the amount of water flowing through an edge (like a pipe) or a state (like a tee, where pipes
+meet). It is shown that this GFlowNet policy samples x proportionally to R(x) if F satisfies a set of
+linear flow matching constraints (a conservation law: the sum of flows into a state should equal the
+sum of flows out of it). These constraints are converted into a temporal difference-like objective that
+can be optimized with respect to the parameters of a neural net that approximates F . An alternative
+objective based on detailed balance constraints was proposed in [4]. These objectives, however, like
+temporal-difference learning, can suffer from slow credit assignment [27, 2, 17].
+The main contribution of this work (§3) is a new parametrization and objective for GFlowNets.
+This objective, which we call trajectory balance, is computed on sampled full action sequences
+(trajectories) from the initial state to a terminal state, unlike the flow matching and detailed balance
+objectives. We prove that global minimization of trajectory balance implies that the learned action
+policy samples proportionally to R. We also empirically show that the trajectory balance objective
+accelerates training convergence relative to previously proposed objectives, improves the learned
+sampling policy with respect to metrics of diversity and divergence from the reward function, and
+allows learning GFlowNets that generate sequences far longer than was possible before. As a
+secondary contribution, we perform the first empirical validation of the detailed balance training
+objective. Comparative evaluation of the three GFlowNet objectives and non-GFlowNet baselines is
+performed on four domains illustrating different features of the reward landscape:
+• Hypergrid (§5.1), an illustrative synthetic environment with modes separated by wide troughs;
+• Molecule synthesis (§5.2), a practical graph generation problem, where the trajectory balance
+  objective leads to significant computational speed-ups and more diverse generated candidates;
+• Sequence generation (§5.3), where we show the robustness of trajectory balance to large action
+  spaces and long action sequences on synthetic data and real AMP sequence data.
+Since the initial appearance of this work on arXiv, several published papers and preprints have used
+trajectory balance and its generalizations successfully in various applications [32, 14, 8, 18].
+
+
+
+
+                                                   2
+2         Preliminaries
+2.1       Markovian flows
+
+We give some essential definitions, following §2 of [4]. Fix a directed acyclic graph G = (S, A)
+with state space S and action space A. Let s0 ∈ S be the special initial (source) state, the only state
+with no incoming edges, and designate vertices with no outgoing edges as terminal (sinks) 1 . We
+call the vertices states, the edges actions, the states reachable through outgoing edges from a state its
+children, and the sources of its incoming edges its parents.
+A complete trajectory is a sequence of transitions τ = (s0 →s1 → . . . →sn ) going from the initial
+state s0 to a terminal state sn with (st →st+1 ) ∈ A for all t. Let T be the set of complete trajectories.
+A trajectory flow is a nonnegative function F : T →R≥0 . With our water analogy, it could be the
+number of water molecules travelling along this path (the units don’t matter because the flow function
+can be scaled arbitrarily,  since we normalize them to get probabilities). For any state s, define the
+state flow F (s) = s∈τ F (τ ), and, for any edge s→s′ , the edge flow
+                    P
+
+                                                     X
+                                  F (s→s′ ) =                    F (τ ).                              (1)
+                                                  τ =(...→s→s′ →... )
+
+As a consequence of this definition, the flow matching constraint (incoming flow = outgoing flow) is
+satisfied for all states s that are not initial or terminal:
+                                        X                    X
+                            F (s) =             F (s′′ →s) =       F (s→s′ ).                   (2)
+                                   (s′′ →s)∈A                    (s→s′ )∈A
+
+A nontrivial (i.e., not identically zero) trajectory flow F determines a distribution P over trajectories,
+                                        1                         X
+                              P (τ ) = F (τ ), Z = F (s0 ) =          F (τ ).                         (3)
+                                        Z
+                                                                         τ ∈T
+
+The trajectory flow F is Markovian if there exist action distributions PF (−|s) over the children of
+each nonterminal state s such that the distribution P has a factorization
+                                                                n
+                                                                Y
+                              P (τ = (s0 → . . . →sn )) =             PF (st |st−1 ).                 (4)
+                                                                t=1
+
+Equivalently ([4], Prop. 3) there are distributions PB (−|s) over the parents of each noninitial state s
+such that for any terminal x,
+                                                                      n
+                                                                      Y
+                          P (τ = (s0 → . . . →sn )|sn = x) =                PB (st−1 |st ).           (5)
+                                                                      t=1
+
+If F is a Markovian flow, then PF and PB can be computed in terms of state and edge flows:
+                                           F (s→s′ )                         F (s→s′ )
+                            PF (s′ |s) =             ,       PB (s|s′ ) =              ,              (6)
+                                             F (s)                             F (s′ )
+supposing denominators do not vanish. We call PF and PB the forward policy and backward policy
+corresponding to F , respectively. These relations are summarized by the detailed balance constraint
+                                    F (s)PF (s′ |s) = F (s′ )PB (s|s′ ).                              (7)
+
+Uniqueness properties. A Markovian flow is uniquely determined by an edge flow, i.e., a nontrivial
+choice of nonnegative value on every edge satisfying the flow matching constraint (2). By Corollary
+1 of [4], a Markovian flow is also uniquely determined by either of
+• a constant Z = F (s0 ) > 0 and a distribution PF (−|s) over children of every nonterminal state; or
+• a nontrivial choice of nonnegative state flows F (x) for every terminal state x and a choice of
+  distribution PB (−|s) over parents of every noninitial state.
+      1
+    [3] allowed terminal states with outgoing edges. The difference is easily overcome by augmenting every
+such state x by a new terminal state x⊤ with a stop action x→x⊤ .
+
+
+                                                         3
+2.2       GFlowNets
+
+Suppose that a nontrivial nonnegative reward function R : X → R≥0 is given on the set of terminal
+states. GFlowNets [3] aim to approximate a Markovian flow F on G such that
+                                     F (x) = R(x) ∀x ∈ X .                                    (8)
+We adopt the broad definition that a GFlowNet is any learning algorithm consisting of:
+• a model capable of providing the initial state flow Z = F (s0 ) as well as the forward action
+  distributions PF (−|s) for any nonterminal state s (and therefore, by the above, uniquely but
+  possibly in an implicit way determining a Markovian flow F );
+• an objective function, such that if the model is capable of expressing any action distribution and the
+  objective function is globally minimized, then the constraint (8) is satisfied for the corresponding
+  Markovian flow F .
+The forward policy of a GFlowNet can be used to sample trajectories from the corresponding
+Markovian flow F by iteratively taking actions according to policy PF (−|s). If the objective function
+is globally minimized, then the likelihood of terminating at x is proportional to R(x).
+In general, an objective optimizing for (8) cannot be minimized directly because F (x) is a sum over
+all trajectories leading to x, and computing it may not be practical. Therefore, two local objectives –
+flow matching and detailed balance – have previously been proposed.
+Flow matching objective [3]. A model Fθ (s, s′ ) 2 with learnable parameters θ approximates the
+edge flows F (s→s′ ). The corresponding forward policy is given by PF (s′ |s; θ) ∝ Fθ (s, s′ ) (Eq.
+(6)). Denote the corresponding Markovian flow by Fθ and distribution over trajectories by Pθ . The
+parameters are trained to minimize the error in the flow matching constraint (2) for all noninitial and
+nonterminal nodes s:                                                    !2
+                                                                  ′′
+                                               P
+                                                  (s′′ →s)∈A Fθ (s , s)
+                            LFM (s) = log P                          ′
+                                                                                                     (9)
+                                                   (s→s′ )∈A Fθ (s, s )
+and a similar objective L′FM pushing the inflow at x ∈ X to equal R(x) at terminal nodes x. This
+objective is optimized for nonterminal states s and terminal states x from trajectories sampled from a
+training policy πθ . Usually, πθ is chosen to be a tempered (higher temperature) version of PF (−|s, θ),
+which also helps exploration during training. The parameters are updated with stochastic gradient
+                                                  "n−1                       #
+                                                    X
+                                                                      ′
+                         Eτ =(s0 →...→sn )∼πθ ∇θ       LFM (st ) + LFM (sn ) .                     (10)
+                                                     t=1
+As per Proposition 10 of [4], if the training policy πθ has full support, and a global minimum of the
+expected loss (9) over states on trajectories sampled from πθ is reached, then the GFlowNet samples
+from the target distribution (i.e., Fθ satisfies (8)).
+Detailed balance objective [4]. A neural network model with parameters θ has input s and three
+kinds of outputs: an estimated state flow Fθ (s), an estimated distribution over children PF (−|s; θ),
+and an estimated distribution over parents PB (−|s; θ). The policy PF (−|−; θ) and the initial state
+flow Fθ (s0 ) uniquely determine a Markovian flow Fθ , which is not necessarily compatible with the
+estimated backward policy PB (−|−; θ). The error in the detailed balance constraint (7) is optimized
+on actions (s→s′ ) between nonterminal nodes seen along trajectories sampled from the training
+policy:
+                                                                        2
+                                                   Fθ (s)PF (s′ |s; θ)
+                                            
+                                       ′
+                              LDB (s, s ) = log                            ,                     (11)
+                                                  Fθ (s′ )PB (s|s′ ; θ)
+and a similar constraint L′DB (s, x) is optimized at actions leading to terminal nodes. Similarly to
+flow matching, the parameters are updated with stochastic gradient
+                                          "n−1                                    #
+                                           X
+                                                                      ′
+                    E(s0 →...→sn )∼πθ ∇θ       LDB (st−1 , st ) + LDB (sn−1 , sn )               (12)
+                                              t=1
+along trajectories sampled from a training policy πθ . By Proposition 6 of [4], a global minimum of
+the expected detailed balance loss under a πθ with full support specifies a GFlowNet that samples
+from the target distribution, i.e., the flow Fθ satisfies (8).
+      2
+    In practice, it is convenient and more economical to provide a representation of s to the neural net, which
+simultaneously outputs the flows Fθ (s, s′ ) for all s′ that are reachable by an action from s.
+
+
+                                                      4
+Algorithm 1 Training a GFlowNet with trajectory balance
+input Reward function R : X → R>0 , model and optimizer hyperparameters
+ 1: Initialize models PF , PB , Z with parameters θ
+ 2: repeat
+ 3:    Sample trajectory τ = (s0 → · · · → sn ) from policy PF (−|−; θ) or a tempered version of it
+ 4:    θ ← θ − η∇θ LTB (τ ) {gradient update on (14)}
+ 5: until convergence monitoring on running LTB (τ )
+
+
+
+Remarks. In some problems, such as autoregressive sequence generation (§5.3), the directed graph
+G is a tree, so each state has only one parent. In this case, PB is trivial and the detailed balance
+objective reduces to the flow matching objective, which in turn can be shown to be equivalent to Soft
+Q-Learning [12, 5] with temperature α = 1, a uniform qa′ , and γ = 1.
+
+
+3   Trajectory balance
+
+Let F be a Markovian flow and P the corresponding distribution over complete trajectories, defined
+by (3), and let PF and PB be forward and backward policies determined by F . A direct algebraic
+manipulation of Eqs. (3,4,5) gives the trajectory balance constraint for any complete trajectory
+τ = (s0 →s1 → . . . →sn = x):
+                                n
+                                Y                              n
+                                                               Y
+                            Z         PF (st |st−1 ) = F (x)         PB (st−1 |st ),               (13)
+                                t=1                            t=1
+
+where we have used that P (sn = x) = F Z(x) .
+As explained in §A.2, the trajectory balance constraint (13) and the detailed balance constraint (7) are
+special cases of one general constraint, which has been studied as a training objective in [18].
+Trajectory balance as an objective. We propose to convert (13) into an objective to be optimized
+along trajectories sampled from a training policy. Suppose that a model with parameters θ outputs
+estimated forward policy PF (−|s; θ) and backward policy PB (−|s; θ) for states s (just as for detailed
+balance above), as well as a global scalar Zθ estimating F (s0 ). The scalar Zθ and forward policy
+PF (−|−; θ) uniquely determine an implicit Markovian flow Fθ .
+For a trajectory τ = (s0 →s1 → . . . →sn = x), define the trajectory loss
+                                              Qn                      2
+                                           Zθ t=1 PF (st |st−1 ; θ)
+                          LTB (τ ) = log        Qn                        .                        (14)
+                                          R(x) t=1 PB (st−1 |st ; θ)
+
+If πθ is a training policy – usually that given by PF (−|−; θ) or a tempered version of it – then the
+trajectory loss is updated along trajectories sampled from πθ , i.e., with stochastic gradient
+                                             Eτ ∼πθ ∇θ LTB (τ ).                                   (15)
+The full algorithm, with batch size of 1, is presented as Algorithm 1 and its correctness is guaranteed
+by the following.
+Proposition 1. Let R be a positive reward function on X .
+(a) If PF (−|−; θ), PB (−|−; θ), and Zθ are the forward and backward policies and normalizing
+    constant of a Markovian flow F satisfying (8), then LTB (τ ) = 0 for all complete trajectories τ .
+(b) Conversely, suppose that LTB (τ ) = 0 for all complete trajectories τ . Then the corresponding
+    Markovian flow Fθ satisfies (8), and PF (−|−; θ) samples proportionally to the reward.
+
+The proof is given in §A.1. In particular, if πθ has full support and Eτ ∼πθ LTB (τ ) is globally
+minimized over all forward and backward policies (PF , PB ) and normalizing constants Z, then the
+corresponding Markovian flow Fθ satisfies (8) and PF (−|−; θ) samples proportionally to the reward.
+(The positivity assumption on R is necessary to avoid division by 0 in (14), but can be relaxed by
+introduction of smoothing constants, just as was done for the losses proposed in [3, 4].)
+
+
+                                                      5
+Remarks. (1) As discussed in §2, in the case of auto-regressive generation, G is a directed tree,
+where each s ∈ S has a single parent state. In this case PB is trivially PB = 1, ∀s ∈ S. We get
+                                                Qn                     2
+                                               Zθ t=1 PF (st |st−1 ; θ)
+                             LTB (τ ) =    log                                                        (16)
+                                                      R(x)
+
+(2) We found it beneficial to parametrize Z in the logarithmic domain (log Z is the trainable parameter)
+and output logits for PF (−|s; θ) and PB (−|s; θ), so that all products in (14) become sums under the
+logarithm. This is consistent with the log-domain parametrization of flows in [3]. In addition, we
+found it helpful to set a higher learning rate for Z than for the parameters of PF and PB .3
+
+3.1   Canonical choice of reward-matching flow
+
+The constraint (8), in general, does not have a unique solution: if the underlying undirected graph of
+G has cycles, there may be multiple Markovian flows whose corresponding action policies sample
+proportionally to the reward. However, by the uniqueness properties, for any choice of backward
+policy PB (−|−), there is a unique flow satisfying (8), and thus a unique corresponding forward
+policy PF (−|−) for states with nonzero flow. (See Fig. 1.)
+In some settings, it may be beneficial to fix the backward policy PB and train only the parameters
+giving PF and Zθ . For example, it may difficult to construct a model that outputs a distribution over
+the parents of a given input state (e.g., for the molecule domain (§5.2), it is hard to force invariance
+to molecule isomorphism). A natural choice is to set PB (−|s) to be uniform over all the parents of a
+state s, i.e., PB (−|s) = 1/#{s′ | (s′ →s) ∈ A}.
+
+
+4     Related work
+
+Reinforcement learning. GFlowNets are trained to sample proportionally the reward rather than
+maximize it as usual in RL. However, on tree-structured DAGs (autoregressive generation) are
+equivalent to RL with appropriate entropy regularization or soft Q-learning and control as inference
+[5, 12, 13]. The experiments and discussion of [3] show how these methods can fail badly in the
+general DAG case well handled by GFlowNets. Signal propagation over sequences of several actions
+in trajectory balance is also related to losses used in RL computed on subtrajectories [22].
+Local exploration vs. amortized generalization to unseen modes. GFlowNets are also related
+to MCMC methods for sampling from unnormalized densities. While there has been work on
+accelerating or partially amortizing sampling from unnormalized densities over discrete spaces when
+exact sampling is intractable [11, 7], some of it domain- or problem-specific [30], GFlowNets treat
+the compositional structure in data as a learning problem (enabling generalization to unseen modes),
+not as a bias to build in to the sampler. Thus, the cost is amortized and borne by the learning of that
+structure through sampling, not through search at generation time.
+Variational inference. GFlowNets are connected with variational methods for fitting hierarchical
+generative models. The squared log-ratio loss proposed in [20] as a control variate in the optimization
+of an evidence lower bound can be seen as a special case of trajectory balance. See §A.3 for further
+discussion, in which we prove that on-policy optimization of trajectory balance is equivalent to
+minimization of a certain KL divergence. Two recent papers [31, 19] extend our observations.
+
+
+5     Experiments
+
+We evaluate the proposed trajectory balance objective against prior objectives for training GFlowNets
+as well as standard methods for learning policies that approximately sample objects proportionally
+to their rewards, like MCMC as well as against other RL techniques. Our experiments include the
+hypergrid and molecule synthesis tasks from [3] and two new tasks in which G is a directed tree.
+
+   3
+     Because the loss (14) is quadratic in log Z, gradientQ
+                                                          updates on log Z are
+                                                                             Qequivalent to setting it to a
+weighted moving average of the discrepancy between log PF and log(R(x) PB ). Optimizers enhanced
+with momentum complicate things: we leave empirical investigation of these questions to future work.
+
+
+                                                    6
+5.1        Hypergrid environment
+
+In this subsection, we study a synthetic hypergrid environment introduced by [3]. This task is easier
+than others we study, but we include it for completeness, and because it allows us to illustrate some
+interesting behaviours.4
+In this environment, the nonterminal states S ◦ form a D-dimensional hypergrid with side length H:
+
+                      S ◦ = {(s1 , . . . , sD ) | sd ∈ {0, 1, . . . , H − 1}, d = 1, . . . , D},
+
+and actions are operations of incrementing one coordinate in a state by 1 without exiting the grid.
+The initial state is (0, . . . , 0). For every nonterminal state s, there is also a termination action that
+transitions to a corresponding terminal state s⊤ (cf. footnote 1). The reward at a terminal state
+s⊤ = (s1 , . . . , sd )⊤ is given by
+                   D                                            D
+                                    sd                                 sd
+                   Y                                          Y                            
+           ⊤
+  R(s ) = R0 + 0.5   I                  − 0.5 ∈ (0.25, 0.5] + 2   I        − 0.5 ∈ (0.3, 0.4)
+                                   H −1                               H −1
+                          d=1                                             d=1
+
+where I is an indicator function and R0 is a constant controlling the difficulty of exploration. This
+reward has peaks of height 2.5 + R0 near the corners of the hypergrid, surrounded by plateaux of
+height 0.5 + R0 . These plateaux are separated by wide troughs with reward R0 . An illustration with
+H = 8 and D = 2 is shown in the left panel of Fig. 1. This environment evaluates the ability of a
+GFlowNet to generalize from visited states to infer the existence of yet-unvisited modes.
+We train GFlowNets with the detailed balance (DB) and trajectory balance (TB) objectives with
+different H, D, and R0 , in addition to reproducing the flow matching (FM) experiments and non-
+GFlowNet baselines based upon [3]’s published code. Our GFlowNet policy model is a multilayer
+perceptron (MLP) that accepts as input a one-hot encoding of a state s (with the goal of enabling
+generalization) and outputs logits of the forward and backward policies PF (−|−; θ) and PB (−|−; θ)
+(as well as the estimated state flow Fθ (s) in the case of DB). The forward policy, backward policy,
+and state flow models share all but the last weight matrix of the MLP. This is consistent with [3]’s
+model, where an identical architecture accepted s as input and output estimated flows Fθ (s, s′ ) for
+all children s′ of s. Details are given in §B.1.
+We consider a 4-dimensional grid with H = 8 and and a 2-dimensional grid with H = 64. The
+two grids have the same number of terminal states, but the 2-dimensional grid has longer expected
+trajectory lengths. For both grid sizes, we consider R0 = 0.1, 0.01, 0.001, with smaller R0 giving
+environments that are more difficult to explore due to the lower likelihood for models to cross the
+low-reward valley. For the models trained with DB and TB, we also explore the effect of fixing the
+backward policy to be uniform (§3.1).
+Results. In Fig. 2, we plot the evolution over the course of training of the L1 error between the true
+reward distribution (the reward R(x) normalized over all possible terminal states x ∈ X ) and the
+empirical distribution of the last 2 · 105 visited states for all settings (which would have a probability
+of 0 on x’s not visited). Although convergence to the same stable minimum is achieved by all models
+and settings, DB and TB training tend to converge faster than FM, with a slight benefit of TB over
+detailed balance in the 4-D environment.
+Effect of uniform PB . Note the difference in learning speed between models with fixed uniform
+backward policy PB and models with learned PB . As noted in §3.1, when PB is fixed, there is a
+unique PF (−|−; θ) that globally minimizes the objective, and it may be approached slowly. However,
+if PB and PF are permitted to evolve jointly, they may more quickly approach one of the many
+optimal solutions. This is confirmed by the much faster convergence of models with learned PB
+on the 64 × 64 grid. We have observed that, especially for large grid sizes, when PB and PF are
+both learned, the model has a bias towards first taking all actions in one coordinate direction, then
+proceeding in the other direction until terminating (as in the right panel of Fig. 1), perhaps because a
+constant distribution over two actions (‘continue to the right’ and ‘terminate’) can be modeled with
+higher precision over a large portion of the grid than the complex position-dependent distribution as
+shown in the centre panel of Fig. 1.
+
+      4
+          Code: https://gist.github.com/malkin1729/9a87ce4f19acdc2c24225782a8b81c15.
+
+
+                                                          7
+Figure 1: Left: The reward function on an 8 × 8 grid environment (§5.1) with R0 = 0.1. Centre
+and right: Two forward action policies – with fixed uniform PB and with a learned non-uniform
+PB – that sample from this reward. The lengths of arrows pointing up and right from each state
+are proportional to the likelihoods of the corresponding actions under PF , and the sizes of the red
+octagons are proportional to the termination action likelihoods.
+
+
+
+
+Figure 2: Empirical L1 error between true and sampled state distributions on the grid environment
+with varying grid size and R0 . Mean and standard error over 5 seeds. The curves for PPO and MCMC
+baseline would lie outside the plot bounds.
+
+
+5.2        Small drug molecule synthesis
+
+Next, we consider the molecule generation task [30, 15, 16, 10, 24] introduced for GFlowNets in [3].
+We extend [3]’s published code with an implementation of the TB and DB objectives.5
+The goal is to generate molecules, in the form of graphs, with a low binding energy to the 4JNC
+inhibitor of the sEH (soluble epoxide hydrolase) protein. The graphs generated are junction trees [15]
+of a vocabulary of building blocks. The reward is defined as the normalized negative binding energy as
+predicted by a proxy model, itself trained to predict energies computed via docking simulations [26].
+The maximum trajectory length is 8, with the number of actions varying between around 100 and
+2000 (the larger a molecule, the more possible additions exist), making |X | about 1016 .
+Results. We plot in Fig. 3 (left and centre) the correlation of log-reward and log-sampling probability
+(the likelihood that a trajectory sampled from the learned policy terminates at x) for GFlowNets
+trained using TB, FM and DB. This correlation is significantly higher for models trained with TB.
+The points x shown are from a fixed held-out set to which the GFlowNets do not have access in
+training. Note that a perfect model would have correlation 1, as log R(x) and log pθ (x) would differ
+by a constant (equal to log Z) that is independent of x.
+In Fig. 3 (right) we plot the average pairwise Tanimoto similarity [1] for the 1000 highest-reward
+samples generated over the course of training. We see that TB consistently generates more diverse
+molecules than FM. These results showcase the benefits of TB, not only for faster temporal credit
+assignment, but for generalization and diversity. In addition, TB has up to 5× runtime speedup over
+FM as the enumeration of parents is not needed. See §B.2 for further discussion.
+
+5.3        Autoregressive sequence generation
+
+Finally, we evaluate the TB objective on the task of autoregressive sequence generation. In §5.3.1,
+we study the effect of trajectory length and action space size on the learning dynamics in GFlowNets.
+In §5.3.2, we consider the more realistic task of generating peptides (short protein sequences with
+anti-microbial properties) and evaluate GFlowNets against standard RL and MCMC baselines.
+      5
+          Code: https://github.com/GFNOrg/gflownet/tree/trajectory_balance.
+
+
+                                                  8
+                                                                                                                                                                    FM
+
+
+
+
+                                               Corr. log p (x) to log R(x)
+                                                                             0.8
+
+
+
+
+                                                                                                              Top-1000 Tanimoto sim.
+             20                                                                                                                        0.7                          DB
+                                                                             0.6                                                                                    TB
+             40                                                              0.4
+                                                                                                                                       0.6
+log p (x)
+             60                                                              0.2
+                                                                             0.0
+             80                                                                                                                        0.5
+                                                                             0.2
+            100                  FM r = 0.31                                 0.4
+                                 DB r = 0.8
+                                 TB r = 0.86                                 0.6                                                       0.4
+            120
+                     60     40       20    0                                       FM      DB         TB                                 0.0   0.5   1.0      1.5    2.0
+                                                                                                                                                                     1e5
+                          log R(x)                                                      objective                                              molecules seen
+Figure 3: Left, Centre: Pearson correlations between rewards and sampling probability. log pθ (x) is
+the log-likelihood that a trajectory sampled from the learned policy PF (−|−; θ) terminates at x. Left:
+Scatter plot on a test set of x’s for the best hyperparameters of TB, FM, and DB. Centre: Violin plot
+of correlations for 16 hyperparameter settings and 3 seeds for each setting, showing TB being capable
+of fitting better. Right: Average pairwise Tanimoto similarity for the top 1000 samples generated by
+GFlowNets as training progresses. Lines are the average across runs, shaded regions the standard
+deviation. Models trained with TB have consistently lower similarity than those with FM, hence
+greater diversity. We hypothesize that the higher variance, in correlation and diversity, of TB relative
+to DB is related to high variance of the stochastic gradient; see [18].
+
+
+5.3.1             Bit sequences
+Task. The goal is to generate bit sequences of a fixed length n = 120 (X = {0, 1}n ), where the
+reward is designed to have modes at a given fixed set M ⊂ X that is unknown to the learner. The
+reward for a sequence x is defined as R(x) = exp(1 − miny∈M d(x, y)/n), where d is the edit
+distance. We describe the procedure to generate M in §B.3.
+For different integers k dividing n, we design action spaces for left-to-right generation of sequences
+in X , where a complete trajectory has nk actions and each action appends a k-bit ‘word’ to the end of
+a partial sequence. A forward policy on this state space is the same an autoregressive sequence model
+over a vocabulary of size 2k . Varying k while fixing X and M allows us to study the effect of the
+tradeoff between trajectory lengths ( nk ) and the action space sizes (|V | = 2k ) without changing the
+underlying probabilistic modeling problem.
+We compare GFlowNets trained with the TB objective against GFlowNets trained with the FM
+objective (equivalent to DB and Soft Q-Learning in this case) and two non-GFlowNet baselines:
+A2C with Entropy Regularization [29, 21], Soft Actor-Critic [13, 6] and MARS [30]. We use a
+Transformer-based architecture [28] across all the methods. See §B.3 for details.
+To evaluate the methods we use (1) Spearman correlation between the probability of generating the
+sequence p(x) = F (x)/Z and its reward R(x) on a test set sampled approximately uniformly over
+the possible values of the reward, (2) number of modes captured (number of reference sequences
+from M for which a candidate within a distance δ has been generated). In our experiments, n = 120,
+|M | = 60, k ∈ {1, 2, 4, 6, 8, 10}, and δ = 28.
+Results. Fig. 4 (left) presents the results for the Spearman correlation evaluation. We observe that
+GFlowNets trained with the TB objective learn policies that correlate best with the reward R(x)
+across all action spaces. In particular, we observe the effect of inefficient credit assignment in
+GFlowNets trained with FM, as the correlation improves with increasing k, i.e., shorter trajectories.
+On the other hand, large action spaces also hurt GFlowNets trained with the FM objective, while
+the TB objective is robust to them. Additionally, we can observe in Fig. 4 (right) that for fixed k,
+GFlowNets trained with TB discover more modes faster than other methods.
+
+5.3.2             Anti-Microbial Peptide (AMP) generation Table 1: Results on the AMP generation task.
+                                                                                                                                       Top 100 Reward      Top 100 Diversity
+In this section, we consider the practical task of gen-
+                                                                                                    GFN-LTB                            0.85 ± 0.03         18.35 ±1.65
+erating peptide sequences that have anti-microbial                                                  GFN-LFM /LDB                       0.78 ± 0.05         12.61 ± 1.32
+activity. The goal is to generate a protein sequence                                                SAC                                0.80 ± 0.01         8.36 ± 1.44
+(where the vocabulary consists of 20 amino acids and                                                AAC-ER                             0.79 ± 0.02         7.32 ± 0.76
+                                                                                                    MCMC                               0.75 ± 0.02         12.56 ± 1.45
+
+                                                                                          9
+                                                                                                      25
+                                                                                                         GFN - Trajectory Balance                                   GFN - Trajectory Balance
+                                  0.7                                                                    GFN - Flow Matching                                        GFN - Flow Matching
+                                                                                                      20 A2C - Entropy                                              A2C - Entropy
+
+
+
+
+    Spearman Correlation (p, r)
+                                  0.6
+                                                                                                         Soft Actor-Critic                                          Soft Actor-Critic
+
+
+
+
+                                                                                    Number of Modes
+                                  0.5                                                                    MCMC                                                       MCMC
+                                                                                                      15
+                                  0.4
+                                                                                                      10
+                                  0.3
+
+                                  0.2                                                                  5
+                                  0.1
+                                                                                                       0
+                                  0.0
+                                        2      4              6            8   10                          0        10000       20000       30000   40000   50000
+                                            Number of Bits in Action Space                                                        Training Steps
+
+
+
+Figure 4: Left: Spearman correlation of the sampling probability under different learned policies
+and reward on a test set, plotted against the number of bits k in the symbols in V in the bit sequence
+generation task. GFlowNets trained with trajectory balance learn policies that have the highest
+correlation with the reward R(x) and are robust to length and vocabulary size. Right: Number
+of modes discovered over the course of training on the bit sequence generation task with k = 1.
+GFlowNets trained with trajectory balance discover more modes faster.
+
+
+a special end-of-sequence action), with maximum length 60. We take 6438 known AMP sequences
+and 9522 non-AMP sequences from the DBAASP database [23]. We then train a classifier on this
+dataset, using 20% of the data as a validation set. The probability output by this model for a sequence
+to be classified as an AMP is used as the reward R(x) in our experiments.
+The state and actions are designed just as in the previous experiment, with each action appending
+a symbol to the right of a state. We again compare TB and FM, as well as A2C with entropy
+regularization, SAC and MCMC as baselines. We again use Transformers for all the experiments on
+this task; see further details in Appendix B.4. We generate 2048 sequences from each method, and
+pick the top 100 sequences ranked by their reward R(x). As metrics, we use the mean reward for
+these 100 sequences and the average pairwise edit distance among them as a measure of diversity.
+Results. We present the results in Table 1, where we observe that GFlowNets trained with TB
+outperform all baselines on both performance and diversity metrics.
+
+6                                 Discussion and conclusion
+We introduced a novel training loss for GFlowNets, trajectory balance (TB), which yields faster and
+better training than the previously proposed flow matching (FM) and detailed balance (DB) losses. We
+proved that this objective, when minimized, yields the desired GFlowNet property of sampling from
+the target distribution specified by an unnormalized reward function. This new loss was motivated
+by the observation that the FM and DB losses are local in the action sequence and may require
+many iterations for credit assignment to propagate to early actions: if a gradient update introduces a
+flow inconsistency at some state far from the initial state (such as when a novel high-reward state is
+sampled), the parent of this state must be visited before the update is propagated closer to the root,
+akin to the slow propagation of reward signals in temporal difference learning.
+We empirically found that TB discovered more modes of the energy function faster and was more
+robust than FM and DB to the exponential growth of the state space, due in part to the lengths
+of sequences and in part to the size of the action space. A factor to consider when interpreting
+our experimental results is that because we use a neural net rather than a tabular representation of
+policies, the early states’ transitions are informed by downstream credit assignment via parameter
+sharing. Early states also get many more visits because there are more possible states near the
+ends of sequences than near the initial state. Finally, TB trades off the advantage of immediately
+providing credit to early states with the disadvantage of relying on sampling of long trajectories and
+thus a potentially higher variance of the stochastic gradient. The high gradient variance is a possible
+limitation of TB in difficult environments, and ways to overcome it by interpolating between local
+and trajectory-level objectives have been studied in subsequent work [18].
+All in all, we found that trajectory balance is a superior training objective in a broad set of experiments,
+making it the default choice for future work on GFlowNets.
+
+
+
+                                                                                                                10
+Acknowledgments
+This research was enabled in part by computational resources provided by Compute Canada. All
+authors are funded by their primary academic institution. We also acknowledge funding from CIFAR,
+Samsung, IBM, Microsoft, and the Banting Postdoctoral Fellowship.
+The authors are grateful to all the members of the Mila GFlowNet group, in particular to Dinghuai
+Zhang, for many fruitful research discussions, as well as to Yiheng Zhu for feedback on the published
+code. We also thank the anonymous reviewers for their comments.
+
+References
+ [1] Bender, A. and Glen, R. C. Molecular similarity: a key technique in molecular informatics.
+     Organic & biomolecular chemistry, 2(22):3204–3218, 2004.
+ [2] Bengio, E., Pineau, J., and Precup, D. Interference and generalization in temporal difference
+     learning. International Conference on Machine Learning (ICML), 2020.
+ [3] Bengio, E., Jain, M., Korablyov, M., Precup, D., and Bengio, Y. Flow network based generative
+     models for non-iterative diverse candidate generation. Neural Information Processing Systems
+     (NeurIPS), 2021.
+ [4] Bengio, Y., Lahlou, S., Deleu, T., Hu, E., Tiwari, M., and Bengio, E. GFlowNet foundations.
+     arXiv preprint 2111.09266, 2021.
+ [5] Buesing, L., Heess, N., and Weber, T. Approximate inference in discrete distributions with
+     Monte Carlo tree search and value functions. Artificial Intelligence and Statistics (AISTATS),
+     2019.
+ [6] Christodoulou, P. Soft actor-critic for discrete action settings. arXiv preprint arXiv:1910.07207,
+     2019.
+ [7] Dai, H., Singh, R., Dai, B., Sutton, C., and Schuurmans, D. Learning discrete energy-based mod-
+     els via auxiliary-variable local exploration. Neural Information Processing Systems (NeurIPS),
+     2020.
+ [8] Deleu, T., Góis, A., Emezue, C., Rankawat, M., Lacoste-Julien, S., Bauer, S., and Bengio, Y.
+     Bayesian structure learning with generative flow networks. Uncertainty in Artificial Intelligence
+     (UAI), 2022.
+ [9] Ford, L. R. and Fulkerson, D. R. Maximal flow through a network. Canadian Journal of
+     Mathematics, 8:243–248, 1956.
+[10] Gilmer, J., Schoenholz, S. S., Riley, P. F., Vinyals, O., and Dahl, G. E. Neural message passing
+     for quantum chemistry. International Conference on Machine Learning (ICML), 2017.
+[11] Grathwohl, W., Swersky, K., Hashemi, M., Duvenaud, D. K., and Maddison, C. J. Oops I took
+     a gradient: Scalable sampling for discrete distributions. International Conference on Machine
+     Learning (ICML), 2021.
+[12] Haarnoja, T., Tang, H., Abbeel, P., and Levine, S. Reinforcement learning with deep energy-
+     based policies. International Conference on Machine Learning (ICML), 2017.
+[13] Haarnoja, T., Zhou, A., Abbeel, P., and Levine, S. Soft actor-critic: Off-policy maximum
+     entropy deep reinforcement learning with a stochastic actor. International Conference on
+     Machine Learning (ICML), 2018.
+[14] Jain, M., Bengio, E., Hernandez-Garcia, A., Rector-Brooks, J., Dossou, B. F., Ekbote, C., Fu,
+     J., Zhang, T., Kilgour, M., Zhang, D., Simine, L., Das, P., and Bengio, Y. Biological sequence
+     design with GFlowNets. International Conference on Machine Learning (ICML), 2022.
+[15] Jin, W., Barzilay, R., and Jaakkola, T. Chapter 11. junction tree variational autoencoder for
+     molecular graph generation. Drug Discovery, pp. 228–249, 2020. ISSN 2041-3211.
+
+
+                                                 11
+[16] Kumar, A., Voet, A., and Zhang, K. Fragment based drug design: from experimental to
+     computational approaches. Current medicinal chemistry, 19(30):5128–5147, 2012.
+
+[17] Kumar, A., Agarwal, R., Ghosh, D., and Levine, S. Implicit under-parameterization inhibits data-
+     efficient deep reinforcement learning. International Conference on Learning Representations
+     (ICLR), 2021.
+
+[18] Madan, K., Rector-Brooks, J., Korablyov, M., Bengio, E., Jain, M., Nica, A., Bosc, T., Bengio,
+     Y., and Malkin, N. Learning GFlowNets from partial episodes for improved convergence and
+     stability. arXiv preprint 2209.12782, 2022.
+
+[19] Malkin, N., Lahlou, S., Deleu, T., Ji, X., Hu, E., Everett, K., Zhang, D., and Bengio, Y.
+     GFlowNets and variational inference. arXiv preprint 2210.00580, 2022.
+
+[20] Mnih, A. and Gregor, K. Neural variational inference and learning in belief networks. Interna-
+     tional Conference on Machine Learning (ICML), 2014.
+
+[21] Mnih, V., Badia, A. P., Mirza, M., Graves, A., Lillicrap, T., Harley, T., Silver, D., and
+     Kavukcuoglu, K. Asynchronous methods for deep reinforcement learning. International
+     Conference on Machine Learning (ICML), 2016.
+
+[22] Nachum, O., Norouzi, M., Xu, K., and Schuurmans, D. Bridging the gap between value and
+     policy based reinforcement learning. Neural Information Processing Systems (NeurIPS), 2017.
+
+[23] Pirtskhalava, M., Amstrong, A. A., Grigolava, M., Chubinidze, M., Alimbarashvili, E., Vish-
+     nepolsky, B., Gabrielian, A., Rosenthal, A., Hurt, D. E., and Tartakovsky, M. Dbaasp v3:
+     Database of antimicrobial/cytotoxic activity and structure of peptides as a resource for develop-
+     ment of new therapeutics. Nucleic Acids Research, 49(D1):D288–D297, 2021.
+
+[24] Shi, Y., Huang, Z., Feng, S., Zhong, H., Wang, W., and Sun, Y. Masked label prediction: Unified
+     message passing model for semi-supervised classification. International Joint Conference on
+     Artificial Intelligence (IJCAI), 2021.
+
+[25] Sutton, R. S. and Barto, A. G. Reinforcement learning: An introduction. MIT Press, 2018.
+
+[26] Trott, O. and Olson, A. J. AutoDock Vina: improving the speed and accuracy of docking with
+     a new scoring function, efficient optimization, and multithreading. Journal of computational
+     chemistry, 31(2):455–461, 2010.
+
+[27] van Hasselt, H., Doron, Y., Strub, F., Hessel, M., Sonnerat, N., and Modayil, J. Deep reinforce-
+     ment learning and the deadly triad. arXiv preprint 1812.02648, 2018.
+
+[28] Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, L., and
+     Polosukhin, I. Attention is all you need. Neural Information Processing Systems (NeurIPS),
+     2017.
+
+[29] Williams, R. J. and Peng, J. Function optimization using connectionist reinforcement learning
+     algorithms. Connection Science, 3(3):241–268, 1991.
+
+[30] Xie, Y., Shi, C., Zhou, H., Yang, Y., Zhang, W., Yu, Y., and Li, L. MARS: Markov molecular
+     sampling for multi-objective drug discovery. International Conference on Learning Representa-
+     tions (ICLR), 2021.
+
+[31] Zhang, D., Chen, R. T. Q., Malkin, N., , and Bengio, Y. Unifying generative models with
+     GFlowNets. arXiv preprint 2209.02606, 2022.
+
+[32] Zhang, D., Malkin, N., Liu, Z., Volokhova, A., Courville, A., and Bengio, Y. Generative flow
+     networks for discrete probabilistic modeling. International Conference on Machine Learning
+     (ICML), 2022.
+
+
+                                                 12
+Checklist
+    1. For all authors...
+        (a) Do the main claims made in the abstract and introduction accurately reflect the paper’s
+            contributions and scope? [Yes]
+        (b) Did you describe the limitations of your work? [Yes] This is mainly a paper about
+            theory and algorithms. Future work that applies these algorithms, in particular for
+            domains where they can most immediately have an impact (e.g., molecule design for
+            drug discovery), should consider the limitations and negative societal impacts of these
+            applications.
+        (c) Did you discuss any potential negative societal impacts of your work? [N/A] See
+            previous.
+        (d) Have you read the ethics review guidelines and ensured that your paper conforms to
+            them? [Yes]
+    2. If you are including theoretical results...
+        (a) Did you state the full set of assumptions of all theoretical results? [Yes]
+        (b) Did you include complete proofs of all theoretical results? [Yes] See §A.1.
+    3. If you ran experiments...
+        (a) Did you include the code, data, and instructions needed to reproduce the main experi-
+            mental results (either in the supplemental material or as a URL)? [Yes] For the grid
+            and molecule environments. [No] For the other environments.
+        (b) Did you specify all the training details (e.g., data splits, hyperparameters, how they
+            were chosen)? [Yes] See the Appendix.
+        (c) Did you report error bars (e.g., with respect to the random seed after running experi-
+            ments multiple times)? [Yes] See the Appendix.
+        (d) Did you include the total amount of compute and the type of resources used (e.g., type
+            of GPUs, internal cluster, or cloud provider)? [Yes] See the Appendix.
+    4. If you are using existing assets (e.g., code, data, models) or curating/releasing new assets...
+        (a) If your work uses existing assets, did you cite the creators? [Yes] See the relevant
+            experiment sections.
+        (b) Did you mention the license of the assets? [N/A]
+        (c) Did you include any new assets either in the supplemental material or as a URL? [N/A]
+            References to the molecule and AMP sequence data are provided.
+        (d) Did you discuss whether and how consent was obtained from people whose data you’re
+            using/curating? [N/A] No new data collection was done.
+        (e) Did you discuss whether the data you are using/curating contains personally identifiable
+            information or offensive content? [N/A] Not relevant for the domains studied.
+    5. If you used crowdsourcing or conducted research with human subjects...
+        (a) Did you include the full text of instructions given to participants and screenshots, if
+            applicable? [N/A]
+        (b) Did you describe any potential participant risks, with links to Institutional Review
+            Board (IRB) approvals, if applicable? [N/A]
+        (c) Did you include the estimated hourly wage paid to participants and the total amount
+            spent on participant compensation? [N/A]
+
+
+
+
+                                                13
+A     Theoretical appendix
+A.1   Proof of Proposition 1
+
+Recall Proposition 1:
+Proposition. Let R be a positive reward function on X .
+(a) If PF (−|−; θ), PB (−|−; θ), and Zθ are the forward and backward policies and normalizing
+    constant of a Markovian flow F satisfying (8), then LTB (τ ) = 0 for all complete trajectories τ .
+(b) Conversely, suppose that LTB (τ ) = 0 for all complete trajectories τ . Then the corresponding
+    Markovian flow Fθ satisfies (8), and PF (−|−; θ) samples proportionally to the reward.
+
+Proof. Part (a) is an elementary manipulation of the trajectory balance constraint (13), with R(x)
+substituted for F (x) by the reward matching assumption (8).
+Conversely, if LTB (τ ) = 0 for all complete trajectories τ = (s0 → → · · · → sn = x), then the
+policies PF (−|−; θ) and PB (−|−; θ) satisfy the constraint
+                               n
+                               Y                                      n
+                                                                      Y
+                           Z         PF (st |st−1 ; θ) = R(x)               PB (st−1 |st ; θ).                       (17)
+                               t=1                                    t=1
+
+Let x be a terminal state. By iterating the law of total probability, we have
+                                            X                 n
+                                                              Y
+                                                                   PB (st−1 |st ; θ) = 1.                            (18)
+                               τ =(s0 →s1 →...→sn =x) t=1
+
+(Each term in this sum is the conditional likelihood of τ conditioned on terminating at sn = x under
+the the Markovian flow Fθ′ uniquely determined by setting terminal state flows Fθ′ (x) = R(x) and
+backward policy PB (−|−; θ), cf. the uniqueness properties.)
+On the other hand, we have
+                      X
+      Fθ (x) =                         Fθ (τ )                                      (by definition of state flows)
+                  τ =(s0 →...→sn )=x
+                         X                  n
+                                            Y
+              =                         Z         PF (st |st−1 ; θ)                                      (by (4))
+                  τ =(x0 →...→sn )=x        t=1
+
+                         X                        n
+                                                  Y
+              =                         R(x)            PB (st−1 |st ; θ)                               (by (17))
+                  τ =(x0 →...→sn )=x              t=1
+
+              = R(x)                                                                                   (by (18)).
+We conclude that Fθ satisfies (8), as desired.
+(We remark that one can show in a similar way that Fθ (s→s′ ) = Fθ′ (s→s′ ) for all actions (s→s′ ) ∈
+A, and thus, by the uniqueness properties, Fθ = Fθ′ , i.e., the forward and backward policies determine
+the same Markovian flow.)
+
+A.2   Generalizations
+
+The trajectory balance constraint (13) can be generalized to partial (not complete) trajectories, i.e.,
+those that do not start at s0 and end in a terminal state. Generalizations such as those we present here
+could be useful for a future goal of modularized or hierarchical GFlowNets, where each module (or
+low-level GFlowNet) can apply them to just the subsequences they have access to (cf. §9.4 and §10.2
+in [4]).
+Subtrajectory balance. If τ = (sm →sm+1 → . . . →sn ) is a partial trajectory (i.e., (st →st+1 ) ∈ A
+for all t), then, for any Markovian flow F with forward and backward policies PF and PB ,
+                                  n−1
+                                  Y                                         n−1
+                                                                            Y
+                        F (sm )         PF (st+1 | st ) = F (sn )                 PB (st | st+1 ).                   (19)
+                                  t=m                                       t=m
+
+
+                                                              14
+This can be derived by showing that both sides are equal to
+                                            X
+                                                                                 F (τ ).                                   (20)
+                                          τ =(...→sm →sm+1 →...→sn →... )∈T
+
+The trajectory balance constraint (13) is the special case of this for full trajectories, while the detailed
+balance constraint (7) is the special case of trajectories wth only one edge. This subtrajectory balance
+constraint can be converted into a learning objective: a model can output estimated state flows Fθ (s)
+only for certain nonterminal states s (“hubs"), and the error in (19) optimized along segments of
+trajectories between these hubs. Thus the detailed balance loss corresponds to all nodes being hubs,
+and the trajectory balance loss corresponds to only the initial state s0 being a hub.
+Subtrajectory balance has been explored and was shown to have convergence benefits in a work that
+appeared while this paper was under review [18].
+Non-forward trajectories. Trajectory balance has a more general form for trajectories that have a
+mix of forward and backward steps. Here we describe just one example: terminal-terminal paths that
+take several backward steps, then take several forward steps.
+Let s1 = s′1 be any state (not necessarily a child of the GFlowNet’s initial state s0 ) and
+(s1 →s2 → . . . →sn ) and (s′1 →s′2 → . . . →s′n′ ) two trajectories from s0 to terminal states. Then
+the following must hold for any Markovian flow F :
+               ′                                                                                    ′
+              nY −1                       n−1
+                                          Y                                n−1
+                                                                           Y                       nY −1
+   R(s′n′ )           PB (s′t | s′t+1 )         PF (st+1 | st ) = R(sn )         PB (st | st+1 )           PF (s′t+1 | s′t ).
+              t=1                         t=1                              t=1                     t=1
+                                                                                                   (21)
+That is, the path that goes “backward, then forward” from sn to s′n′ must have the same likelihood no
+matter in which direction it is traversed, up to the ratio of rewards at the endpoints. A simple way to
+derive (21) is by writing the trajectory balance constraint for two paths from the GFlowNet’s initial
+state to sn and s′n′ that are identical until s1 and then diverge, then dividing one constraint by the
+other. Notice that the flow F (s1 ) is not present here. Thus, (21) can be converted into an learning
+objective does not require a model to output any state flows (even the initial state flow Z).
+Such terminal-terminal paths could also be used for exploration of X with MCMC-like local search
+algorithms [32]. The special case of ‘one step back, two steps forward’ paths was used for a graph
+generation problem in Bayesian structure learning [8].
+
+A.3   GFlowNets and variational methods
+
+We build a connection between the TB loss for GFlowNets and a naïve variational approach to fitting
+sequential samplers.
+Suppose
+    P that the backward policy PB is fixed, and suppose for ease of the derivation that it is known
+that x∈X R(x) = 1. As in the main text, we write PB (τ |x) for the likelihood of obtaining the
+reverse of the trajectory tau when sampling from the backward policy starting from x.
+The on-policy trajectory balance objective has gradient with respect to the parameters of PF :
+             "                      2 #                                                       
+                       R(x)PB (τ |x)                             R(x)PB (τ |x)
+ E(τ,x)∼PF ∇θ log                          = E(τ,x)∼PF −2 log                   ∇θ log PF (τ ; θ) ,
+                          PF (τ ; θ)                                PF (τ ; θ)
+                                                                                                 (22)
+which is estimated by sampling τ ∼ PF (terminating in x ∈ X ) and computing the term inside the
+expectation.
+The model PF could also be optimized with respect to an evidence lower bound (ELBO) objective,
+i.e., minimizing DKL (PF (τ )∥R(x)PB (τ |x)). We derive the gradient of this KL:
+              ∇θ DKL (PF (τ ; θ)∥R(x)PB (τ |x))                                                                            (23)
+                                                
+                                      PF (τ )
+              = ∇θ E(τ,x)∼PF log
+                                   R(x)PB (τ |x)
+                                                                                      
+                                      PF (τ ; θ)          PF (τ ; θ)
+              = E(τ,x)∼PF ∇θ log                  + log               ∇θ log PF (τ ; θ) .                                  (24)
+                                    R(x)PB (τ |x)       R(x)PB (τ |x)
+
+
+                                                              15
+The last step is the standard score function trick, and the Reinforce estimator optimizes the KL by
+sampling τ ∼ PF (τ ; θ) and using the term inside the expectation as the direction of the gradient step.
+But now notice that
+                                                
+                                     PF (τ ; θ)
+              E(τ,x)∼PF ∇θ log                      = E(τ,x)∼PF [∇θ log PF (τ ; θ)] = 0,           (25)
+                                  R(x)PB (τ |x)
+because of the constraint τ PF (τ ; θ) = 1. We conclude that the expected trajectory balance
+                            P
+gradient (22) is equal to the expected Reinforce gradient (24) up to a constant.
+However in the vicinity of the optimum (when TB and KL equal 0), the TB graident estimator has
+lower variance, as the following computation shows:
+                                                      
+                             p(x)
+       Var(τ,x)∼PF log                ∇θ log PF (τ ; θ)
+                           PF (τ ; θ)
+                                                                                       
+                                      PF (τ ; θ)           PF (τ ; θ)
+        − Var(τ,x)∼PF ∇θ log                      + log                ∇θ log PF (τ ; θ)
+                                   R(x)PB (τ |x)         R(x)PB (τ |x)
+                                                                                        
+                                                            ⊤              R(x)PB (τ |x)
+        = −E(τ,x)∼PF (∇θ log PF (τ ; θ)∇θ log PF (τ ; θ) ) 1 + 2 log                         .
+                                                                              PF (τ ; θ)
+If the term in parentheses is always positive (in particular, in the neighbourhood of the solution where
+PF (τ ) = R(x)PB (τ |x) for all τ ), then the difference of variances for all directional derivatives is
+negative for all θ.
+The connection between GFlowNets and variational methods was more thoroughly explored in two
+papers that appeared while this work was under review [31, 19].
+
+B     Experimental appendix
+B.1   Hypergrid
+
+For the GFlowNet policy model, we use an MLP of the same architecture as [3], with 2 hidden layers
+of 256 hidden units each. We train all models with a learning rate of 0.001 (PF and PB policy model)
+and 0.1 (Zθ ) with up to 106 sampled trajectories with a batch size of 16, using the Adam optimizer
+with all other parameters at their default values.
+To reproduce the flow matching and non-GFlowNet baselines, we used the code published by [3] out
+of the box. For TB and DB, we used a learning rate of 10−3 for the flow and policy models and a
+10−1 for the initial state flow log Z = log F (s0 ). (In a search of learning rates over powers of 10,
+10−3 was found to be the largest that does not lead to instability in the form of rapid mode collapse.)
+All experiments with TB and DB were performed on CPU and take about 2 hours for 106 episodes
+on a single core, totaling ∼10 CPU days for all 24 DB and TB experiment settings with 5 seeds each:
+{TB, DB} × {uniform PB , learned PB } × {R0 = 10−1 , 10−2 , 10−3 } × {(H, d) = (8, 4), (64, 2)}.
+
+B.2   Molecule synthesis
+
+We use the dataset and proxy model provided by [3]. We also train GFlowNet using the same
+architecture and hyperparameters (except β and learning rate) but using the trajectory balance loss
+presented in this paper, using fixed uniform backward policy PB . The binding scores in the provided
+dataset were computed with AutoDock [26].
+To test hyperparameter robustness we trained models using reward exponents β = {4, 8, 10, 16}, and
+learning rates {5 × 10−5 , 10−4 , 5 × 10−4 , 10−3 }. In contrast to [3], we used a more exploratory
+training policy: with probability 0.1 (instead of the original 0.05) trajectories are set to stop at some
+length k, which is chosen uniformly between 3 and 8, the minimum and maximum allowed trajectory
+length respectively.
+We observed a runtime improvement of up to 5× for TB relative to FM. There are three factors
+responsible for this:
+(1) Most importantly, FM requires as many model evaluations as there are parents of all states in a
+    sampled trajectory, since the model gives the out-flows F (s→s′ ) for an input state s, while the
+
+
+                                                   16
+    objective involves a sum over in-flows. On the other hand, TB and DB require just one evaluation
+    of the forward and backward policy models per state.
+(2) The average trajectory length. If a model learns to terminate early with higher frequency,
+    trajectories are shorter and fewer model evaluations are required.
+(3) Hardware and the ratio of CPU and GPU load. Experiments on the molecule domain were run on
+    a Tesla K80 GPU; the computation time benefit of TB appears to be smaller but still present on
+    newer hardware with identical batch size settings. (Meanwhile, experiments on the lightweight
+    grid domain were run on CPU, and the trajectory length was the main factor controlling runtime.)
+
+B.3     Bit sequence generation
+
+Generating reference sequences. Let H be a set of symbols (short bit sequences of length
+b), for instance H = {0110, 1100, 1111, 0000, 0011}. Sequences in S are then constructed
+by randomly combining m symbols from H, for instance, 0011110000000011 where m = 4.
+This construction imposes a structure on R(x). In our experiments we set m = nb , b = 8,
+H = {′ 00000000′ ,′ 11111111′ ,′ 11110000′ ,′ 00001111′ ,′ 00111100′ }.
+Generating the test set. Since the reward is defined based on the edit distance from the sequences in
+set M , we generate a test set sampled approximately uniformly over the possible values of R(x) as
+follows: (1) pick a mode s ∈ M , (2) modify i bits randomly ∀i < n and we repeat this for all the
+modes.
+Implementation. We implement GFlowNets with TB and FM in PyTorch6 for autoregressive
+generation tasks, along with the A2C baseline. For the MARS (MCMC) baseline we modify the
+implementation released by [3].
+Hyperparameters. We use a Transformer [28] as the neural network architecture for all the methods.
+We use 3 hidden layers with hidden dimension 64 with 8 attention heads. All methods were trained
+for 50, 000 iterations, with a minibatch size of 16. We set the the random action probability to 0.0005
+selected from {0.0001, 0.0005, 0.001, 0.01}, the reward exponent β to 3 selected from {2, 3, 4}, and
+the sampling temperature for PF to 1 for the GFlowNets. For trajectory balance we use a learning
+rate of 1 × 10−4 selected from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 } for the policy parameters
+and 1 × 10−3 for log Z. For flow matching we use a learning rate of 5 × 10−4 selected from
+{10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 } with leaf loss coefficient λT = 10. For A2C with entropy
+regularization we share parameters between the actor and critic networks, and use learning rate of
+10−4 selected from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 } with entropy regularization coefficient
+10−3 selected from {10−4 , 10−3 , 10−2 }. For SAC we use the formulation in [6] with a learning rate
+of 5 × 10−4 selected from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 } target network update frequency
+500 and 200 initial random steps. For the MARS baseline we set the learning rate to 5×10−4 selected
+from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 }. For all the methods we use the Adam optimizer.
+Overall, for the Bit sequence generation experiments we used 25 GPU days.
+
+B.4     AMP generation
+
+Vocabulary. The vocabulary of the 20 amino acids is defined as: [‘A’, ‘C’, ‘D’, ‘E’, ‘F’,
+‘G’, ‘H’, ‘I’, ‘K’, ‘L’, ‘M’, ‘N’, ‘P’, ‘Q’, ‘R’, ‘S’, ‘T’, ‘V’, ‘W’, ‘Y’]
+Reward Model. We use a Transformer-based classifier, with 4 hidden layers, hidden dimension 64,
+and 8 attention heads. We train it with a minibatch of size 256, with learning rate 10−4 , with early
+stopping on the validation set.
+Hyperparameters. As with the bit sequences, we use a Transformer [28] as the neural network archi-
+tecture for all the methods. We use 3 hidden layers with hidden dimension 64 with 8 attention heads.
+All method were trained for 20, 000 iterations, with a mini batch size of 16. We set the the random ac-
+tion probability to 0.01 selected from {0.0001, 0.0005, 0.001, 0.01}, the reward exponent β : R(x)β
+to 3 selected from {2, 3, 4}, and the sampling temperature for PF to 1 for the GFlowNets. For trajec-
+tory balance we use a learning rate of 5×10−3 selected from {10−5 , 10−4 , 5×10−4 , 10−3 , 5×10−3 }
+for the flow parameters and 1 × 10−2 for log Z. For flow matching we use a learning rate of 5 × 10−4
+selected from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 } with leaf loss coefficient λT = 25. For
+A2C with entropy regularization we share parameters between the actor and critic networks, and
+   6
+       Code: https://gist.github.com/MJ10/59bfcc8bce4b5fce9c1c38a81b1105ae.
+
+
+                                                  17
+use learning rate of 5 × 10−4 selected from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 } with entropy
+regularization coefficient 10−2 selected from {10−4 , 10−3 , 10−2 }. For SAC we use the formulation
+in [6] with a learning rate of 5 × 10−4 selected from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 } target
+network update frequency 400 and 200 initial random steps. For the MARS baseline we set the learn-
+ing rate to 5 × 10−4 selected from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 }. We run the experiments
+on 3 seeds and report the mean and standard error over the three runs in Table 1. Overall, for the
+AMP Generation experiments we used 14 GPU days.
+
+
+
+
+                                                  18
+

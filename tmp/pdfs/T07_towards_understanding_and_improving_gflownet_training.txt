@@ -1,0 +1,1292 @@
+                                                            Towards Understanding and Improving GFlowNet Training
+
+
+                                                             Max W. Shen 1 2 Emmanuel Bengio 3 Ehsan Hajiramezanali 1 Andreas Loukas 1 2
+                                                                              Kyunghyun Cho 1 2 4 Tommaso Biancalani 1
+
+
+                                                                     Abstract                                   alternative to local exploration methods (e.g., MCMC) that
+                                                                                                                can learn from data to potentially discover new, distant x
+
+
+
+
+arXiv:2305.07170v1 [cs.LG] 11 May 2023
+                                                 Generative flow networks (GFlowNets) are a fam-                with high R(x). They have been applied to active learn-
+                                                 ily of algorithms that learn a generative policy               ing, biological sequence design, and various probabilistic
+                                                 to sample discrete objects x with non-negative                 learning tasks (Bengio et al., 2021a; Jain et al., 2022; Zhang
+                                                 reward R(x). Learning objectives guarantee the                 et al., 2022; Deleu et al., 2022).
+                                                 GFlowNet samples x from the target distribution
+                                                 p∗ (x) ∝ R(x) when loss is globally minimized                  GFlowNets aim to solve a challenging unnormalized density
+                                                 over all states or trajectories, but it is unclear how         estimation problem. Standard learning objectives guarantee
+                                                 well they perform with practical limits on training            that the GFlowNet’s learned distribution over x matches
+                                                 resources. We introduce an efficient evaluation                the target distribution p∗ (x) ∝ R(x) when training loss is
+                                                 strategy to compare the learned sampling distri-               globally minimized over all states or trajectories, but many
+                                                 bution to the target reward distribution. As flows             practical domains of interest can have exponentially many
+                                                 can be underdetermined given training data, we                 x and exponentially many trajectories per x, making this
+                                                 clarify the importance of learned flows to gen-                infeasible with a practical amount of data and training time.
+                                                 eralization and matching p∗ (x) in practice. We                To gain insight into GFlowNet learning behavior under prac-
+                                                 investigate how to learn better flows, and propose             tical constraints, we design an efficient GFlowNet evaluation
+                                                 (i) prioritized replay training of high-reward x,              scheme that precisely compares the learned sampling distri-
+                                                 (ii) relative edge flow policy parametrization, and            bution to the target reward distribution. We discover that a
+                                                 (iii) a novel guided trajectory balance objective,             primary challenge during GFlowNet training is learning to
+                                                 and show how it can solve a substructure credit                reduce the probability assigned to low-reward x, and that
+                                                 assignment problem. We substantially improve                   GFlowNets can continue to oversample low-reward x even
+                                                 sample efficiency on biochemical design tasks.                 after extensive training time.
+                                                                                                                When the space of x is large, not all MDP states are seen
+                                         1       Introduction                                                   during training, and a GFlowNet’s ability to match the target
+                                                                                                                distribution depends on how it generalizes from the flow
+                                         A Generative Flow Network (GFlowNet) learns a policy
+                                                                                                                it learned during training. GFlowNets were originally de-
+                                         for generating discrete objects x, such as graphs, strings,
+                                                                                                                signed for the setting where any given R(x) is compatible
+                                         or sets, by iteratively taking actions that add simple build-
+                                                                                                                with multiple flows (Bengio et al., 2021a) - that is, flows are
+                                         ing blocks to partial objects (substructures) (Bengio et al.,
+                                                                                                                underdetermined. Despite this, learned flows have remained
+                                         2021a;b). GFlowNets view the data-generating Markov de-
+                                                                                                                understudied, with little to no sense of which learned flows
+                                         cision process (MDP) as a flow network, where “water”,
+                                                                                                                may be more desirable than others. Our analyses ground a
+                                         “unnormalized probability”, or non-negative reward R(x)
+                                                                                                                clear notion of optimality for learned flows: a flow is better
+                                         flows through the MDP, from the source node (a “null” ob-
+                                                                                                                if it improves generalization to unseen states and helps a
+                                         ject), to intermediate nodes (partial objects), to sink nodes
+                                                                                                                GFlowNet match the target distribution better.
+                                         (complete objects). GFlowNets can be seen as an amortized
+                                             1                                                                  We analyze how existing training objectives learn flows, and
+                                              Genentech, South San Francisco, USA 2 Prescient Design,
+                                         Genentech, South San Francisco, USA 3 Recursion Pharmaceuti-
+                                                                                                                identify a credit assignment problem where the substruc-
+                                         cals, Salt Lake City, Utah 4 Department of Computer Science, New       tures of x most responsible for reward R(x) can be off the
+                                         York University, New York, USA. Correspondence to: Max W.              sampling trajectory used to reach x, and under-credited by
+                                         Shen <shen.max@gene.com>.                                              popular training objectives. This is important for composi-
+                                                                                                                tional reward functions, where the value of R(x) is partially
+                                         Proceedings of the 40 th International Conference on Machine
+                                         Learning, Honolulu, Hawaii, USA. PMLR 202, 2023. Copyright
+                                                                                                                determined by the substructures of x. We propose guided
+                                         2023 by the author(s).                                                 trajectory balance, a novel learning objective that is the first
+
+                                                                                                            1
+                                    Towards Understanding and Improving GFlowNet Training
+
+solution to this credit assignment problem.                               PB (st−1 |st ), a backward policy. When F is Markovian,
+                                                                                                                                 0
+
+This objective, alongside our proposals of prioritized re-                these policies relate to flows by: PF (s0 |s) = F (s→s   )
+                                                                                                                            F (s) , and
+                                                                                                0
+play training and relative edge flow parametrization, and                 PB (s|s0 ) = F F(s→s   )
+                                                                                            (s0 ) .
+even user choice of data-generating MDPs, can change how
+GFlowNets learn to distribute flow during training. In ex-                Generative Flow Network. A GFlowNet is a learning al-
+periments on biochemical design tasks, we demonstrate that                gorithm with parameters θ comprising a model of a Marko-
+these changes in learned flows can significantly impact sam-              vian flow Fθ , and an objective function (Bengio et al.,
+ple efficiency and convergence to the target distribution,                2021b). The flow model can be uniquely determined by
+with up to 10× improvement. Our work deepens our un-                      either:
+derstanding of the impact of learned flows on GFlowNet
+                                                                          • edge flows Fθ (s → s0 ), which induces a forward policy
+behavior, and establishes an fundamental open question:
+                                                                            PF (s0 |s), or
+how can we induce GFlowNets to learn more optimal flows,
+and thereby improve their ability to solve unnormalized
+                                                                          • initial state flow Zθ = Fθ (s0 ) and forward policy
+density estimation problems.
+                                                                            PFθ (st+1 |st ), or
+
+2    Preliminaries                                                        • terminal state flows Fθ (x) and backward policy
+                                                                            PBθ (st−1 |st ) .
+A Generative Flow Network (GFlowNet) learns a genera-
+tive policy for constructing an object by taking a sequence               We call the GFlowNet’s learned sampling distribution pθ (x),
+of actions (see (Bengio et al., 2021b) for a more complete                which is sampled by starting at s0 and iteratively sampling
+description). This policy acts in a user-defined deterministic            PFθ (st+1 |st ) to reach a terminal state x. Learning objec-
+Markov decision process (MDP) which must satisfy certain                  tives are designed Pto match pθ (x) to the target distribution,
+constraints described below. The MDP has a state space                    p∗ (x) , R(x)/ X R(x).
+S, a set of legal actions As for each state s, a determinis-
+tic transition function S × As → S, and reward function                   Trajectory balance objective (Malkin et al., 2022). This
+R. GFlowNets view this MDP as a type of directed graph                    objective uses a forward policy parameterization by learn-
+called a flow network where states correspond to nodes and                ing Zθ and a forward policy PFθ , but also learns a back-
+the MDP transition function defines directed edges between                ward policy PBθ as a training artifact. Trajectory balance
+nodes. The children of a state are states reachable by out-               is motivated by a detailed balancing condition, which is
+going edges, and parents are the sources of its incoming                  satisfied for a flow F with state flow function F (s) if
+edges. States with no outgoing edges are called terminal                  F (s)PF (s0 |s) = F (s0 )PB (s|s0 ) for all edges s → s0 . The
+states (sinks), and referred to as x ∈ X . GFlowNets require              trajectory balance objective attempts to enforce detailed
+the MDP to be defined by the user such that this graph is                 balancing over a complete trajectory:
+acyclic, has exactly one state without incoming edges, s0                                                  Qn                    !2
+called the initial state (source), and has R : X → R≥0 .                                                 Zθ t=1 PFθ (st |st−1 )
+                                                                                  LTB (τ ) =        log     Qn                        (1)
+                                                                                                        R(x) t=1 PBθ (st−1 |st )
+A complete trajectory is a sequence of states τ , (s0 →
+s1 → ... → sn ) starting from source s0 to a sink sn with
+(st → st+1 ) ∈ Ast for all t. We denote T as the set                      (Malkin et al., 2022) showed that if a GFlowNet achieves
+of all complete trajectories. A trajectory flow is a non-                 a global minima of this objective over trajectories from
+negative function F : T → R≥0 describing the unnor-                       a training policy with full support, then it samples from
+malized probability flowing along each complete trajec-                   the target distribution. When many trajectories can lead
+tory τ from the source                                                    to the same x, there can be many global optima for the
+                         P to a sink. For any state s, the
+state flow F (s) =          {τ ∈T :s∈τ } F (τ ) describes the total
+                                                                          trajectory balance objective - flows are underdetermined.
+amount of unnormalized probability flowing through state                  However, for any fixed choice of PB , there is a unique
+sPand, for any edge s → s0 , the edge flow is F (s → s0 ) =               global minima corresponding to a PF that samples from
+    {τ ∈T :(s→s0 )∈τ } F (τ ). A trajectory flow F (τ ) is Marko-
+                                                                          the target distribution (Bengio et al., 2021b). (Madan et al.,
+ vian if there exist distributions PF (·|s) over the children of          2022) study an extension of trajectory balance that learns
+ every non-terminal state s, and a constant Z, such that for              from partial episodes.
+ any complete trajectory τ , we have PQ      F (τ ) = F (τ )/Z with       Maximum entropy GFlowNets. (Zhang et al., 2022)
+                                               n
+ PF (τ = (s0 → s1 → ... → sn )) = t=1 PF (st |st−1 ).                     showed that when PB is fixed as the uniform distribution,
+This PF (st+1 |st ) is called a forward policy, which can                 the unique global minima of the trajectory balance objec-
+sample complete trajectories from F . We also consider                    tive is a Markovian
+                                                                                         Pn−1 flow F with maximum flow entropy
+                                                                          H[F ] , Eτ ∼PF t=0 H[PF (·|st )].
+
+                                                                      2
+                                  Towards Understanding and Improving GFlowNet Training
+
+Training. GFlowNets are trained with stochastic gradient              fitting here and propose improvements, and defer benchmark
+descent to optimize the learning objective on states or tra-          details and experimental results to §7.
+jectories sampled from a training policy, which is usually
+                                                                      GFlowNets underfit target distributions during train-
+chosen as a mixture of PFθ and a uniform action policy to en-
+                                                                      ing. In our experiments (see §7), mean GFlowNet sam-
+courage exploration during training. In RL terms, GFlowNet
+                                                                      pling reward Epθ (x) [R(x)] initializes significantly below
+training is off-policy. Importantly, GFlowNet training is a
+                                                                      the target mean reward, and very slowly reaches, or never
+bootstrapping process: the current policy is used to sample
+                                                                      reaches the target mean reward, even over more than tens of
+new x at each training round. As R(x) is defined by the
+                                                                      thousands of active training rounds. At initialization with
+user, it is computed on each new x, and this set {x, R(x)}
+                                                                      random parameters, we reason that GFlowNet mean sam-
+is used to update the GFlowNet policy. We define X as the
+                                                                      pling rewards is expected to be low, as PFθ (st+1 |st ) has high
+set of all x seen so far in training. It is initially empty and
+                                                                      entropy, so pθ (x) generally also has high entropy (though it
+expands with each training round.
+                                                                      depends on the choice of MDP, see §A.1).
+
+3   Evaluating GFlowNets and underfitting                             This is consistent with previous work, which has reported
+                                                                      linear regression slope of 0.58 between log pθ (x) and
+In prior work, GFlowNets have been evaluated in several               log R(x) on a small molecule task (Bengio et al., 2021a)
+ways, typically focusing on their ability to discover novel           after training completed, indicating oversampling of low-
+and diverse modes with high reward. However, their ability            reward x. To encourage discovery of high reward x, it
+to match the target distribution has been empirically studied         is common to train on rewards raised to a high exponent,
+less thoroughly, especially on real-world data, despite this          such as 3 to 10. For instance, 10× higher binding affinity
+ability’s central importance in the GFlowNet machinery.               molecules can be more than 1000× rarer in X , reducing
+                                                                      their relative probability unless reward is taken as bind-
+Learning to match the target distribution is non-trivial. This
+                                                                      ing affinity raised to a power. This increases reward skew,
+theoretically occurs when loss is globally minimized over
+                                                                      decreasing target distribution entropy and widens the gap
+all states or trajectories. However, in high-dimensional
+                                                                      to high-entropy GFlowNet initializations. In prior work,
+settings where |X | is exponentially large, visiting each state
+                                                                      GFlowNets have failed to sufficiently increase sampled re-
+or trajectory even once is infeasible.
+                                                                      wards when training on increasingly skewed rewards.
+Evaluating GFlowNets can be challenging. In many MDPs
+                                                                      Remark 1. A primary practical challenge during
+of interest, there are exponentially many trajectories per x,
+                                                                      GFlowNet training is reducing their probability of sampling
+which can make computing pθ (x) costly by requiring dy-
+                                                                      low-reward x.
+namic programming. And, |X | is often exponentially large,
+making it infeasible to precisely characterize the target dis-        Our observations affect the practical use of GFlowNets.
+tribution. Several studies evaluate GFlowNets by spearman             GFlowNet training is conventionally stopped at convergence,
+correlation between log pθ (x) and R(x) on held-out data              or when training resources are depleted, but our experi-
+(Madan et al., 2022; Nica et al., 2022) , but this correlation        ments show that GFlowNets can converge below the target
+is 1.0 when log pθ (x) = cR(x) for any constant c > 0, even           mean, and fail to reach the target mean even after extensive
+though it is only when c = 1 that the GFlowNet matches                training time. It has not been common practice to monitor
+the target distribution.                                              the sampling mean reward nor to compare it to the target
+We design our benchmarks with biological data and rewards,            mean, which is typically unknown. As a consequence, in
+constrain them to have enumerable X , and use GFlowNet                practice, many GFlowNets may oversample low-reward x,
+samples for evaluation rather than computing pθ (x). This             unbeknowst to users.
+enables an exact, precise, and efficient view of how well             This motivates us to understand the training behavior of
+GFlowNets match statistics of the target reward distribu-             GFlowNets, and explore strategies that may assist them in
+tion. We study the Anderson-Darling statistic which com-              learning to sample high rewards with higher probability
+putes goodness-of-fit between GFlowNet samples of reward              more quickly. These strategies can help GFlowNets match
+and the target reward distribution, and also compare mean             the target distribution more quickly.
+GFlowNet reward from samples, Epθ (x) [R(x)], to expected
+target reward R(x)2 /Z.                                               Reward-prioritized replay training (PRT). We propose
+                                                                      prioritized replay training (PRT) that focuses on high reward
+We remark that this evaluation scheme only compares to                data, as a simple strategy for increasing sampled rewards.
+the target reward distribution. Nevertheless, this scheme en-         At each training round, in addition to training on trajectories
+ables us to report that a key challenge in GFlowNet training          sampled from the training policy, we form a replay batch
+is underfitting the target distribution, meaning that they sam-       from X, all data seen so far, so that α% of the batch is
+ple low rewards with too high probability. We discuss under-          sampled from the top β percentile of R(x), and the rest of
+
+                                                                  3
+                                   Towards Understanding and Improving GFlowNet Training
+
+the batch is sampled from the bottom 1 − β percentile. To               eralization at any training step improves future training.
+train on the replay batch of x, we sample trajectories for              Finally, GFlowNets can only ever train on a tiny fraction of
+them using PB , then train on the trajectories.                         X , so their final ability to match the target distribution also
+                                                                        depends on generalization.
+Replay training is common in RL, where it can significantly
+improve sample efficiency (Fedus et al., 2020). A simi-                 As pθ (xunseen ) depends on learned forward policy PFθ or
+lar strategy is error-prioritized experience replay (Schaul             equivalently on learned edge flows Fθ (s → s0 ), we state:
+et al., 2015), which preferentially samples replays with high
+                                                                        Remark 2. Flow distribution matters for generalization,
+temporal-difference error. (Jain et al., 2022) propose replay
+                                                                        which matters for matching the target distribution over X .
+training with GFlowNets from a fixed initial dataset. In
+                                                                        Moreover, flows are generally underspecified given data
+contrast, our reward-prioritized replay training is motivated
+                                                                        {x, R(x)}.
+by fixing the observation that GFlowNets can struggle with
+oversampling low-reward x.                                              This remark grounds a notion of the quality of a flow distri-
+                                                                        bution: a flow distribution is better if it helps a GFlowNet
+4    Flow Distribution and Generalization                               generalize better.
+We now turn to studying flow distribution, which is how a               Relative edge flow parametrization (SSR). Our clarifica-
+GFlowNet chooses to flow “unnormalized probability” over                tion of the role of generalization in matching the target dis-
+nodes and edges in the MDP graph. In this section, we                   tribution led us to investigate inductive biases in GFlowNet
+clarify how flow distribution is important for generalization           parametrizations that could impact generalization behavior.
+and efficiently matching the target distribution. As flows              GFlowNets typically use a policy parametrization, where
+are usually underdetermined, this clarification leads to the            PFθ (s) is a neural net mapping S → A, which we call “SA”.
+question: how can GFlowNets learn better flows?                         If this policy learns that certain actions are favorable in a
+                                                                        state s, it can generalize to prefer the same actions in new
+The first factor in flow distribution is the user’s choice of the       states similar to s, but this can sometimes be the wrong
+data-generating MDP. For any given data x, a user usually               generalization. This concept is related to optimal transport
+enjoys ample choice among different MDPs. Strings can be                regularization (Anonymous, 2023) to explicitly encourage
+generated autoregressively, by starting from an empty string,           similar action policies in similar states.
+and iteratively appending characters. In this autoregressive
+MDP, there is exactly one trajectory ending in any x, which             We propose an alternative parametrization, where rel-
+means there is only one flow compatible with R(x) over all              ative edge flows are parametrized by a neural net
+x. However, if the legal action set is expanded to prepending           fθ : S, S 0 → R+ , which we call “SSR”. We de-
+and appending, then the resulting prepend/append MDP has                fine the probability   of transitioning forward from s, s0 as
+                                                                                0
+                                                                                    P
+2k−1 trajectories ending in a string of length k, and there are         fθ (s, s )/ c∈children(s) fθ (s, c). Intuitively, SSR can
+many flows over the MDP compatible with R(x). Finally,                  “see” the child state, unlike SA. Conceptually, SSR can help
+note that graph-generating MDPs typically have more than                the GFlowNet generalize to favor taking different actions at
+two attachment points, and even more trajectories per x.                new states than actions seen in training, based on the child
+                                                                        state. We remark that relative edge flow parametrization is
+The original motivation for the GFlowNet machinery, and                 less efficient and no more expressive than SA.
+its primary novelty, are in MDPs with many trajectories per
+x (Bengio et al., 2021a). It is in this setting that autore-            SSR is closely related to directly parametrizing state flows
+gressive or standard RL methods learn biased generative                 F (s) (for example, in the flow matching objective (Bengio
+probabilities, while GFlowNets do not. When trajectories                et al., 2021a)) which may help the GFlowNet generalize
+and x are one-to-one, GFlowNets reduce to a known method:               from patterns of states with high and low flow to discover
+discrete-action soft Q-learning. As such, we focus on the               new states associated with high reward. Related work also
+many-to-one setting, where flows are underdetermined given              includes (Madan et al., 2022) which parametrizes state flows
+R(x).                                                                   to learn from partial episodes, and hypothesizes a benefit
+                                                                        to state flow generalization, but their method does not use
+The role of generalization during training. When X is                   learned state flows for decision-making.
+high-dimensional and large, it is useful to conceptually di-
+vide states, trajectories, and x into those seen in training so
+far, and those not yet seen. The quality of a GFlowNet’s pol-           5   Compositionality and Credit Assignment
+icy over X , in particular how closely pθ (xunseen ) matches            We have established that flow distribution is important for
+p∗ (xunseen ), critically depends on how well a GFlowNet                generalization to unseen x, and matching the target distri-
+generalizes from the data seen so far in training. As                   bution over X . Flows are also generally underspecified
+GFlowNets train in a bootstrapping manner, improving gen-               given data {x, R(x)}, and it is an open question of whether
+
+                                                                    4
+                                  Towards Understanding and Improving GFlowNet Training
+
+GFlowNets prefer to learn certain flow distributions over              assigning flow, or credit, to important substructures most
+others. In this section, we continue by investigating how              responsible for R(x) - which we call the substructure credit
+GFlowNet learning objectives learn to distribute flow. In              assignment problem. But in RL, credit assignment is limited
+particular, we establish this remark (see fig. 3 for intuition):       to actions taken in a specific trajectory arriving at reward.
+                                                                       However, for GFlowNets, in the typical case where there
+Remark 3. When there are many trajectories for each x, the
+                                                                       are exponentially many trajectories ending in any x, the
+manner in which trajectory balance and maximum entropy
+                                                                       substructures most responsible for R(x) are often not on the
+GFlowNets learn flows can inadequately credit substruc-
+                                                                       training trajectory used to reach x.
+tures of x associated with high reward. Such substructures
+can exist when the reward function is compositional.                   Existing learning objectives inadequately address the sub-
+                                                                       structure credit assignment problem. Trajectory balance
+We build up to this remark in pieces: first discussing compo-          (TB) and MaxEnt objectives take gradients steps to min-
+sitional reward functions, the substructure credit assignment          imize loss on the generative trajectory, from the training
+problem, and finally studying TB and MaxEnt objectives.                policy, used to reach x, which usually does not contain im-
+Compositional reward functions. We have established                    portant substructures. Furthermore, TB underspecifies flow:
+that generalization from seen R(X) to unseen x is impor-               many different flows all globally minimize loss, and there
+tant for GFlowNets to match the target distribution when               is no discernible inductive bias favoring any particular flow
+X is large. However, it could be that R(x) has no learn-               distribution. MaxEnt fixes PB as the uniform distribution,
+able relationship with x - in such a case, generalization is           achieving a unique credit assignment solution, but one that
+impossible, and no flow distribution is better than any other.         diffuses credit for R(x) as widely as possible, assigning
+                                                                       minimal credit to important substructures.
+Thus, the core premise that GFlowNets have an advantage
+over MCMC for unnormalized density estimation relies                   Prior objectives under-credit important substructures.
+on the assumption that generalization of R(x) is possible.             To formalize intuitions, we study the behavior of TB and
+Compositional reward functions, where the value of R(x)                MaxEnt in a simplified yet representative framework. We
+depends primarily on properties of subparts or substructures           adopt the tabular model setting used to study algorithms in
+of x and interactions among them (Andreas, 2019; Szabó,               RL (Sutton & Barto, 2018), and consider a simple MDP
+2020), are an important example of such learnable R(x).                with relevant properties. Due to space constraints, we pro-
+                                                                       vide informal summaries here, and complete statements and
+For example, important properties of small molecules are               proofs in the appendix.
+often caused by the presence of molecular substructures,
+                                                                       Definition 5.1 (Sequence prepend/append MDP setting).
+such as benzene rings. These examples highlight that when
+                                                                       In this MDP, s0 is the empty string, states are strings, and
+R(x) is compositional, substructures of x can be associated
+                                                                       actions are prepending or appending a symbol in an alphabet
+with higher reward. We call these important substructures.
+                                                                       A. This MDP generates strings of length n. There is a
+GFlowNets that generate discrete objects iteratively take              fixed dataset {x, x0 } with R(x) = R(x0 ). Denote s∗ as the
+actions that combine simple building blocks, progressively             important substructure, defined as longest substring shared
+passing through states corresponding to “partial objects”              by x, x0 , with length k. Denote sk (x) the set of k-length
+to generate complete objects x. When R(x) is composi-                  substrings of x.
+tional, GFlowNets that assign higher flow to internal MDP              Remark 4. In this MDP, there are 2n−1 trajectories end-
+states s corresponding to important substructures may gen-             ing in any x, and each passes through exactly one string
+eralize better by 1) increasing pθ (xunseen ) for downstream           of length k, which is either s∗ , or any other string in the
+xunseen that contain s, increasing the probability of sam-             set {sk (x) \ s∗ } where \ denotes set subtraction. We
+pling xunseen associated with higher reward, and 2) en-                study the flow F (s∗ ) passing through s∗ , and the sum of
+abling the GFlowNet to generalize from s and discover new                                        {sk (x) \ s∗ }, using F (sk (x) \ s∗ ) ,
+substructures sunseen associated with high reward.                     P passing through
+                                                                       flows
+                                                                                               0
+                                                                          s0 ∈{sk (x)\s∗ } F (s ) .
+The substructure credit assignment problem. In rein-                   Proposition 5.2 (MaxEnt assigns minimal credit to impor-
+forcement learning, the credit assignment problem concerns             tant substructures). In setting 5.1, suppose the GFlowNet is
+determining how the success of a system’s overall perfor-              trained with the maximum entropy learning objective. Then,
+mance is due to the various contributions of the system’s              at the global minima,
+components (Minsky, 1961). A long trajectory of actions                                 "                 #
+is taken by a learning agent in an environment to receive a                                    F (s∗ )           2
+final reward, and the agent must learn to assign credit to the                        E                 ∗
+                                                                                                             =                 (2)
+                                                                                          F (sk (x) \ s )      n−k
+actions most responsible for the reward.
+We argue that GFlowNets face an analogous challenge -                  with expectation over random positions of s∗ in x, x0 .
+
+                                                                   5
+                                   Towards Understanding and Improving GFlowNet Training
+
+This proposition states that, for many values of n, k of prac-          guide p(τ→x |X) changes with each new active round during
+tical interest, MaxEnt assigns a low minority of flow to s∗ ,           training, as X grows.
+and prefers to sample trajectories through non-important
+                                                                        To formulate a valid and general GFlowNet learning objec-
+substructures with high probability.
+                                                                        tive, we propose a guided trajectory balance constraint for
+To reason about trajectory balance in setting 5.1, we con-              a trajectory τ→x ending in x. Theorem 6.1 shows that if a
+fine it to tabular trajectory flow updates, and ensure equal            GFlowNet satisfies this constraint at all x and all trajectories,
+training steps on x, x0 .                                               then it samples from the target distribution, which achieves
+                                                                        the same asymptotic guarantees as prior GFlowNet learning
+Definition 5.3 (Tabular, fixed-data TB). Suppose that all
+                                                                        objectives.
+tabular trajectory flows F (τ ) =  at initialization, such
+that F (x) < R(x) for x, x0 at initialization. We take m/2              Theorem 6.1 (Guided trajectory balance constraint). Sup-
+training steps on each of x, x0 , sampling a trajectory τ→x             pose that for any x, and any trajectory τ→x = (s0 → s1 →
+ending in that x with probability proportional to current               ... → sn = x) ending in x, the guided trajectory balance
+F (τ→x ), then update F (τ→x ) ← F (τ→x ) + λ(R(x) − ).                constraint (3) holds.
+Proposition 5.4 (TB tends to reduce credit to important                                  n
+substructures). Suppose setting 5.1 and TB training 5.3. Let
+                                                                                         Y
+                                                                                     Z         PF (st |st−1 ) = p(τ→x )R(x)            (3)
+t index training steps. At any training step t, if Ft−1 (s∗ ) <                          t=1
+(n − k) Es∼sk (x)\s∗ [Ft−1 (s)] holds (with expectation under
+a uniform distribution), then the expected trajectory flow
+update over training trajectories τ has:                                Then PF samples x with probability R(x)/Z.
+
+                                                                                      Qn
+      h       i                                                         Proof. Use t=1 PF (st |st−1 ) = PF (τ→x ), then sum over
+    E Ft (s∗ ) −Ft−1 (s∗ ) <
+    τ                                                                   all trajectories ending in x to get ZPF (x) = R(x).
+                  h                i
+                E Ft (sk (x) \ s∗ ) − Ft−1 (sk (x) \ s∗ ).
+                 τ
+                                                                        In general, however, the guide distribution may not be
+                                                                        Markovian, and constraint 3 cannot be satisfied everywhere
+TB learning updates prefer to increase flow through non-                by standard GFlowNets with Markovian flow. We solve this
+important substructures at the expense of s∗ , except in the            with a two-phase optimization approach. Note how guided
+rare situation where F (s∗ ) is significantly larger, by a factor       trajectory balance (3) relates to trajectory balance (1), in
+of (n − k), than the average flow through competing non-                that p(τ→x ) plays the role of PB . We propose to first train
+important substructures. In §C.7, we interpret TB as a Pólya           PB to match p(τ→x ), using:
+urn process where “rich gets richer”: trajectories with high
+flow are sampled more in training, further increasing flow.                                                   Qn    θ
+                                                                                                               t=1 PB (st |st−1 )
+                                                                                                                                 2
+In summary, TB and MaxEnt inadequately address the sub-                     Lback-GTB (τ→x ) =          log                            (4)
+                                                                                                                   p(τ→x )
+structure credit assignment problem, and likely do not learn
+to distribute flow optimally.
+                                                                        which learns a PB that acts as a Markov approximation to
+6     Guided Trajectory Balance                                         p(τ→x ). Once converged, we freeze PB , then learn PF with
+                                                                        fixed PB using trajectory balance, which recovers a proper
+We introduce a novel learning objective called guided tra-              GFlowNet learning objective: by the uniqueness property
+jectory balance that enables flexible control over credit as-           ((Bengio et al., 2021b), Corollary 1), for any fixed Marko-
+signment and flow distribution. We propose a specific guide             vian PB , there is a unique global minima to the trajectory
+that solves the substructure credit assignment problem.                 balance loss which corresponds to a Markovian PF that
+                                                                        samples from the target distribution.
+In general, suppose that for some x and R(x), we would
+like to assign credit (i.e., flow) for R(x) preferentially along        Training considerations. Training trajectories can be sam-
+some trajectories. We express this preference over trajecto-            pled from the training policy. Alternatively, x can be sam-
+ries ending in x with a guide distribution p(τ→x ).                     pled from the training policy, and a training trajectory τ→x
+                                                                        can be resampled from the guide.
+We emphasize that the guide p(τ→x ) does not have to be
+fixed, and does not have to be Markovian with respect to the            In practice, a useful PF can be learned faster by alternating
+MDP. A particularly powerful approach is defining guides                updates to PB and PF . PF may also train on a target that
+using X, the set of all x collected so far during training,             mixes the current PB and guide p(τ→x ) with weight α ∈
+which we demonstrate in a following section. The resulting              [0, 1]:
+
+                                                                    6
+                                    Towards Understanding and Improving GFlowNet Training
+
+                                                                        7   Experiments
+                                                                        To precisely and efficiently evaluate how well GFlowNets
+  Lforward-GTB (τ ) = (ψf − ψb )2                             (5)       match the target reward distribution, we design benchmarks
+                                n
+                              X                                         with enumerable X , and use GFlowNet sampled rewards for
+                ψf , log Zθ +     log PFθ (st |st−1 )         (6)       evaluation. The Anderson-Darling (AD) statistic, a statisti-
+                                    t=1
+                                                                        cal metric of goodness-of-fit between samples and a target
+                 ψb , log R(x) + α log p(τ→x )           (7)            distribution, is strongly correlated with error between mean
+                                n
+                                 X                                     of the samples and the target mean in our experiments (me-
+                      + (1 − α)      log PBθ (st |st−1 )                dian R2 = 0.87, §B, Fig. B.1), and the AD statistic is near
+                                        t=1                             zero (indicating no significant difference) when the mean’s
+                                                                        error is near zero. As a result, we report error against the
+Substructure guide. We propose a particular guide suited                mean for ease of interpretation. In table 1, we report relative
+for compositional reward functions, used to train substruc-             error of the mean at convergence, or number of training
+ture GFlowNets. This guide finds important substructures                rounds required to first reach the target mean. In figure 1,
+by looking at parts of x associated with high reward over all           we depict training curves for the same runs in table 1. We
+of X seen so far in training, and guides credit assignment              report mean ± standard error in table 1 and figure 1 using
+towards these empirically important substructures.                      three replicates.
+We say that a state s is a substructure of x, or s ∈ x, if there        In five tasks, we report results from baselines TB and Max-
+is a directed path in the MDP from s to x. A motivating                 Ent, and compare to the effects of our three proposed train-
+insight is that for many compositional objects, ∈ is efficient          ing modifications: prioritized replay training (PRT), rela-
+to compute (subset function for sets, substring function                tive edge flow policy parametrization mapping S × S → R
+for strings). For graphs, ∈ corresponds to the NP-complete              (SSR), and substructure guided trajectory balance (Sub).
+graph isomorphism problem, but this is fast in practice when            We used the ablation series of TB, TB+PRT, TB+PRT+SSR,
+many node or edge features are distinct. Furthermore, ∈                 and Sub+PRT+SSR to compare the individual effects of
+can always be computed by breadth-first search in the MDP               adding PRT, SSR, and substructure guidance respectively.
+DAG, which bounds its time complexity to O(V + E).                      We change the minimal number of hyperparameters and
+                                      Qn−1                              training details necessary to add each proposal (see §B for
+Our guide defines p(τ→x |X) =            t=0 p(st+1 |st , x, X),        full experimental details).
+where state transition probabilities are:
+                                                                        Bag. (|X | ≈ 100B) A multiset of size 13, with 7 distinct
+                                                                        elements. The base reward is 0.01. A bag has a “substruc-
+                                   φ(st+1 |x, X)                        ture” if it contains 7 or more repeats of any letter: then it
+   p(st+1 |st , x, X) = P                         0
+                                                          ,   (8)
+                             s0 ∈children(st ) φ(s |x, X)
+                                                                        has reward 10 with 75% chance, and 30 otherwise. In this
+                                                                        MDP, actions are adding an element to a bag.
+with score function φ(s|x, X) that favors children that are             SIX6 (TFBind8). (|X | = 65, 536) A string of length 8 of
+substructures of x with high average reward:                            nucleotides. The reward is wet-lab measured DNA binding
+                                                                        activity to a human transcription factor, SIX6, from (LA
+                                                                       et al., 2016; Trabucco et al., 2022). Following (Jain et al.,
+                            E         R(x0 ), if s ∈ x
+      φ(s|x, X) =        {x0 ∈X:s∈x}
+                                                              (9)       2022), we use a reward exponent of 3. Though an autore-
+                     0                        otherwise.               gressive MDP is conventionally used for strings, in order
+                                                                        to compare TB with substructure guidance which is only
+                                                                        meaningful in generative MDPs with more than one trajec-
+For ease of presentation, this description ignores corner               tory per x, we use a sequence prepend/append MDP. We
+cases. We provide a complete description in §A.2. In prac-              compare to an autoregressive MDP in a following section.
+tice, parallelization and an efficiency trick reduce added
+overhead to negligible amounts (see §A.2).                              PHO4. (|X | = 1, 048, 576) 10 nucleotide string, with wet-
+                                                                        lab measured DNA binding activity to yeast transcription
+Substructure GFlowNets credit important shared sub-                     factor PHO4 (LA et al., 2016; Trabucco et al., 2022).
+structures. In setting C.3, we showed that MaxEnt and
+TB objectives inadequately credit the important shared sub-             QM9. (|X | = 58, 765) A small molecule graph. Reward is
+structure, s∗ . In contrast, substructure GFlowNets assign              from a proxy deep neural network predicting the HOMO-
+maximal credit to s∗ (Proposition C.9), demonstrating that              LUMO gap from density functional theory. We build using
+substructure-guided trajectory balance helps to solve the               12 building blocks with 2 stems, and generate with 5 blocks
+substructure credit assignment problem.                                 per molecule.
+
+                                                                    7
+                                       Towards Understanding and Improving GFlowNet Training
+
+sEH. (|X | = 34, 012, 224) A small molecule graph. Re-                      learning curves (compare green vs. blue, Fig. 1).
+ward is from a proxy model trained to predict binding affin-
+                                                                            Effect of relative edge flow parametrization. Relative
+ity to soluble epoxide hydrolase from AutoDock. We build
+                                                                            edge flow parametrization (SSR) further improves training
+using 18 blocks with 2 stems, and use 6 blocks per molecule.
+                                                                            by a significant amount (compare red vs. green, Fig. 1), and
+Results.                                                                    in particular noticeably shifts the learning curve in SIX6 by
+                                                                            a factor up to 3×. In Bag and sEH, SSR improves the time
+PRT, SSR, and Sub improve GFlowNet training. In Ta-
+                                                                            to match the target mean by 2-fold. These experiments show
+ble 1, we observe that across all 5 experimental settings,
+                                                                            that SSR can meaningfully change the training behavior of
+the best model includes at least one of our proposals PRT,
+                                                                            GFlowNets, and improve them substantially on some tasks.
+SSR, and substructure guidance. The best model matches
+                                                                            Further work may continue to investigate SSR and develop
+the target mean in the shortest number of rounds - in the
+                                                                            further improved parametrizations.
+case of sEH, 9-fold faster than TB - or achieves the highest
+mean when all models underfit the target distribution. We                   Effect of substructure guidance. Substructure guidance
+discuss the individual effects of each proposal in following                has the biggest effect in SIX6 and sEH, where it enables the
+sections.                                                                   only model able to match the target mean in SIX6, and im-
+                                                                            proves sample efficiency in matching the target mean by 2×
+Baselines and GFlowNets can struggle with underfit-
+                                                                            in sEH (Table 1). Overall, these results confirm that differ-
+ting. Our benchmark results show that within a reasonable
+                                                                            ent credit assignment preferences can significantly impact
+amount of training time, TB converges to policies that under-
+                                                                            GFlowNet training, convergence, and sample efficiency.
+sample the target mean and place too much weight on low
+rewards in two out of five environments. This is particularly               The benefit of our proposed substructure guide can depend
+notable in SIX6 where over 50,000 training rounds TB sam-                   on how compositional R(x) is. Further, failures of the sub-
+pled 800,000 data points (batch size of 16 per round), a rela-              structure guide to improve training may be due to overfitting.
+tive ratio over 12× over the state space size |X | = 65, 536.
+                                                                            Autoregressive MDP. In general, users can have many
+This convergence under the mean despite significantly over-
+                                                                            choices in designing generative MDPs. TFBind8 is a string-
+sampling the state space size shows the difficulty of finding
+                                                                            generation environment, for which autoregressive or append-
+a global minima over all states and trajectories in practice,
+                                                                            only MDPs have commonly been used for GFlowNet train-
+and may signal challenges in GFlowNets training in larger
+                                                                            ing. We trained a GFlowNet using an autoregressive MDP,
+state spaces. Underfitting also varied by environment: all
+                                                                            and find final converged mean at 97.3% after 50,000 training
+models struggled in PHO4 in particular.
+                                                                            rounds with a TB baseline. Note that in an autoregressive
+TB and MaxEnt are often similar. MaxEnt has a unique                        MDP, standard TB is equivalent to MaxEnt and substruc-
+global optima from PB distributing flow uniformly, while                    ture guidance has no effect, as there is only one trajectory
+TB could in principle learn different flows with lower en-                  per x. Adding PRT and PRT+SSR do not impact the final
+tropy PB . Prior work has not yielded much insight into the                 GFlowNet policy, achieving 96.9% and 96.6% respectively,
+similarities and differences between MaxEnt and TB. In our                  but significantly improve sample efficiency, reaching their
+experiments, we empirically observe that the training curves                best policies by rounds 8000 and 3500 respectively, which
+of MaxEnt and TB are similar, and generally have worse                      is a 6-fold and 14-fold improvement (Fig. 2).
+sample efficiency and convergence than our proposals.
+                                                                            Can it be beneficial to use an MDP with more trajectories
+Prioritized replay training improves sample efficiency.                     per x? For SIX6, we show the answer is that it can be. Using
+Prioritized replay training (PRT) improves on baselines. It                 a prepend/append MDP alongside substructure guidance,
+achieves the highest performance in PHO4 out of all models,                 PRT, and SSR is the only combination in our experiments
+and reduces the number of rounds to match the target mean                   that managed to match the target mean in SIX6 (Table 1).
+in sEH by 3-fold, from 45840 to 19390. In environments                      This result shows that favoring autoregressive MDPs may
+bag and SIX6, prioritized replay training does not improve                  not always be best, as their constraints on building order can
+the final converged GFlowNet (Table 1), but noticeably                      limit which x can be built from certain substructures.
+improves the sample efficiency of improving mean error in
+
+
+           Table 1. Converged learned mean vs. target mean (100% is best), or num. active rounds to match target mean (↓)
+              M ETHOD            BAG                   SIX6                 PHO4           QM9                 S EH
+
+              TB                 100% (13820 ± 1740)   98.0% ± 0.2%         78.3% ± 0.3%   100% (8405 ± 185)   100% (45840 ± 500)
+              M AX E NT          100% (13775 ± 2275)   96.8% ± 0.7%         77.7% ± 0.2%   100% (8735 ± 775)   100% (42670 ± 190)
+              TB + PRT           100% (20575 ± 2355)   97.3% ± 0.2%         80.2% ± 0.3%   100% (4735 ± 765)   100% (19390 ± 2570)
+              TB + PRT + SSR     100% (8880 ± 1795)    97.2% ± 0.2%         79.6% ± 0.4%   100% (5630 ± 650)   100% (9920 ± 4880)
+              S UB + PRT + SSR   100% (7440 ± 1310)    100% (4560 ± 1730)   73% ± 0.5%     98.5% ± 1.0%        100% (5570 ± 290)
+
+
+
+                                                                        8
+                                                            Towards Understanding and Improving GFlowNet Training
+
+
+
+
+                                                 SIX6 training curves
+                               100%
+
+
+
+
+      Relative error of mean
+                                80%                                      Name
+                                                                        TB
+                                                                        MaxEnt
+                                60%                                     TB+PRT
+                                                                        TB+PRT+SSR        Figure 2. SIX6, autoregressive MDP. TB baseline (blue) is outper-
+                                                                        Sub+PRT+SSR
+                                40%                                                       formed with PRT and SSR.
+                                        102          103               104
+                                               Training rounds (up to 50000)
+                                                  Bag training curves                     Mode discovery and diversity. We confirm that improved
+                               100%
+                                                                                          sample efficiency and sampling higher reward x with higher
+
+
+
+      Relative error of mean
+                                80%
+                                                                                          frequency also improves mode discovery, while retaining
+                                60%                                                       diversity. In sEH, the TB baseline discovered 140 modes
+                                40%                                                       by active round 10,000, while Sub+PRT+SSR discovered
+                                20%                                                       867 modes (6× more). The Tanimoto diversity (↑ is better)
+                                 0%                                                       among the top 100 reward-ranked samples was 0.55, slightly
+                                        102          103               104                better than 0.517 for the TB baseline. This result is consis-
+                                               Training rounds (up to 50000)              tent with other experiments, where we found that training
+                                                  sEH training curves                     strategy had no significant impact on sample diversity.
+                               100%
+
+
+
+
+      Relative error of mean
+                                80%
+                                                                                          8    Discussion
+                                60%
+                                                                                          In this work, we have identified challenges with GFlowNet
+                                40%
+                                                                                          training to learn to match the target distribution in a reason-
+                                20%                                                       able number of training steps, and contributed a conceptual
+                                        102         103              104                  understanding of GFlowNet training in terms of generaliza-
+                                                     Training rounds
+                                                                                          tion, flow distribution, and credit assignment. We evaluated
+                                                  PHO4 training curves
+                               100.0%                                                     three proposals for improving GFlowNet training: priori-
+                                                                                          tized replay training, relative edge flow parametrization, and
+
+
+
+      Relative error of mean
+                                90.0%
+                                                                                          substructure-guided trajectory balance.
+                                80.0%
+                                70.0%                                                     We discussed challenges in GFlowNet evaluation, and stud-
+                                                                                          ied GFlowNet learning behavior on benchmark tasks with
+                                60.0%
+                                                                                          biochemical data using the Anderson-Darling statistic be-
+                                         102         103              104                 tween GFlowNet sampled rewards and the target reward
+                                                      Training rounds                     distribution, and the difference in sampled mean to target
+                                                 QM9 training curves                      mean. We learned that a key challenge in GFlowNet train-
+                               100%
+                                                                                          ing is learning to not undersample the mean. However, by
+
+
+
+      Relative error of mean
+                                90%
+                                                                                          evaluating with sampled rewards, we sacrificed exactness
+                                80%                                      Name
+                                                                        TB                for efficiency. While matching the target mean is better than
+                                70%                                     MaxEnt            undersampling it, the target mean can be matched while
+                                                                        TB+PRT
+                                60%                                     TB+PRT+SSR        pθ (x) 6= p∗ (x) for all x. In future work, more insights into
+                                                                        Sub+PRT+SSR       GFlowNet learning behavior may be uncovered by more
+                                50%
+                             103        102    104                                        thoroughly comparing pθ (x) to p∗ (x) on enumerable MDPs
+                               Training rounds                                            with real-world reward functions.
+Figure 1. Training curves. Generally, baselines (orange/blue) in-
+crease reward most slowly, and converge later or to lower values,                         We have shown that altering flow distributions can signif-
+than our proposals (green/red/purple). This effect is seen most                           icantly change generalization and training behavior, and
+clearly in Six6, Bag, and sEH, and less clearly in PHO4 and QM9.                          developed a novel training objective that enables flexible
+                                                                                          control over credit assignment. While we have defined one
+                                                                                          notion of optimality of flow distribution based on general-
+                                                                                          ization and convergence, it remains an open question how
+                                                                                          best to learn favorable flow distributions.
+
+                                                                                      9
+                                Towards Understanding and Improving GFlowNet Training
+
+References                                                         N. Learning gflownets from partial episodes for im-
+                                                                   proved convergence and stability, 2022. URL https:
+Andreas, J. Measuring compositionality in representa-              //arxiv.org/abs/2209.12782.
+  tion learning. In None (ed.), International Confer-
+  ence on Learning Representations, 2019. URL https:             Malkin, N., Jain, M., Bengio, E., Sun, C., and Bengio,
+ //openreview.net/forum?id=HJz05o0qK7.                            Y. Trajectory balance: Improved credit assignment in
+                                                                  gflownets. In Advances in Neural Information Processing
+Anonymous. Improving generative flow networks with
+                                                                  Systems, volume abs/2201.13259, 2022. URL https:
+  path regularization. In Submitted to The Eleventh In-
+                                                                  //arxiv.org/abs/2201.13259.
+  ternational Conference on Learning Representations,
+  2023. URL https://openreview.net/forum?                        Minsky, M. Steps toward artificial intelligence. Proc.
+  id=7qyLeRm1e3. under review.                                    IRE, January 1961. URL http://web.media.mit.
+                                                                  edu/˜minsky/papers/steps.html.
+Bengio, E., Jain, M., Korablyov, M., Precup, D., and Ben-
+  gio, Y. Flow network based generative models for non-          Nica, A. C., Jain, M., Bengio, E., Liu, C.-H., Korablyov, M.,
+  iterative diverse candidate generation. In Beygelzimer,          Bronstein, M. M., and Bengio, Y. Evaluating generaliza-
+  A., Dauphin, Y., Liang, P., and Vaughan, J. W. (eds.),           tion in GFlownets for molecule design. In ICLR2022 Ma-
+  Advances in Neural Information Processing Systems,               chine Learning for Drug Discovery, 2022. URL https:
+  2021a. URL https://openreview.net/forum?                         //openreview.net/forum?id=JFSaHKNZ35b.
+  id=Arn2E4IRjEB.
+                                                                 Schaul, T., Quan, J., Antonoglou, I., and Silver, D. Priori-
+Bengio, Y., Deleu, T., Hu, E. J., Lahlou, S., Tiwari,              tized experience replay, 2015. URL https://arxiv.
+  M., and Bengio, E. Gflownet foundations. CoRR,                   org/abs/1511.05952.
+  abs/2111.09266, 2021b. URL https://arxiv.org/
+  abs/2111.09266.                                                Sutton, R. S. and Barto, A. G. Reinforcement Learn-
+                                                                   ing: An Introduction. The MIT Press, second edition,
+Deleu, T., Góis, A., Emezue, C., Rankawat, M., Lacoste-           2018. URL http://incompleteideas.net/
+  Julien, S., Bauer, S., and Bengio, Y. Bayesian struc-            book/the-book-2nd.html.
+  ture learning with generative flow networks. arXiv,
+  abs/2202.13903, 2022. URL https://arxiv.org/                   Szabó, Z. G. Compositionality. In Zalta, E. N. (ed.), The
+  abs/2202.13903.                                                  Stanford Encyclopedia of Philosophy. Metaphysics Re-
+                                                                   search Lab, Stanford University, fall 2020 edition, 2020.
+Fedus, W., Ramachandran, P., Agarwal, R., Bengio, Y.,
+  Larochelle, H., Rowland, M., and Dabney, W. Revisiting         Trabucco, B., Geng, X., Kumar, A., and Levine, S. Design-
+  fundamentals of experience replay. In III, H. D. and Singh,      bench: Benchmarks for data-driven offline model-based
+  A. (eds.), Proceedings of the 37th International Confer-         optimization, 2022. URL https://arxiv.org/
+  ence on Machine Learning, volume 119 of Proceedings              abs/2202.08450.
+  of Machine Learning Research, pp. 3061–3071. PMLR,
+  13–18 Jul 2020. URL https://proceedings.mlr.                   Zhang, D., Malkin, N., Liu, Z., Volokhova, A., Courville,
+  press/v119/fedus20a.html.                                        A., and Bengio, Y. Generative flow networks for discrete
+                                                                   probabilistic modeling. arXiv, abs/2202.01361, 2022.
+Jain, M., Bengio, E., Garcia, A.-H., Rector-Brooks, J.,            URL https://arxiv.org/abs/2202.01361.
+   Dossou, B. F. P., Ekbote, C., Fu, J., Zhang, T., Kil-
+   gour, M., Zhang, D., Simine, L., Das, P., and Bengio,
+  Y. Biological sequence design with gflownets. arXiv,
+   abs/2203.04115, 2022. URL https://arxiv.org/
+   abs/2203.04115.
+LA, B., A, V., JV, K., JM, R., SS, G., EJ, R., J, W.,
+  L, M., KH, K., S, I., T, S., L, S., R, G., N, S., C,
+  C., T, H., S, Y., M, K., MJ, D., M, V., DE, H., and
+  ML., B. Survey of variation in human transcription
+  factors reveals prevalent dna binding changes. Science,
+  March 2016. URL http://web.media.mit.edu/
+ ˜minsky/papers/steps.html.
+Madan, K., Rector-Brooks, J., Korablyov, M., Bengio, E.,
+ Jain, M., Nica, A., Bosc, T., Bengio, Y., and Malkin,
+
+                                                            10
+                                   Towards Understanding and Improving GFlowNet Training
+
+A     Appendix: Notes
+A.1 Oversampling low-reward x at initialization Using default PyTorch neural network initializations, we find that
+PF (st+1 |st ) outputting real numbers taken as logits has close to a uniform distribution. We can understand this with a
+simple model: suppose PF is exactly a uniform distribution, all states have exactly the same number of actions A, and all
+trajectories have the same length n: then the probability of any trajectory is 1/An . It is difficult to precisely characterize the
+entropy of pθ (x) at random neural net initialization because it depends on how many trajectories end in each x in the MDP;
+denote this Nx . We can extend the above simple model to find that at initialization, the flow ending in x is proportional
+to Nx /An . Thus pθ (x) has highest entropy and is the uniform distribution when Nx is identical for all x. However, if Nx
+varies substantially, then pθ (x) will have lower entropy.
+However, we note that the common practice of using high reward exponents (from 3 to 10) typically induces a very low
+entropy reward distribution, which can make it very unlikely in practice that at initialization, a GFlowNet’s sampled mean is
+higher than the target mean.
+A.2 Substructure Guide. Our substructure guide uses a scoring function to favor children states s that are a member of
+x in X with high reward.
+In equation 9, we presented a simplified scoring function for presentation purposes. The exact scoring function is:
+
+                                                      
+                                                                  E             R(x), if s ∈ xtarget
+                                                          {x∈X\{xtarget }:s∈x}
+                               φ(s|xtarget , X) =                                                                                  (10)
+                                                      0,                               otherwise,
+
+In words: the score φ scores a state s, given target xtarget and X, the set of all observed x so far in training. If the state s is
+not in (∈) the target x, then the score is 0 (bottom line). If the state s is in the target (the state s is a substructure of the target
+x), then the score is the average reward over the subset of x in X, where for each x in that subset, s is a substructure of that
+x. This subset excludes the target: we only care about other x in X that contains s.
+When this scoring function is used to build a guide distribution over trajectories ending in xtarget , it prefers trajectories
+along paths that include substructures/states s that are substructures of high-reward x, other than xtarget .
+The main difference with the simplified equation 9 is that here, we exclude the target x from the collection X. This focuses
+on substructures that are shared with other x.
+One corner case is when no child states are members of any x in X except for the target x: then the score for all children is
+zero. In this case, we set p(st+1 |st ) to the uniform distribution over children s that are members of the target x. We refer
+readers to the code for a very precise description of the algorithm.
+Implementation details. We parallelize guide computation on CPUs, and observe no significant overhead on GPU model
+training, at the cost of using slightly out-of-date X. We sample guide trajectories efficiently by progressively filtering X as
+the sampled trajectory lengthens: note that if a state s is not in some x, then any descendant of s cannot be in x.
+A.3    Additional figures.
+
+
+
+
+                                                                   11
+                                     Towards Understanding and Improving GFlowNet Training
+
+
+
+
+Figure 3. Intuition figure. (Left) Multiple trajectories lead to the same x. An example possible generative ordering (red) disagrees with the
+preferred credit assignment path (green), which contains a molecular substructure that causes receptor binding activity, a fact that could be
+learned by a substructure GFlowNet by looking at other molecules (right).
+
+
+
+B    Appendix: Experimental Details
+Our code is available at https://github.com/maxwshen/gflownet.
+Implementation details. We found it useful to clip gradient norms to a maximum of 10.0. We also clipped policy logit
+predictions
+     P       to a minimum of -50.0 and a maximum of 50.0. We initialized log Zθ to 5.0, which is less than the true
+Z = x R(x) in every environment. In our experiments, every active training round we sampled a batch of 16 x using
+the current training policy, and updated the model using the sample batch, then optionally performed one replay training
+update. For monitoring, every 10 active rounds we sampled 128 x from the GFlowNet policy (not the training policy). To
+evaluate the model at a certain round while reducing sample noise, we aggregate over all true policy samples from the last
+500 rounds, for an effective sample size of 6400.
+There are several design choices for substructure gflownets. One can sample training trajectories from the training policy, or
+sample x from the training policy and resample a training trajectory using the guide distribution. We found that the former
+worked better in practice, though it can increase loss and gradient norm variance, which bounding gradient norm helped
+with. The mixing weight, α, in equation 5 is another choice. We found that α = 1 was generally preferred, which eliminates
+the PB term and focuses solely on the guide likelihood term.
+For prioritized replay training, we focus on the top 10% ranked by reward and randomly sample among them to be 50% of
+the batch, with the bottom 90% ranked comprising the remainder of the batch.
+Bag. (|X | ≈ 100B) A multiset of size 13, with 7 distinct elements. The base reward is 0.01. A bag has a “substructure” if it
+contains 7 or more repeats of any letter: then it has reward 10 with 75% chance, and 30 otherwise. In this MDP, actions are
+adding an element to a bag. As this is a constructed setting, we use a small neural net policy with two layers of 16 hidden
+units. We use an exploration epsilon of 0.10.
+SIX6 (TFBind8). (|X | = 65, 536) A string of length 8 of nucleotides. The reward is wet-lab measured DNA binding
+activity to a human transcription factor, SIX6, from (LA et al., 2016; Trabucco et al., 2022). Following (Jain et al., 2022),
+we use a reward exponent of 3. Though an autoregressive MDP is conventionally used for strings, in order to compare TB
+with substructure guidance which is only meaningful in generative MDPs with more than one trajectory per x, we use a
+sequence prepend/append MDP. We use a neural net with two layers of 128 hidden units and an exploration epsilon of 0.01.
+PHO4. (|X | = 1, 048, 576) 10 nucleotide string, with wet-lab measured DNA binding activity to yeast transcription factor
+PHO4 (LA et al., 2016; Trabucco et al., 2022). We use a reward exponent of 3, and scale rewards to a maximum of 10. We
+use a neural net with three layers of 512 hidden units and an exploration epsilon of 0.01.
+
+                                                                     12
+                                Towards Understanding and Improving GFlowNet Training
+
+QM9. (|X | = 58, 765) A small molecule graph. Reward is from a proxy deep neural network predicting the HOMO-LUMO
+gap from density functional theory. We use a reward exponent of 5, and scale rewards to a maximum of 100. We build using
+12 building blocks with 2 stems, and generate with 5 blocks per molecule. As all the blocks have two stems, we treat the
+MDP as a sequence prepend/append MDP. In general, the stem locations on the graph blocks are not symmetric, so reward
+is not invariant to string reversal. We use a neural net with two layers of 1024 hidden units and an exploration epsilon of
+0.10. We measure diversity using 1 - Tanimoto similarity.
+sEH. (|X | = 34, 012, 224) A small molecule graph. Reward is from a proxy model trained to predict binding affinity to
+soluble epoxide hydrolase from AutoDock. Specifically, we trained a gradient boosted regressor on the graph neural network
+predictions from the proxy model provided by (Bengio et al., 2021a) over the entire space of X , with the goal of memorizing
+the model. Our proxy achieved a mean-squared error of 0.375, and pearson correlation of 0.905. We use a reward exponent
+of 6, which is less than 10 used in prior work, and scale rewards to a maximum of 10. We build using 18 blocks with 2
+stems, and use 6 blocks per molecule. As all the blocks have two stems, we treat the MDP as a sequence prepend/append
+MDP. In general, the stem locations on the graph blocks are not symmetric, so reward is not invariant to string reversal. We
+use a neural net with two layers of 1024 hidden units and an exploration epsilon of 0.05. We define modes as the top 0.5%
+of X as ranked by R(x). We measure diversity using 1 - Tanimoto similarity.
+B.1Anderson-Darling statistic. In figure B.1, we depict the relationship between the Anderson-Darling statistic between
+GFlowNet samples and the target distribution, and the relative error between the GFlowNet sampled mean and the target
+mean.
+
+
+
+
+                                                            13
+                                 Towards Understanding and Improving GFlowNet Training
+
+C    Appendix: Proofs
+In this section, we study the credit attribution behavior of various GFlowNet learning objectives in a simplified yet
+representative setting.
+
+C.0.1    D EFINITIONS
+Definition C.1. (Sequence prepend/append MDP). A sequence prepend/append MDP is an MDP where s0 is the empty
+string, states correspond to strings, and actions are prepending or appending a symbol in some discrete alphabet A to a
+string. We consider this MDP to only generate strings x of length n, i.e., the exit action only occurs at states corresponding
+to strings of length n, and the exit action is the only action available at those states.
+Remark 5. While simple, this is representative of many MDPs that construct compositional objects by combining subparts,
+such as building graphs by connecting new nodes to existing nodes (often, > 2 insertion points that increase as the graph
+enlarges).
+
+Definition C.2. (Tabular GFlowNet, with trajectory flow parameterization). A tabular GFlowNet uses a table to store
+the flow network. We consider a trajectory flow parameterization, where the trajectory flow F : T → R≥0 is stored as a
+table. In contrast to the function approximation setting, updating any entry in the table does not change any other entry. We
+assume all trajectory flows F (τ ) are uniformly initialized to a small positive constant . A trajectory flow F (τ ) is updated
+with y with F (τ ) ← F (τ ) + λ(y − F (τ )) for some step size 0 < λ ≤ 1.
+Remark 6. The tabular setting has historically been used to develop, motivate, and study properties of reinforcement
+learning algorithms (Sutton & Barto, 2018). Note that the trajectory flow parameterization is inefficient in practice,
+because computing PF on a single state can require summing over exponentially many trajectories. However, it is a useful
+parameterization for theoretical analysis for various reasons.
+
+
+Definition C.3. (Setting A). This setting comprises a sequence prepend/append MDP, and a fixed dataset {x, x0 }, each of
+length n, with R(x) = R(x0 ). Let s∗ denote the longest string shared by x, x0 , with length k < n: i.e., there is no string of
+length k + 1 shared by both x, x0 . Let sk (x) denote the set of k-length substrings of some x.
+Remark 7. In this setting, every trajectory is a sequence of strings of length (0, 1, 2, ..., n), thus every trajectory contains
+exactly one substring of length k for every k ≤ n. As a result, a trajectory ending in x must pass through either s∗ (the
+shared substring) or some substring s0 ∈ sk (x) (a non-shared substring). Our analysis will concern the credit assignment
+behavior of various learning objectives in how they assign flow to F (s∗ ) compared to F (sk (x) \ s∗ ).
+
+
+C.0.2    P ROPERTIES
+We now state various properties about setting C.3.
+Property 1. (Exponentially many trajectories for each x). In a sequence prepend/append MDP, there are 2n−1 trajectories
+that end in a specific string x of length n.
+
+Proof. To build a string s of length n, we can choose an initial zero-basedindex i for our first character, then we can take i
+prepend actions and n − i − 1 append steps in any order. There are n−1   i   n − 1 choose i such sequences of prepend and
+append actions.
+Pn−1 n−1       Summing      over choices of i, which can be viewed   as summing   over a row of Pascal’s triangle, there are
+                 n−1
+  i=0    i   =  2      trajectories.
+
+Remark 8. This property shows how “easy” it is to design an MDP with exponentially many trajectories for each x. Note
+that an autoregressive, append-only MDP has exactly one trajectory for each x. The sequence prepend/append MDP has two
+“insertion points”, points at which new content can be added, and has exponentially many trajectories for each x. In general,
+MDPs that construct objects by combining building blocks will likely have many insertion points. MDPs that do not have
+specific insertion positions, such as sets, also have at least exponentially many trajectories for each x.
+Property 2. (Number of trajectories through a state s to some x). In a sequence prepend/append MDP, suppose s of
+length k is preceded by a characters in x of length n. There are n−k
+                                                                  a 2
+                                                                      k−1
+                                                                          trajectories passing through s that end at x.
+
+                                                              14
+                                  Towards Understanding and Improving GFlowNet Training
+
+Proof. There are 2k−1 trajectories from the root to s (property 1). There are n−k
+                                                                                     
+                                                                                  a    action sequences corresponding to
+different orderings of prepending and appending, to start from s and end at x. So in total there are n−k
+                                                                                                          k−1
+                                                                                                      a 2      trajectories
+passing through s∗ that end at x.
+
+Property 3. Uniform trajectory flow distribution ⇐⇒ Uniform forward and backward policies. In a sequence
+prepend/append MDP, the flow has a uniform trajectory flow distribution F (τ ) if and only if PF and PB are uniform at
+every state.
+
+
+Proof. (Uniform trajectory flow distribution =⇒ Uniform forward and backward policies).
+Let the uniform F (τ ) = . Recall that F (s, s0 ) = τ ∈T :(s,s0 )∈τ F (τ ). Suppose s has length k and therefore s0 has length
+                                                      P
+
+k + 1. Using property 1, there are 2k−1 trajectories from s0 to s, and there are 2n−k−1 trajectories from s0 to any string of
+length n, for a total of 2n−2 trajectories that pass through the edge s → s0 . Using F (τ ) = , we have for any s with length
+k and s0 with length k + 1, F (s, s0 ) = 2n−2 .
+At any state corresponding to a string of length k, PF is only a distribution over strings of length k + 1, and PB over k − 1,
+because the MDP always adds a single character with every action. As PF and PB sample with probability proportional to
+the edge flow, and the edge flow is identical for every edge, PF and PB are uniform.
+
+
+Proof. (Uniform trajectory flow distribution ⇐= Uniform forward and backward policies).
+Any trajectory τ = (s0 , s1 , ..., sn ) is a sequence of strings of length (0, 1, 2, ..., n). We consider the forward policy first.
+Note that at s0 , there are |A| actions/children, corresponding to adding each letter in the alphabet A. For any string of length
+1 to n − 1, there are 2|A| actions/children. For any string of length n, there is 1 action (exiting). Using this, we have for any
+τ,
+
+                                                                     n−1
+                                                                     Y
+                                              p(τ ) = PF (s1 |s0 )             PF (st+1 |st )                                 (11)
+                                                                         t=1
+                                                              n−1
+                                                           1 Y 1
+                                                      =                .                                                      (12)
+                                                          |A| t=1 2|A|
+
+
+As this doesn’t depend on the states in τ , we have p(τ ) = p(τ 0 ) for any trajectories τ, τ 0 ∈ T . Note that F (τ ) = Zp(τ ).
+The backward policy case proceeds similarly, using the observation that each string of length 2 to n has 2 parents.
+
+
+C.0.3    M AXIMUM ENTROPY GF LOW N ETS
+Recall that the maximum entropy learning objective learns PFθ using the trajectory balance constraint:
+
+                                             n−1
+                                             Y                                 n−1
+                                                                               Y
+                                        Zθ         PFθ (st+1 |st ) = R(x)             PB (st |st+1 )                          (13)
+                                             t=0                                t=0
+
+
+for a trajectory τ ending in x. The maximum entropy objective fixes PB (st−1 |st ) as the uniform distribution. The trajectory
+balance constraint is an algebraic manipulation of the simpler detailed balancing constraint
+
+
+                                          F (s)PF (st+1 |st ) = F (st+1 )PB (st |st+1 )                                       (14)
+
+that “chains” the detailed balancing constraint over a complete trajectory. Other constraints can be derived by extending the
+chain over partial trajectories. Note that the trajectory balance constraint with a uniform PB fully determines PF (st+1 |st )
+when all R(x) are known.
+
+                                                                    15
+                                  Towards Understanding and Improving GFlowNet Training
+
+Theorem C.4. (Maximum entropy GFlowNets attribute minimal credit to shared substructures). In setting C.3, suppose
+the GFlowNet is trained with the maximum entropy learning objective. Then, at the global minima,
+                                                  "              #        !
+                                                    F (s∗ )            1
+                                              E                    =Θ                                                         (15)
+                                                F (sk (x) \ s∗ )      n−k
+
+over uniformly random positions of s∗ in x, x0 .
+Remark 9. As all trajectories to x must pass through either the shared substring s∗ (with length k) or a non-shared substring
+in sk (x) \ s∗ , credit assignment for x, r(x) can be evaluated by how much flow, or reward, is assigned to s∗ versus sk (x) \ s∗ .
+This theorem states that a minority of credit is assigned to s∗ , and it decreases linearly with n − k.
+
+Proof. As a uniform backward policy induces a uniform trajectory distribution over trajectories connecting x to the root
+(property 3), and there are 2n−1 such trajectories (property 1), each trajectory ending in x has trajectory flow r(x)/2n−1 .
+By property 2, there are n−k        trajectories passing through s∗ that end at x. Multiplying by the flow over each trajectory,
+                               k−1
+                           a 2
+                                ∗
+the total flow passing through s ending at just x is
+
+                                                             n−k k−1
+                                                                  
+                                                              a 2     R(x)
+                                                                  n−1
+                                                                           .                                                  (16)
+                                                                2
+
+The average number of trajectories over a uniform distribution on a, which can range from 0 to n − k, is:
+
+                                            n−k
+                                                                  "     #
+                                      1     X n − k     2n−k       n−k
+                                                       =       =E                                                             (17)
+                                  n − k + 1 a=0  a       n−k+1  a     a
+
+Thus, the expected flow passing through s∗ and ending at just x, over uniformly random positions of s∗ in x is:
+
+                                                  "                        #
+                                                      n−k k−1
+                                                         
+                                                       a 2    R(x)                  R(x)
+                                             E            n−1
+                                                                               =                                              (18)
+                                              a          2                         n−k+1
+
+                                                              0
+The total expected flow of s∗ to both x, x0 is R(x)+R(x )                                                ∗  (n−k)R(x)
+                                                 n−k+1 , while the total expected flow through sk (x) \ x is n−k+1 .
+                   0
+When R(x) = R(x ), the ratio is 2/(n − k), which scales as Θ(1/(n − k)).
+
+
+Remark 10. In a set MDP, a similar argument shows that the fraction of flow going through s∗ out of all flow going through
+all subsets of size k scales as Θ(1/k!).
+
+C.0.4    T RAJECTORY BALANCE GF LOW N ETS
+The trajectory balance learning objective is more challenging to analyze because it has many global minima which are
+reached by a self-modifying learning procedure, where in each step the GFlowNet policy generates samples x which are
+used to update the policy.
+Definition C.5. (Trajectory balance training procedure: Fixed dataset, tabular GFlowNet setting).
+This definition builds on setting C.3, and the definitions of a tabular GFlowNet (definition C.2). We suppose that , the initial
+value of all trajectory flows, is sufficiently small and R(x) is sufficiently large such that, at initialization,
+
+
+                                                         Finit (x) < R(x).                                                    (19)
+
+We consider training for m steps, with some learning rate λ. During each training step, we:
+
+                                                                      16
+                                     Towards Understanding and Improving GFlowNet Training
+
+  1. Sample a trajectory τ ending in x or x0 according to the current GFlowNet policy. Under our tabular trajectory flow
+     parameterization, we presume this is done by sampling a trajectory with probability proportional to its flow, among all
+     trajectories ending in either x, x0 (see remark 12).
+  2. The GFlowNet is updated according to the trajectory balance learning objective. We update F (τ ) ← F (τ ) + ∆, where
+     we label ∆ = λ(R(x) − Finit (τ )) as the positive, constant flow update.
+
+If λ = 2/m, then when we have performed exactly m/2 training steps on x and x0 , we have F (x) = R(x) and F (x0 ) =
+R(x0 ).
+Remark 11. This training procedure is closely related to standard GFlowNet active learning schemas (Bengio et al., 2021a).
+The condition that every trajectory ends in an x in the fixed dataset is also used in the backward trajectory data augmentation
+training procedure used in (Zhang et al., 2022; Jain et al., 2022). This setting is conceptually equivalent to standard active
+learning when R(x) has the property that learning on any x00 , R(x00 ) for x00 ∈     / X negligibly impacts the learned flow
+network. Note that this training procedure has full support over states and trajectories in a tabular GFlowNet where all
+trajectory flows are initialized to a small positive constant.
+Remark 12. (Non-Markovian trajectory sampling). Sampling a trajectory proportional to its flow when each trajectory has
+a separate tabular flow value induces a non-Markovian trajectory distribution, which acts as a relaxation of the standard
+GFlowNet procedure where trajectories are sampled according to the Markovian policy PF or PB . For theoretical analysis,
+this simplifying assumption ensures that the principle of “tabular independence” is obeyed for trajectory sampling - changing
+the flow of some trajectory τ does not change the relative likelihood ratio of sampling any other two trajectories τ 0 , τ 00 .
+
+                                                                ∗∗∗
+Theorem C.6. (Trajectory balance tends to reduce credit to shared substructures). In setting C.3, suppose the GFlowNet
+is trained with trajectory balance according to the steps in C.5. Let t index training steps. At any training step t, if
+
+                                                       Ft−1 (s∗ )
+                                                                         <n−k                                               (20)
+                                                 Es∼sk (x)\s∗ [Ft−1 (s)]
+
+holds (where the expectation is on a uniform distribution over the set), then the expected learning update over training
+trajectories has:
+                             h        i                h                 i
+                            E Ft (s∗ ) − Ft−1 (s∗ ) < E Ft (sk (x) \ s∗ ) − Ft−1 (sk (x) \ s∗ ).                            (21)
+                             τ                              τ
+                                                           ∗
+Remark 13. This proposition states that, unless F (s ) dominates F (s) for any s that is not a shared k-length substring,
+each trajectory balance training step tends to increase flow more for non-shared substrings than for s∗ .
+
+Proof. Recall the following definitions: s∗ is the longest substring shared between x, x0 , and has length k. The set of
+k-length strings in x is denoted by sk (x), and there are n − k + 1 such strings.
+As any trajectory from x to s0 must pass through exactly one string in sk (x), and the state flow is defined as the total flow
+summed over all trajectories passing through that state, the probability of sampling a trajectory that passes through s∗ is
+
+                                                         F (s∗ )       F (s∗ )
+                                             p(s∗ ) =              =P               .                                       (22)
+                                                        F (sk (x))   s∈sk (x) F (s)
+
+Suppose Ft−1 (s∗ ) < Ft−1 (sk (x) \ x∗ ). Using the fact that there are n − k items in sk (x) \ x∗ , this condition is equivalent
+to equation 20. This means that pt−1 (s∗ ) < pt−1 (sk (x) \ s∗ ).
+Note that the expected increase in flow from one training step is:
+
+                                                   h       i
+                                                 E Ft (s∗ ) − Ft−1 (s∗ ) = ∆pt−1 (s∗ )                                      (23)
+                                                 τ
+                                  h                i
+                                 E Ft (sk (x) \ s ) − Ft−1 (sk (x) \ s∗ ) = ∆pt−1 (sk (x) \ s∗ )
+                                                 ∗
+                                                                                                                            (24)
+                                 τ
+
+
+                                                                17
+                                  Towards Understanding and Improving GFlowNet Training
+
+Using pt−1 (s∗ ) < pt−1 (sk (x) \ s∗ ), we arrive at our proposition.
+
+                                                             ∗∗∗
+
+When trajectories are sampled according to their flow and not by a Markovian policy, the “rich-get-richer” property can be
+understood through a Pólya urn model.
+Theorem C.7. (Trajectory balance training as a Pólya urn model). In setting C.3, suppose the GFlowNet is trained with
+trajectory balance according to the steps in C.5. After m training steps, we have:
+
+                                                                                                       !
+                                                             Ffinal (s∗ ) − Finit (s∗ )
+                                                     p                                            >ψ       ≤                 (25)
+                                                       Ffinal (sk (x, x0 )) − Finit (sk (x, x0 ))
+                                                                                                           !
+                                                     α      e           2n−1
+                     1 − BetaBinomialCDF ψm; n = m,     = √    ,α + β =                                                      (26)
+                                                    α+β  π n−k            ∆
+
+      e
+for π√n−k ≤ ψ ≤ 1 and n − k ≥ 3.
+Remark 14. A consequence of the Pólya urn model is that the fraction of total flow attributed during training that passes
+through s∗ follows a beta-binomial distribution. As each training step increases flow by a constant amount, this fraction is
+equal to the fraction of trajectories sampled through s∗ during the “rich-get-richer” training process.
+
+Proof. The Pólya urn model applies as follows: we have one color of ball in the urn for each k-length substring in either
+x, x0 , where we recall that s∗ is the only k-length substring shared by both x, x0 . There are therefore 2(n − k) + 1 colors.
+We denote the set of k-length substrings in either x, x0 as sk (x, x0 ). At each training step, we sample a trajectory τ ending in
+either x, x0 which must pass through exactly one s ∈ sk (x, x0 ) with probability proportional to F (s); in the Pólya urn, this
+corresponds to sampling a ball from the urn with color c. We then increment the flow along τ . Due to the tabular trajectory
+flow parameterization, and tabular trajectory sampling assumption in C.5, this incrementing step does not change the flow to
+any other state in sk (x). In the Pólya urn, this corresponds to adding a ball with color c to the urn.
+The distribution of ball colors sampled from the Pólya urn, after m steps, follows a Dirichlet-multinomial distribution. As
+we only care about s∗ compared to sk (x, x0 ) \ s∗ , we can reduce to two colors, which follows a Beta-binomial distribution.
+We label ’white balls’ for s∗ and ’black balls’ for sk (x, x0 ) \ s∗ .
+At initialization, the number of white balls for s∗ is determined by F (s∗ |x, x0 ), which depends on its position in x and x0
+(property 2). We apply an upper bound on F (s∗ |x) to remove this dependence, which will let us treat x, x0 identically and
+simplify our exposition.
+Recall that a denotes how many characters precede s∗ in x. We use the upper bound (see lemma C.8):
+
+                                                                e2n−k
+                                                           
+                                                        n−k
+                                                 max          ≤ √     .                                                      (27)
+                                               0≤a≤n−k   a     π n−k
+
+For some x̂ in {x, x0 }, recall that there are 2n−1 trajectories ending in x̂. We upper bound the number of trajectories passing
+through s∗ ending in x̂ as:
+
+                                                            e2n−k k−1
+                                                   
+                                               n − k k−1
+                                                      2  ≤ √     2                                                         (28)
+                                                 a         π n−k
+
+As both x, x0 are the same length, and s∗ is the only k-length substring in x and x0 , the upper bound on the proportion of
+trajectories with s∗ are equal for x and x0 . This corresponds to an “upper-bounded” Pólya urn where the number of white
+balls for trajectories with s∗ ending in x or x0 is proportional to 28, and the number of black balls for any other trajectory
+ending in x or x0 is proportional to 2n−1 . We continue our analysis using this upper-bounded Pólya urn.
+We now solve for the parameters of the beta-binomial distribution that models the urn’s draws. Let α denote the initial
+number of white balls for s∗ . As “one ball” is ∆ flow,
+
+                                                               18
+                                      Towards Understanding and Improving GFlowNet Training
+
+
+
+                                                                         e2n−k 2k−1 
+                                                                α=       √                                                (29)
+                                                                        π n−k ∆
+
+Similarly, let α + β denote the initial total number of balls.
+
+
+                                                                                          2k−1 
+                                                              α + β = (2n−k )                                             (30)
+                                                                                            ∆
+                            α          e
+When n − k = 3, we have (α+β)    = π√n−k    = 0.499555773, which is the mean of the normalized beta binomial confined
+between 0 and 1. As the beta binomial distribution’s mean and variance are largest when α/(α + β) = 0.5, and decrease
+as α/(α + β) decreases below 0.5, we have that for any threshold ψ greater than or equal to the mean α/(α + β), our
+upper bounded beta binomial has a larger cumulative probability density above ψ than any beta binomial with smaller mean.
+Therefore, our upper-bounded beta binomial satisfies the bounds in the proposition.
+
+
+
+                                                                            ∗∗∗
+Lemma C.8. (Upper bound on the largest element in a row of Pascal’s triangle).
+For any natural number n,
+
+                                                                           e2n
+                                                                      
+                                                                      n
+                                                                max      ≤ √ .                                            (31)
+                                                                0≤a≤n a   π n
+
+                              n   n        n
+                                                
+Proof. Note that the series   0 , 1 , ..., n          corresponds to a row of Pascal’s triangle.
+                                           n                                                                       n
+                                                                                                                    
+First, consider when n is even. Then       a     is maximized when a = n/2. We therefore seek an upper bound to   n/2 . We use
+Stirling’s approximation:
+
+                                                            
+                                                           n      n!
+                                                               ≤ n 2                                                      (32)
+                                                          n/2   ( 2 !)
+                                                                                          1
+                                                                                  enn+ 2 e−n
+                                                                    ≤ √         n+1                                       (33)
+                                                                      ( 2π( n2 ) 2 e−n/2 )2
+
+Following algebraic manipulations, we get
+
+
+                                                                               e2n
+                                                                          
+                                                                         n
+                                                                             ≤ √                                          (34)
+                                                                        n/2   π n
+
+Now, consider when n is odd. Then na is maximized when a is n/2 rounded up or down. This corresponds to                   n
+                                                                                                                              
+                                                                                                                         n+1       ,
+                                                                                                                          2
+                           n
+                              
+which we note is equal to n−1   . By the recurrence relation of Pascal’s triangle, we have
+                              2
+
+
+
+                                                                                          
+                                                          n                 n              n+1
+                                                          n+1       +       n−1       =       n+1                         (35)
+                                                           2
+                                                                         2             2   
+                                                                          n             1 n+1
+                                                                            n+1       =         .                         (36)
+                                                                             2          2 n+1
+                                                                                            2
+
+
+                                                                                19
+                                 Towards Understanding and Improving GFlowNet Training
+
+                                                                       n+1
+Applying the same upper bounding strategy for the even case on         n+1    , we get
+                                                                        2
+
+
+
+
+                                                                   1 e2n+1
+                                                           
+                                                      n
+                                                      n+1         ≤  √                                                   (37)
+                                                       2           2π n+1
+                                                                     e2n
+                                                                  ≤ √                                                    (38)
+                                                                   π n+1
+
+                                                          n
+As this upper bound is less than the upper bound of πe2√n , we can apply that bound whether n is odd or even.
+
+C.0.5   S UBSTRUCTURE GF LOW N ETS
+Theorem C.9. (Substructure GFlowNets attribute credit to shared substructures). In setting C.3, suppose the GFlowNet
+is trained as a substructure GFlowNet. Then, at the global minima over learned Markovian policies PB , PF ,
+
+
+                                                      F (s∗ ) = R(x) + R(x0 ),                                           (39)
+                                                              ∗
+                                              F (sk (x) \ s ) = 0.                                                       (40)
+
+Proof. As s∗ is the only k-length substring in both x, x0 , all trajectories ending in x, x0 sampled by the substructure-aware
+guide distribution must include s∗ . When PB reaches a global minima in matching the guide distribution, it will also have
+this property, because this property is Markov: for any sk+1 of length k + 1 connected to s∗ , have PB (s∗ |sk+1 ) = 1. When
+PF reaches a global minima, it therefore must assign all flow from R(x), R(x0 ) through s∗ .
+Remark 15. In practice, it may be preferable to not assign all credit for R(x), R(x0 ) to a single substring s∗ ; in some
+situations, this may correspond to overfitting. Other credit assignments are easily achievable by other guide distribution
+designs, or mixing the substructure GFlowNet guide distribution with a uniform guide distribution.
+
+
+
+
+                                                                  20
+

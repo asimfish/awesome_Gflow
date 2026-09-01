@@ -1,0 +1,62 @@
+FAIL rc=1 A01 559s
+OK N007 317s
+OK N010 487s
+OK N011 304s
+OK N015 259s
+FAIL rc=1 O01 691s
+OK O07 342s
+OK O08 220s
+OK T01 457s
+OK T02 1225s
+OK T05 373s
+OK T07 614s
+OK T08 462s
+OK T09 231s
+OK T12 616s
+OK T14 441s
+OK T15 557s
+OK T17 477s
+OK T19 571s
+OK T36 527s
+OK T49 421s
+[round] done=20/35 idle=0
+OK N019 240s
+OK N029 458s
+FAIL rc=1 N032 1163s
+FAIL rc=1 N061 586s
+OK N082 642s
+OK N099 215s
+OK N103 386s
+[round] done=25/35 idle=0
+[round] done=25/35 idle=1
+[round] done=25/35 idle=2
+[round] done=25/35 idle=3
+[round] done=25/35 idle=4
+[round] done=25/35 idle=5
+[round] done=25/35 idle=6
+[round] done=25/35 idle=7
+[round] done=25/35 idle=8
+[round] done=25/35 idle=9
+[round] done=25/35 idle=10
+[round] done=25/35 idle=11
+[round] done=25/35 idle=12
+[round] done=25/35 idle=13
+[round] done=25/35 idle=14
+[round] done=25/35 idle=15
+[round] done=25/35 idle=16
+[round] done=25/35 idle=17
+[round] done=25/35 idle=18
+[round] done=25/35 idle=19
+[round] done=25/35 idle=20
+[round] done=25/35 idle=21
+[round] done=25/35 idle=22
+[round] done=25/35 idle=23
+[round] done=25/35 idle=24
+[round] done=25/35 idle=25
+[round] done=25/35 idle=26
+[round] done=25/35 idle=27
+[round] done=25/35 idle=28
+[round] done=25/35 idle=29
+[round] done=25/35 idle=30
+BATCH_DONE
+FAIL rc=1 A01 552s

@@ -1,0 +1,264 @@
+{
+ "T01": {
+  "title": "Flow Network based Generative Models for Non-Iterative Diverse Candidate Generation",
+  "arxiv_id": "2106.04399v2",
+  "matched_title": "Flow Network based Generative Models for Non-Iterative Diverse Candidate Generation",
+  "pdf_path": "pdfs/en/T01_flow_network_based_generative_models_for_non_iterative_diver.pdf",
+  "pdf_bytes": 1827836,
+  "pdf_ok": true
+ },
+ "T02": {
+  "title": "GFlowNet Foundations",
+  "arxiv_id": "2111.09266v5",
+  "matched_title": "GFlowNet Foundations",
+  "pdf_path": "pdfs/en/T02_gflownet_foundations.pdf",
+  "pdf_bytes": 1270695,
+  "pdf_ok": true
+ },
+ "T03": {
+  "title": "Trajectory Balance: Improved Credit Assignment in GFlowNets",
+  "arxiv_id": "2201.13259v4",
+  "matched_title": "Trajectory balance: Improved credit assignment in GFlowNets",
+  "pdf_path": "pdfs/en/T03_trajectory_balance_improved_credit_assignment_in_gflownets.pdf",
+  "pdf_bytes": 1336717,
+  "pdf_ok": true
+ },
+ "T05": {
+  "title": "Learning GFlowNets from Partial Episodes for Improved Convergence and Stability",
+  "arxiv_id": "2209.12782v3",
+  "matched_title": "Learning GFlowNets from partial episodes for improved convergence and stability",
+  "pdf_path": "pdfs/en/T05_learning_gflownets_from_partial_episodes_for_improved_conver.pdf",
+  "pdf_bytes": 4512954,
+  "pdf_ok": true
+ },
+ "T07": {
+  "title": "Towards Understanding and Improving GFlowNet Training",
+  "arxiv_id": "2305.07170v1",
+  "matched_title": "Towards Understanding and Improving GFlowNet Training",
+  "pdf_path": "pdfs/en/T07_towards_understanding_and_improving_gflownet_training.pdf",
+  "pdf_bytes": 2629246,
+  "pdf_ok": true
+ },
+ "T08": {
+  "title": "GFlowNets and Variational Inference",
+  "arxiv_id": "2210.00580v3",
+  "matched_title": "GFlowNets and variational inference",
+  "pdf_path": "pdfs/en/T08_gflownets_and_variational_inference.pdf",
+  "pdf_bytes": 1141552,
+  "pdf_ok": true
+ },
+ "T09": {
+  "title": "A Variational Perspective on Generative Flow Networks",
+  "arxiv_id": "2210.07992v1",
+  "matched_title": "A Variational Perspective on Generative Flow Networks",
+  "pdf_path": "pdfs/en/T09_a_variational_perspective_on_generative_flow_networks.pdf",
+  "pdf_bytes": 693012,
+  "pdf_ok": true
+ },
+ "T12": {
+  "title": "A Theory of Continuous Generative Flow Networks",
+  "arxiv_id": "2301.12594v2",
+  "matched_title": "A theory of continuous generative flow networks",
+  "pdf_path": "pdfs/en/T12_a_theory_of_continuous_generative_flow_networks.pdf",
+  "pdf_bytes": 1219170,
+  "pdf_ok": true
+ },
+ "T14": {
+  "title": "Generative Flow Networks as Entropy-Regularized RL",
+  "arxiv_id": "2310.12934v3",
+  "matched_title": "Generative Flow Networks as Entropy-Regularized RL",
+  "pdf_path": "pdfs/en/T14_generative_flow_networks_as_entropy_regularized_rl.pdf",
+  "pdf_bytes": 2150811,
+  "pdf_ok": true
+ },
+ "T15": {
+  "title": "Discrete Probabilistic Inference as Control in Multi-path Environments",
+  "arxiv_id": "2402.10309v2",
+  "matched_title": "Discrete Probabilistic Inference as Control in Multi-path Environments",
+  "pdf_path": "pdfs/en/T15_discrete_probabilistic_inference_as_control_in_multi_path_en.pdf",
+  "pdf_bytes": 1263553,
+  "pdf_ok": true
+ },
+ "T17": {
+  "title": "On Divergence Measures for Training GFlowNets",
+  "arxiv_id": "2410.09355v2",
+  "matched_title": "On Divergence Measures for Training GFlowNets",
+  "pdf_path": "pdfs/en/T17_on_divergence_measures_for_training_gflownets.pdf",
+  "pdf_bytes": 988988,
+  "pdf_ok": true
+ },
+ "T19": {
+  "title": "A Theory of Non-Acyclic Generative Flow Networks",
+  "arxiv_id": "2312.15246v1",
+  "matched_title": "A Theory of Non-Acyclic Generative Flow Networks",
+  "pdf_path": "pdfs/en/T19_a_theory_of_non_acyclic_generative_flow_networks.pdf",
+  "pdf_bytes": 808252,
+  "pdf_ok": true
+ },
+ "T32": {
+  "title": "When Do GFlowNets Learn the Right Distribution?",
+  "arxiv_id": null,
+  "pdf_ok": false
+ },
+ "T36": {
+  "title": "Revisiting Non-Acyclic GFlowNets in Discrete Environments",
+  "arxiv_id": "2502.07735v3",
+  "matched_title": "Revisiting Non-Acyclic GFlowNets in Discrete Environments",
+  "pdf_path": "pdfs/en/T36_revisiting_non_acyclic_gflownets_in_discrete_environments.pdf",
+  "pdf_bytes": 868295,
+  "pdf_ok": true
+ },
+ "T49": {
+  "title": "\\(f\\)-Trajectory Balance",
+  "arxiv_id": "2605.15417v1",
+  "matched_title": "$f$-Trajectory Balance: A Loss Family for Tuning GFlowNets, Generative Models, and LLMs with Off- and On-Policy Data",
+  "pdf_path": "pdfs/en/T49_f_trajectory_balance.pdf",
+  "pdf_bytes": 12064947,
+  "pdf_ok": true
+ },
+ "O01": {
+  "title": "Optimal Transport for Machine Learners",
+  "arxiv_id": "2505.06589v3",
+  "matched_title": "Optimal Transport for Machine Learners",
+  "pdf_path": "pdfs/en/O01_optimal_transport_for_machine_learners.pdf",
+  "pdf_bytes": 27786429,
+  "pdf_ok": true
+ },
+ "O07": {
+  "title": "Learning Shortest Paths with Generative Flow Networks",
+  "arxiv_id": "2603.01786v1",
+  "matched_title": "Learning Shortest Paths with Generative Flow Networks",
+  "pdf_path": "pdfs/en/O07_learning_shortest_paths_with_generative_flow_networks.pdf",
+  "pdf_bytes": 677172,
+  "pdf_ok": true
+ },
+ "O08": {
+  "title": "Your GFlowNet Secretly Learns an Optimal Transport Plan",
+  "arxiv_id": "2606.06272v1",
+  "matched_title": "Your GFlowNet Secretly Learns an Optimal Transport Plan",
+  "pdf_path": "pdfs/en/O08_your_gflownet_secretly_learns_an_optimal_transport_plan.pdf",
+  "pdf_bytes": 676457,
+  "pdf_ok": true
+ },
+ "A01": {
+  "title": "GFlowNets for AI-Driven Scientific Discovery",
+  "arxiv_id": "2302.00615v2",
+  "matched_title": "GFlowNets for AI-Driven Scientific Discovery",
+  "pdf_path": "pdfs/en/A01_gflownets_for_ai_driven_scientific_discovery.pdf",
+  "pdf_bytes": 2524248,
+  "pdf_ok": true
+ },
+ "N007": {
+  "title": "Distributional GFlowNets with Quantile Flows",
+  "arxiv_id": "2302.05793v3",
+  "matched_title": "Distributional GFlowNets with Quantile Flows",
+  "pdf_path": "pdfs/en/N007_distributional_gflownets_with_quantile_flows.pdf",
+  "pdf_bytes": 12874518,
+  "pdf_ok": true
+ },
+ "N010": {
+  "title": "Improved off-policy training of diffusion samplers",
+  "arxiv_id": "2402.05098v5",
+  "matched_title": "Improved off-policy training of diffusion samplers",
+  "pdf_path": "pdfs/en/N010_improved_off_policy_training_of_diffusion_samplers.pdf",
+  "pdf_bytes": 2174552,
+  "pdf_ok": true
+ },
+ "N011": {
+  "title": "Generative Augmented Flow Networks",
+  "arxiv_id": "2210.03308v1",
+  "matched_title": "Generative Augmented Flow Networks",
+  "pdf_path": "pdfs/en/N011_generative_augmented_flow_networks.pdf",
+  "pdf_bytes": 6171561,
+  "pdf_ok": true
+ },
+ "N015": {
+  "title": "CFlowNets: Continuous Control with Generative Flow Networks",
+  "arxiv_id": "2303.02430v1",
+  "matched_title": "CFlowNets: Continuous Control with Generative Flow Networks",
+  "pdf_path": "pdfs/en/N015_cflownets_continuous_control_with_generative_flow_networks.pdf",
+  "pdf_bytes": 6559608,
+  "pdf_ok": true
+ },
+ "N018": {
+  "title": "Trajectory Balance with Asynchrony (TBA)",
+  "arxiv_id": null,
+  "pdf_ok": false
+ },
+ "N019": {
+  "title": "FlowRL: Matching Reward Distributions for LLM Reasoning",
+  "arxiv_id": "2509.15207v3",
+  "matched_title": "FlowRL: Matching Reward Distributions for LLM Reasoning",
+  "pdf_path": "pdfs/en/N019_flowrl_matching_reward_distributions_for_llm_reasoning.pdf",
+  "pdf_bytes": 940182,
+  "pdf_ok": true
+ },
+ "N029": {
+  "title": "Improved sampling via learned diffusions",
+  "arxiv_id": "2307.01198v2",
+  "matched_title": "Improved sampling via learned diffusions",
+  "pdf_path": "pdfs/en/N029_improved_sampling_via_learned_diffusions.pdf",
+  "pdf_bytes": 4392424,
+  "pdf_ok": true
+ },
+ "N032": {
+  "title": "Adjoint Matching: Fine-tuning Flow and Diffusion Generative Models with Memoryless Stochastic Optimal Control",
+  "arxiv_id": "2409.08861v5",
+  "matched_title": "Adjoint Matching: Fine-tuning Flow and Diffusion Generative Models with Memoryless Stochastic Optimal Control",
+  "pdf_path": "pdfs/en/N032_adjoint_matching_fine_tuning_flow_and_diffusion_generative_m.pdf",
+  "pdf_bytes": 11921609,
+  "pdf_ok": true
+ },
+ "N038": {
+  "title": "Generalized Schrödinger Bridge on Graphs (GSBoG)",
+  "arxiv_id": null,
+  "pdf_ok": false
+ },
+ "N041": {
+  "title": "Unsupervised Learning for Optimal Transport plan prediction between unbalanced graphs (ULOT)",
+  "arxiv_id": null,
+  "pdf_ok": false
+ },
+ "N043": {
+  "title": "Diffusion Schrödinger Bridge Matching (DSBM)",
+  "arxiv_id": null,
+  "pdf_ok": false
+ },
+ "N046": {
+  "title": "Categorical Schrödinger Bridge Matching (CSBM)",
+  "arxiv_id": null,
+  "pdf_ok": false
+ },
+ "N061": {
+  "title": "Generative Flow Networks: Theory and Applications to Structure Learning",
+  "arxiv_id": "2501.05498v1",
+  "matched_title": "Generative Flow Networks: Theory and Applications to Structure Learning",
+  "pdf_path": "pdfs/en/N061_generative_flow_networks_theory_and_applications_to_structur.pdf",
+  "pdf_bytes": 5381340,
+  "pdf_ok": true
+ },
+ "N082": {
+  "title": "Path-dependent Discrete Amortized Inference",
+  "arxiv_id": "2608.08644v1",
+  "matched_title": "Path-dependent Discrete Amortized Inference",
+  "pdf_path": "pdfs/en/N082_path_dependent_discrete_amortized_inference.pdf",
+  "pdf_bytes": 1562238,
+  "pdf_ok": true
+ },
+ "N099": {
+  "title": "torchgfn: A PyTorch GFlowNet Library",
+  "arxiv_id": "2305.14594v4",
+  "matched_title": "torchgfn: A PyTorch GFlowNet library",
+  "pdf_path": "pdfs/en/N099_torchgfn_a_pytorch_gflownet_library.pdf",
+  "pdf_bytes": 546801,
+  "pdf_ok": true
+ },
+ "N103": {
+  "title": "Discrete Compositional Generation via General Soft Operators and Robust Reinforcement Learning",
+  "arxiv_id": "2506.17007v2",
+  "matched_title": "Discrete Compositional Generation via General Soft Operators and Robust Reinforcement Learning",
+  "pdf_path": "pdfs/en/N103_discrete_compositional_generation_via_general_soft_operators.pdf",
+  "pdf_bytes": 1134683,
+  "pdf_ok": true
+ }
+}

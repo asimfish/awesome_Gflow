@@ -1,0 +1,212 @@
+[
+ {
+  "id": "T01",
+  "title": "Flow Network based Generative Models for Non-Iterative Diverse Candidate Generation",
+  "url": "https://proceedings.neurips.cc/paper/2021/hash/e614f646836aaed9f89ce58e837e2310-Abstract.html",
+  "status": "NeurIPS 2021"
+ },
+ {
+  "id": "T02",
+  "title": "GFlowNet Foundations",
+  "url": "https://jmlr.org/papers/v24/22-0364.html",
+  "status": "JMLR 2023"
+ },
+ {
+  "id": "T03",
+  "title": "Trajectory Balance: Improved Credit Assignment in GFlowNets",
+  "url": "https://proceedings.neurips.cc/paper_files/paper/2022/hash/27b51baca8377a0cf109f6ecc15a0f70-Abstract.html",
+  "status": "NeurIPS 2022"
+ },
+ {
+  "id": "T05",
+  "title": "Learning GFlowNets from Partial Episodes for Improved Convergence and Stability",
+  "url": "https://proceedings.mlr.press/v202/madan23a.html",
+  "status": "ICML 2023"
+ },
+ {
+  "id": "T07",
+  "title": "Towards Understanding and Improving GFlowNet Training",
+  "url": "https://proceedings.mlr.press/v202/shen23a.html",
+  "status": "ICML 2023"
+ },
+ {
+  "id": "T08",
+  "title": "GFlowNets and Variational Inference",
+  "url": "https://openreview.net/forum?id=uKiE0VIluA-",
+  "status": "ICLR 2023"
+ },
+ {
+  "id": "T09",
+  "title": "A Variational Perspective on Generative Flow Networks",
+  "url": "https://openreview.net/forum?id=AZ4GobeSLq",
+  "status": "TMLR 2023"
+ },
+ {
+  "id": "T12",
+  "title": "A Theory of Continuous Generative Flow Networks",
+  "url": "https://proceedings.mlr.press/v202/lahlou23a.html",
+  "status": "ICML 2023"
+ },
+ {
+  "id": "T14",
+  "title": "Generative Flow Networks as Entropy-Regularized RL",
+  "url": "https://proceedings.mlr.press/v238/tiapkin24a.html",
+  "status": "AISTATS 2024"
+ },
+ {
+  "id": "T15",
+  "title": "Discrete Probabilistic Inference as Control in Multi-path Environments",
+  "url": "https://proceedings.mlr.press/v244/deleu24a.html",
+  "status": "UAI 2024"
+ },
+ {
+  "id": "T17",
+  "title": "On Divergence Measures for Training GFlowNets",
+  "url": "https://proceedings.neurips.cc/paper_files/paper/2024/hash/8aaae73117c9266b35eb977e70fcf95f-Abstract-Conference.html",
+  "status": "NeurIPS 2024"
+ },
+ {
+  "id": "T19",
+  "title": "A Theory of Non-Acyclic Generative Flow Networks",
+  "url": "https://ojs.aaai.org/index.php/AAAI/article/view/28989",
+  "status": "AAAI 2024"
+ },
+ {
+  "id": "T32",
+  "title": "When Do GFlowNets Learn the Right Distribution?",
+  "url": "https://proceedings.iclr.cc/paper_files/paper/2025/hash/a48f8928f78a58399ef0049453c14b02-Abstract-Conference.html",
+  "status": "ICLR 2025 Spotlight"
+ },
+ {
+  "id": "T36",
+  "title": "Revisiting Non-Acyclic GFlowNets in Discrete Environments",
+  "url": "https://proceedings.mlr.press/v267/morozov25a.html",
+  "status": "ICML 2025"
+ },
+ {
+  "id": "T49",
+  "title": "\\(f\\)-Trajectory Balance",
+  "url": "https://icml.cc/virtual/2026/poster/61247",
+  "status": "ICML 2026"
+ },
+ {
+  "id": "O01",
+  "title": "Optimal Transport for Machine Learners",
+  "url": "https://arxiv.org/abs/2505.06589",
+  "status": "课程讲义/预印本 2025"
+ },
+ {
+  "id": "O07",
+  "title": "Learning Shortest Paths with Generative Flow Networks",
+  "url": "https://arxiv.org/abs/2603.01786",
+  "status": "ICML 2026 SPIGM Workshop"
+ },
+ {
+  "id": "O08",
+  "title": "Your GFlowNet Secretly Learns an Optimal Transport Plan",
+  "url": "https://arxiv.org/abs/2606.06272",
+  "status": "**ICML 2026 SPIGM Workshop；非主会**"
+ },
+ {
+  "id": "A01",
+  "title": "GFlowNets for AI-Driven Scientific Discovery",
+  "url": "https://pubs.rsc.org/en/content/articlelanding/2023/dd/d3dd00002h",
+  "status": "Digital Discovery 2023"
+ },
+ {
+  "id": "N007",
+  "title": "Distributional GFlowNets with Quantile Flows",
+  "url": "https://openreview.net/forum?id=vFSsRYGpjW",
+  "status": "TMLR 2024 · arXiv:2302.05793"
+ },
+ {
+  "id": "N010",
+  "title": "Improved off-policy training of diffusion samplers",
+  "url": "https://openreview.net/forum?id=vieIamY2Gi",
+  "status": "NeurIPS 2024 poster · arXiv:2402.05098"
+ },
+ {
+  "id": "N011",
+  "title": "Generative Augmented Flow Networks",
+  "url": "https://arxiv.org/abs/2210.03308",
+  "status": "ICLR 2023（notable top 25%） · arXiv:2210.03308"
+ },
+ {
+  "id": "N015",
+  "title": "CFlowNets: Continuous Control with Generative Flow Networks",
+  "url": "https://openreview.net/forum?id=yAYHho4fATa",
+  "status": "ICLR 2023（正式）"
+ },
+ {
+  "id": "N018",
+  "title": "Trajectory Balance with Asynchrony (TBA)",
+  "url": "https://arxiv.org/abs/2503.18929",
+  "status": "NeurIPS 2025（已接收，海报 #1115）"
+ },
+ {
+  "id": "N019",
+  "title": "FlowRL: Matching Reward Distributions for LLM Reasoning",
+  "url": "https://arxiv.org/abs/2509.15207",
+  "status": "ICLR 2026"
+ },
+ {
+  "id": "N029",
+  "title": "Improved sampling via learned diffusions",
+  "url": "https://proceedings.iclr.cc/paper_files/paper/2024/hash/2c9f31add52c28c2db39329b464bce91-Abstract-Conference.html",
+  "status": "ICLR 2024 poster · arXiv:2307.01198"
+ },
+ {
+  "id": "N032",
+  "title": "Adjoint Matching: Fine-tuning Flow and Diffusion Generative Models with Memoryless Stochastic Optimal Control",
+  "url": "https://openreview.net/forum?id=xQBRrtQM8u",
+  "status": "ICLR 2025 **Spotlight** · arXiv:2409.08861"
+ },
+ {
+  "id": "N038",
+  "title": "Generalized Schrödinger Bridge on Graphs (GSBoG)",
+  "url": "https://arxiv.org/abs/2602.04675",
+  "status": "预印本 2026-02（v2）"
+ },
+ {
+  "id": "N041",
+  "title": "Unsupervised Learning for Optimal Transport plan prediction between unbalanced graphs (ULOT)",
+  "url": "https://papers.nips.cc/paper_files/paper/2025/hash/873fd89b3e4db1f6242c2333673e104d-Abstract-Conference.html",
+  "status": "NeurIPS 2025 主会 · arXiv:2506.12025"
+ },
+ {
+  "id": "N043",
+  "title": "Diffusion Schrödinger Bridge Matching (DSBM)",
+  "url": "https://proceedings.neurips.cc/paper_files/paper/2023/hash/c428adf74782c2092d254329b6b02482-Abstract.html",
+  "status": "NeurIPS 2023 · arXiv:2303.16852"
+ },
+ {
+  "id": "N046",
+  "title": "Categorical Schrödinger Bridge Matching (CSBM)",
+  "url": "https://proceedings.mlr.press/v267/ksenofontov25a.html",
+  "status": "ICML 2025 · arXiv:2502.01416"
+ },
+ {
+  "id": "N061",
+  "title": "Generative Flow Networks: Theory and Applications to Structure Learning",
+  "url": "https://arxiv.org/abs/2501.05498",
+  "status": "博士论文 · arXiv:2501.05498"
+ },
+ {
+  "id": "N082",
+  "title": "Path-dependent Discrete Amortized Inference",
+  "url": "https://arxiv.org/abs/2608.08644",
+  "status": "ICML 2026 **Oral**"
+ },
+ {
+  "id": "N099",
+  "title": "torchgfn: A PyTorch GFlowNet Library",
+  "url": "https://arxiv.org/abs/2305.14594",
+  "status": "预印本"
+ },
+ {
+  "id": "N103",
+  "title": "Discrete Compositional Generation via General Soft Operators and Robust Reinforcement Learning",
+  "url": "https://openreview.net/forum?id=MGWk2tEgLW",
+  "status": "ICLR 2026 主会 · arXiv:2506.17007"
+ }
+]

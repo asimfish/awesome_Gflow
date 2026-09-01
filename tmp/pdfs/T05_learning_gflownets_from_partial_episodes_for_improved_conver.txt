@@ -1,0 +1,1118 @@
+                                                                      Learning GFlowNets From Partial Episodes
+                                                                       For Improved Convergence And Stability
+
+
+                                            Kanika Madan 1 2 Jarrid Rector-Brooks * 1 2 Maksym Korablyov * 1 2 Emmanuel Bengio 3 Moksh Jain 1 2
+                                                             Andrei Nica 1 4 Tom Bosc 1 2 Yoshua Bengio 1 2 5 Nikolay Malkin 1 2
+
+
+                                                                  Abstract                                       metric policy that can generalize to states not seen during
+
+
+
+
+arXiv:2209.12782v3 [cs.LG] 3 Jun 2023
+                                                                                                                 training makes them a competitive alternative to methods
+                                             Generative flow networks (GFlowNets) are a fam-
+                                                                                                                 based on local exploration in various probabilistic modeling
+                                             ily of algorithms for training a sequential sampler
+                                                                                                                 tasks (Bengio et al., 2021a; Malkin et al., 2022; Zhang et al.,
+                                             of discrete objects under an unnormalized target
+                                                                                                                 2022; Jain et al., 2022; Deleu et al., 2022).
+                                             density and have been successfully used for vari-
+                                             ous probabilistic modeling tasks. Existing train-                   GFlowNets solve the variational inference problem of ap-
+                                             ing objectives for GFlowNets are either local to                    proximating a target distribution over X with the distribution
+                                             states or transitions, or propagate a reward signal                 induced by the sampling policy, and they are trained by al-
+                                             over an entire sampling trajectory. We argue that                   gorithms reminiscent of reinforcement learning (although
+                                             these alternatives represent opposite ends of a gra-                GFlowNets model the diversity present in the reward distri-
+                                             dient bias-variance tradeoff and propose a way to                   bution, rather than maximizing reward by seeking its mode).
+                                             exploit this tradeoff to mitigate its harmful effects.              In most past works (Bengio et al., 2021a; Malkin et al.,
+                                             Inspired by the TD(𝜆) algorithm in reinforcement                    2022; Zhang et al., 2022; Jain et al., 2022), GFlowNets are
+                                             learning, we introduce subtrajectory balance or                     trained by exploratory sampling from the policy and receive
+                                             SubTB(𝜆), a GFlowNet training objective that can                    their training signal from the reward of the sampled object.
+                                             learn from partial action subsequences of varying                   The flow matching (FM) and detailed balance (DB) learning
+                                             lengths. We show that SubTB(𝜆) accelerates sam-                     objectives for GFlowNets (Bengio et al., 2021a;b) resemble
+                                             pler convergence in previously studied and new                      temporal difference learning (Sutton & Barto, 2018).
+                                             environments and enables training GFlowNets in
+                                                                                                                 A third objective, trajectory balance (TB), was proposed in
+                                             environments with longer action sequences and
+                                                                                                                 Malkin et al. (2022) to address the problem of slow temporal
+                                             sparser reward landscapes than what was possible
+                                                                                                                 credit assignment with the FM and DB objectives. The TB
+                                             before. We also perform a comparative analysis
+                                                                                                                 objective propagates learning signals over entire episodes,
+                                             of stochastic gradient dynamics, shedding light on
+                                                                                                                 while the temporal difference-like objectives make updates
+                                             the bias-variance tradeoff in GFlowNet training
+                                                                                                                 local to states or actions. It has been hypothesized by Malkin
+                                             and the advantages of subtrajectory balance.
+                                                                                                                 et al. (2022) that the improved credit assignment with TB
+                                                                                                                 comes at the cost of higher gradient variance, analogous
+                                                                                                                 to the bias-variance tradeoff seen in temporal difference
+                                        1. Introduction                                                          learning (TD(𝑛) or TD(𝜆)) with different eligibility trace
+                                        Generative flow networks (GFlowNets; Bengio et al., 2021a)               schemes (Sutton & Barto, 2018; Kearns & Singh, 2000; van
+                                        are generative models that construct objects lying in a target           Hasselt et al., 2018; Bengio et al., 2020). This hypothesis
+                                        space X by taking sequences of actions sampled from a                    is one of the starting points for the present paper.
+                                        learned policy. GFlowNets are trained so as to make the                  We propose a new learning objective for GFlowNets, called
+                                        probability of sampling an object 𝑥 ∈ X proportional to a                subtrajectory balance (SubTB, or SubTB(𝜆) when its hyper-
+                                        given nonnegative reward 𝑅(𝑥). GFlowNets’ use of a para-                 parameter 𝜆 is specified). Building upon results of Bengio
+                                          * Equal contribution 1 Mila – Québec AI Institute 2 Université       et al. (2021b); Malkin et al. (2022), we show how SubTB(𝜆)
+                                        de Montréal 3 Recursion 4 Politehnica University of Bucharest           allows the flexibility of learning from partial experiences
+                                        5 CIFAR Fellow.       Correspondence to:       Kanika Madan              of any length. Experiments on two synthetic and four real-
+                                        <madankanika.s@gmail.com>.                                               world domains support three empirical claims:
+                                        Proceedings of the 40𝑡 ℎ International Conference on Machine             (1) SubTB(𝜆) improves convergence of GFlowNets in pre-
+                                        Learning, Honolulu, Hawaii, USA. PMLR 202, 2023. Copyright                   viously studied environments: models trained with
+                                        2023 by the author(s).
+
+                                                                                                             1
+                       Learning GFlowNets from partial episodes for improved convergence and stability
+
+    SubTB approach the target distribution in fewer training              to 𝑅(𝑥). That is, there should exist a constant 𝑍 such that
+    steps and are less sensitive to hyperparameter choices.                                        ∑︁
+(2) SubTB enables training of GFlowNets in environments                           𝑅(𝑥) = 𝑍                   𝑃𝐹 (𝜏) ∀𝑥 ∈ X.        (2)
+    where past approaches perform poorly due to sparsity                                      𝜏=(𝑠0 →...→𝑠𝑛 =𝑥 )
+    of the reward function or length of action sequences.                                                 Í
+                                                                          If (2) is satisfied, then 𝑍 =       𝑥 ∈ X 𝑅(𝑥).
+(3) The benefits of SubTB(𝜆) are explained by lower vari-
+    ance of the stochastic gradient, with the parameter 𝜆
+                                                                          2.2. GFlowNet training objectives
+    interpolating between the high-bias, low-variance DB
+    objective and the low-bias, high-variance TB objective.               Because the sum in (2) may be intractable to compute, it is in
+                                                                          general not possible to directly convert this constraint into a
+2. Method                                                                 training objective. To solve this problem, GFlowNet training
+                                                                          objectives introduce auxiliary variables in the parametriza-
+2.1. Preliminaries                                                        tion in various ways, but all have the property that (2) is
+                                                                          satisfied at the global optimum. The key properties of these
+In this section, we summarize the necessary preliminaries on
+                                                                          objectives are summarized in Table 1.
+GFlowNets. We follow the notation of Malkin et al. (2022),
+to which the reader is directed for a more thorough exposi-               Flow matching (FM; Bengio et al., 2021a). Motivating the
+tion written with a view towards motivating the trajectory                ‘flow network’ terminology, Bengio et al. (2021a) proved
+and subtrajectory balance objectives. A deeper introduction               that (2) is satisfied if 𝑃𝐹 arises from an edge flow function
+is given in Bengio et al. (2021b).                                        satisfying certain constraints. Namely, an assignment 𝐹 :
+Let 𝐺 = (S, A) be a directed acyclic graph. The vertices                   A → R ≥0 of a nonnegative number (flow) to each action
+𝑠 ∈ S are called states and the directed edges (𝑢→𝑣) ∈ A                  defines a policy via
+are actions. If (𝑢→𝑣) is an edge, we say 𝑣 is a child of 𝑢                                                     𝐹 (𝑠→𝑡)
+and 𝑢 is a parent of 𝑣. There is a unique initial state 𝑠0 ∈ S                         𝑃𝐹 (𝑡|𝑠) = Í                            .      (3)
+                                                                                                                    𝐹 (𝑠→𝑡 ′ )
+                                                                                                       𝑡 ′ :(𝑠→𝑡 ′ ) ∈ A
+with no parents. States with no children are called terminal,
+and the set of terminal states is denoted by X.                           A sufficient condition for the terminating distribution of 𝑃𝐹
+A trajectory or an action sequence is a sequence of states                to be proportional to the reward 𝑅(𝑥) is that a family of flow-
+𝜏 = (𝑠 𝑚 →𝑠 𝑚+1 → . . . →𝑠 𝑛 ), where each (𝑠𝑖 →𝑠𝑖+1 ) is an              matching (flow in = flow out) conditions is satisfied at all
+action. The trajectory is complete if 𝑠 𝑚 = 𝑠0 and 𝑠 𝑛 is                 interior states and a family of reward-matching conditions
+terminal. The set of complete trajectories is denoted by T .              is satisfied at terminal states; ∀𝑡 ∈ S \ (X ∪ {𝑠0 }) :
+                                                                                         ∑︁                     ∑︁
+A (forward) policy is a collection of distributions 𝑃𝐹 (−|𝑠)                                    𝐹 (𝑠→𝑡) =             𝐹 (𝑡→𝑢)
+over the children of every nonterminal state 𝑠 ∈ S. A                               𝑠:(𝑠→𝑡 ) ∈ A                𝑢:(𝑡→𝑢) ∈ A
+forward policy determines a distribution over T by                                     ∑︁
+                                                                                                   𝐹 (𝑠→𝑥) = 𝑅(𝑥)          ∀𝑥 ∈ X.    (4)
+                                        𝑛−1                                        𝑠:(𝑠→𝑥 ) ∈ A
+                                        Ö
+        𝑃𝐹 (𝜏 = (𝑠0 → . . . →𝑠 𝑛 )) =         𝑃𝐹 (𝑠𝑖+1 |𝑠𝑖 ).   (1)       The flow 𝐹 (𝑠→𝑡) is then proportional to the marginal likeli-
+                                        𝑖=0
+                                                                          hood that a complete trajectory sampled from 𝑃𝐹 includes
+Any distribution over complete trajectories that arises from              the action 𝑠→𝑡.
+a forward policy satisfies a Markov property: the marginal                In Bengio et al. (2021a), a GFlowNet is described by a
+choice of action out of a state 𝑠 is independent of how 𝑠 was             parametric estimate of the edge flow function, 𝐹 (𝑢→𝑣; 𝜃)
+reached. Conversely, any Markovian distribution over T                    (a neural net with parameters 𝜃). These conditions can be
+arises from a forward policy (Bengio et al., 2021b).                      converted into objectives that are minimized when (4) is
+A forward policy can thus be used to sample terminal states               satisfied. For example, the flow-matching objective at a
+𝑥 ∈ X by starting at 𝑠0 and iteratively sampling actions                  nonterminal state 𝑠 is defined by
+from 𝑃𝐹 , or, equivalently, taking the terminating state of a                                    Í                             2
+                                                                                                   𝑠:(𝑠→𝑡 ) ∈ A 𝐹 (𝑠→𝑡; 𝜃) + 𝜖
+                                                                                           
+complete trajectory 𝜏 ∼ 𝑃𝐹 (𝜏). The marginal likelihood of                       LFM (𝑠) = log   Í                                , (5)
+sampling 𝑥 ∈ X is the sum of likelihoods of all complete                                           𝑢:(𝑡→𝑢) ∈ A 𝐹 (𝑡→𝑢; 𝜃) + 𝜖
+trajectories that terminate at 𝑥.
+                                                                          where 𝜖 is a smoothing constant that can safely be set to 0 if
+Suppose that a nontrivial (not identically 0) nonnegative                 the flows are constrained to be strictly positive, and a similar
+reward function 𝑅 : X → R ≥0 is given. The learning                       objective (or a constraint by construction) is defined to force
+problem solved by GFlowNets is to estimate a policy 𝑃𝐹                    the flow 𝐹 (𝑠→𝑥) into terminal states 𝑥 to match 𝑅(𝑥). If
+such that the likelihood of sampling 𝑥 ∈ X is proportional                these objectives are globally minimized for all states 𝑠, then
+
+                                                                      2
+                          Learning GFlowNets from partial episodes for improved convergence and stability
+
+
+                                             Table 1. Summary of GFlowNet training objectives.
+            Objective                     Parametrization                                                     Locality
+            Flow matching                 edge flow 𝐹 (𝑠→𝑡; 𝜃)                                                state 𝑠
+            Detailed balance              state flow 𝐹 (𝑠; 𝜃), policies 𝑃𝐹 (−|−; 𝜃), 𝑃 𝐵 (−|−; 𝜃)             action 𝑠→𝑡
+            Trajectory balance            initial state flow 𝑍 𝜃 , policies 𝑃𝐹 (−|−; 𝜃), 𝑃 𝐵 (−|−; 𝜃)         complete trajectory 𝜏
+            Subtrajectory balance         state flow 𝐹 (𝑠; 𝜃), policies 𝑃𝐹 (−|−; 𝜃), 𝑃 𝐵 (−|−; 𝜃)             (partial) trajectory 𝜏
+
+
+the policy 𝑃𝐹 (−|−; 𝜃) defined by 𝐹 (−; 𝜃) via (3) satisfies                  implies satisfaction of (2). Therefore, given a sufficiently
+               Í                           Í
+(2), with 𝑍 = 𝑡:(𝑠0 →𝑡 ) ∈ A 𝐹 (𝑠→𝑡; 𝜃) = 𝑥 ∈ X 𝑅(𝑥). The                     expressive model and convergence of the optimization pro-
+question of how to sample states 𝑠 for training is discussed                  cedure, a GFlowNet policy that samples 𝑥 with likelihood
+below.                                                                        proportional to 𝑅(𝑥) can be trained by minimizing any of
+                                                                              these losses over a distribution with full support, enabling
+Detailed balance (DB; Bengio et al., 2021b; Malkin et al.,                    offline training of GFlowNets. As in other RL algorithms,
+2022). In the DB parametrization, a forward policy model                      the distribution over sampled states, actions, or episodes
+𝑃𝐹 (−|−; 𝜃) is learned directly, jointly with two additional                  can be fixed and off-policy, or can vary over the course of
+objects: a backward policy model 𝑃 𝐵 (−|−; 𝜃), which can                      training and use available information about terminal states
+predict a distribution over the parents of any noninitial state,              in interesting ways (Zhang et al., 2022; Deleu et al., 2022).
+and a state flow function 𝐹 (𝑠; 𝜃) (typically parametrized in                 The simplest approach, which is also taken in this paper,
+the log domain). The detailed balance conditions state that                   is on-policy learning or a very similar off-policy variant
+             𝐹 (𝑠; 𝜃)𝑃𝐹 (𝑡|𝑠; 𝜃) = 𝐹 (𝑡; 𝜃)𝑃 𝐵 (𝑠|𝑡; 𝜃)             (6)       that flattens the current policy to ensure exploration. Com-
+                                                                              plete trajectories 𝜏 = (𝑠0 → . . . →𝑠 𝑛 ) are sampled from the
+for all actions (𝑠→𝑡) and 𝐹 (𝑥; 𝜃) = 𝑅(𝑥) for 𝑥 terminal. Sat-                forward policy 𝑃𝐹 (−|−; 𝜃) (tempered or mixed with a uni-
+isfaction of these conditions for all actions (𝑠→𝑡) and 𝑥 ∈ X                 form policy with a small weight so as to ensure full support
+implies that 𝑃𝐹 samples proportionally to the reward (i.e.,                   and exploration). One then takes gradient descent steps
+satisfies (2), with 𝑍 = 𝐹 (𝑠0 )). The DB condition (6) can                    on LTB (𝜏), on LDB (𝑠𝑖 →𝑠𝑖+1 ) over all actions in 𝜏, or on
+be converted into a squared log-ratio objective LDB (𝑠→𝑡)                     LFM (𝑠𝑖 ) for all intermediate states in 𝜏.
+in the same way that (4) yields (5), and LDB (𝑠→𝑡) can be
+optimized over sampled actions (𝑠→𝑡).                                         The GFlowNets in this paper are trained on-policy, or off-
+                                                                              policy with a training policy that is a mixture of 𝑃𝐹 with
+Trajectory balance (TB; Malkin et al., 2022). The                             a uniform policy: 𝜏 = (𝑠0 →𝑠1 → . . . →𝑠 𝑛 ) is sampled with
+                                                                                                                        1
+parametrization required for the TB objective includes                        𝑠𝑖+1 ∼ (1 − 𝜖)𝑃𝐹 (𝑠𝑖+1 |𝑠𝑖 ; 𝜃) + 𝜖 #{𝑡:(𝑠→𝑡 ) ∈ A } . Here 𝜖 is the
+forward and backward policy models 𝑃𝐹 (−|−; 𝜃) and                            random exploration weight.
+𝑃 𝐵 (−|−; 𝜃), as well as an estimate 𝑍 𝜃 of the constant of
+proportionality in (2). Satisfaction of the following condi-                  2.3. Subtrajectory balance: Learning from partial
+tion for all complete trajectories 𝜏 = (𝑠0 → . . . →𝑠 𝑛 ) implies                  episodes
+that (2) is satisfied:
+                                                                            Recall the GFlowNet parametrization used in the DB objec-
+               𝑍 𝜃 𝑃𝐹 (𝜏; 𝜃) = 𝑅(𝑠 𝑛 )𝑃 𝐵 (𝜏|𝑠 𝑛 ; 𝜃),              (7)     tive above, with a state flow estimator 𝐹 (−|−; 𝜃) and a pair
+                                                                            of policies 𝑃𝐹 (−|−; 𝜃), 𝑃 𝐵 (−|−; 𝜃). It is shown in §A.2 of
+where we have used the conventions
+                                                                            Malkin et al. (2022) that the detailed balance conditions (6)
+            𝑛−1                                      𝑛−1
+            Ö                                        Ö                      are satisfied for all actions if and only if the following sub-
+𝑃𝐹 (𝜏; 𝜃) =     𝑃𝐹 (𝑠𝑖+1 |𝑠𝑖 ; 𝜃), 𝑃 𝐵 (𝜏|𝑠 𝑛 ; 𝜃) =     𝑃 𝐵 (𝑠𝑖 |𝑠𝑖+1 ; 𝜃).trajectory balance constraint holds for all (not necessarily
+            𝑖=0                                      𝑖=0
+                                                                            complete) trajectories 𝜏 = (𝑠 𝑚 → . . . →𝑠 𝑛 ):
+The condition (7) can again be made into a squared log-ratio
+objective LTB (𝜏) and optimized for complete trajectories 𝜏                              𝑛−1
+                                                                                         Ö                                   𝑛−1
+                                                                                                                             Ö
+taken from some training policy. In Malkin et al. (2022), the                𝐹 (𝑠 𝑚 ; 𝜃)     𝑃𝐹 (𝑠𝑖+1 |𝑠𝑖 ; 𝜃) = 𝐹 (𝑠 𝑛 ; 𝜃)     𝑃 𝐵 (𝑠𝑖 |𝑠𝑖+1 ; 𝜃),
+TB objective was empirically demonstrated to have better                                 𝑖=𝑚                                 𝑖=𝑚
+convergence properties than FM and DB on various problem                                                                                          (8)
+domains.                                                                    where   we   again enforce  that   𝐹 (𝑥; 𝜃)  = 𝑅(𝑥)  if 𝑥 is  terminal.
+                                                                            Observe that the DB condition (6) is a special case of (8)
+Training policy and exploration. Global minimization of                     when the trajectory consists of one action, and the TB con-
+the FM, DB, and TB objectives for all values of their re-                   dition (7) is precisely the case when 𝜏 is complete, with the
+spective arguments (states, actions, or complete trajectories)              identification 𝑍 𝜃 = 𝐹 (𝑠0 ; 𝜃).
+
+                                                                          3
+                        Learning GFlowNets from partial episodes for improved convergence and stability
+
+The above constraint yields the subtrajectory balance objec-               Hypothesized benefits. We hypothesize that SubTB(𝜆)
+tive                                                                       brings two benefits to GFlowNet training:
+                                Î𝑛−1                    !2
+                     𝐹 (𝑠 𝑚 ; 𝜃) 𝑖=𝑚 𝑃𝐹 (𝑠𝑖+1 |𝑠𝑖 ; 𝜃)                     Variance reduction. The TB loss terms LTB (𝜏) for tra-
+   LSubTB (𝜏) = log                                        . (9)
+                                Î𝑛−1
+                     𝐹 (𝑠 𝑛 ; 𝜃) 𝑖=𝑚 𝑃 𝐵 (𝑠𝑖 |𝑠𝑖+1 ; 𝜃)                    jectories 𝜏 that take a given sequence of actions until a state
+                                                                           𝑠, then diverge, share the terms log 𝑍 and the policy logits
+If this objective is made equal to 0 for all partial trajectories          for all transitions preceding 𝑠 inside the square. However,
+𝜏, where 𝑅(𝑠 𝑛 ) is substituted for 𝐹 (𝑠 𝑛 ; 𝜃) if 𝑠 𝑛 is terminal,        the ‘tail’ of the TB loss, involving the forward and backward
+then the policy 𝑃𝐹 satisfies the desired condition (2). (Proof:            policy logits for transitions that appear after 𝑠 in 𝜏, can be
+When LSubTB (𝜏) = 0, (8) is satisfied, implying satisfaction               seen as a stochastic least-squares regression target. That is,
+of both (7) and (6). Either of these conditions is a sufficient            if 𝑠 = 𝑠 𝑚 in a trajectory 𝜏 = (𝑠0 →𝑠1 → . . . →𝑠 𝑛 ), then
+condition for (2), as shown by Bengio et al. (2021b); Malkin                                           𝑚−1
+                                                                                                                            !
+et al. (2022).)
+                                                                                                        Ö   𝑃𝐹 (𝑠𝑖+1 |𝑠𝑖 )
+                                                                                              log 𝑍 ·                                  (12)
+                                                                                                        𝑖=0
+                                                                                                            𝑃 𝐵 (𝑠𝑖 |𝑠𝑖+1 )
+Extracting subtrajectories for training. Suppose that an
+episode (complete trajectory) 𝜏 = (𝑠0 →𝑠1 → . . . →𝑠 𝑛 ) is               is regressed to
+sampled for training. There are 𝑛+1
+                                  2    = 𝑂 (𝑛2 ) nontrivial                                               𝑛−1
+                                                                                                                                 !
+subtrajectories:
+                                                                                                          Ö   𝑃 𝐵 (𝑠𝑖 |𝑠𝑖+1 )
+                                                                                          log 𝑅(𝑠 𝑛 ) ·                              .   (13)
+                                                                                                          𝑖=𝑚
+                                                                                                                𝑃𝐹 (𝑠𝑖+1 |𝑠𝑖 )
+    𝜏𝑖: 𝑗 := (𝑠𝑖 →𝑠𝑖+1 → . . . →𝑠 𝑗 ),   0 ≤ 𝑖 < 𝑗 ≤ 𝑛.       (10)
+                                                                           Similarly, for trajectories that share the transitions following
+Having sampled a complete trajectory 𝜏 for training, we                    𝑠 but may differ in their initial actions, (12) is a stochastic
+make gradient steps on a convex combination of the subtra-                 regression target for (13).
+jectory balance losses LSubTB (𝜏𝑖: 𝑗 ): 𝜃 ← 𝜃 − ∇ 𝜃 L, where
+                                                                           The subtrajectory balance loss terms LSubTB (𝜏𝑚: 𝑗 ) for par-
+                  Í             𝑗 −𝑖 L                                     tial trajectories beginning at 𝑠 regress the log-state flow
+                    0≤𝑖< 𝑗 ≤𝑛 𝜆        SubTB (𝜏𝑖: 𝑗 )
+             L=         Í                𝑗 −𝑖
+                                                      .  (11)              log 𝐹 (𝑠) to (parts of) expressions like (13), while loss terms
+                            0≤𝑖< 𝑗 ≤𝑛 𝜆                                    LSubTB (𝜏𝑖:𝑚 ) regress (parts of) expressions like (12) to the
+Here 𝜆 > 0 is a hyperparameter controlling the weights                     log-state flow log 𝐹 (𝑠). The learned log 𝐹 (𝑠) is thus a
+assigned to subtrajectories of different lengths, and when 𝜆               learned estimate of a stochastic piece of the TB loss for
+is set to 1, it leads to a uniform weighting scheme. Notice                trajectories that contain 𝑠. Replacing a stochastic term in the
+that the 𝜆 → 0+ limit leads precisely to the average detailed              TB loss by a learned estimate of its expectation is guaran-
+balance loss LDB (𝑠𝑖 →𝑠𝑖+1 ) over all transitions in 𝜏, while              teed to introduce bias into the gradient (with respect to the
+the 𝜆 → +∞ limit gives the trajectory balance objective                    gradient of the TB loss), but is expected to reduce variance.
+LTB (𝜏).1                                                                  This is akin to the variance-reducing effect of actor-critic
+                                                                           methods in RL.
+Other schemes for weighting subtrajectories are possible
+and should be explored in future work.                                     This hypothesis is studied empirically in our experiments
+                                                                           and in particular §4.1.1, where we provide evidence that
+Computational considerations. It may appear that the                       SubTB(𝜆) is a practically useful interpolation between TB
+optimization of (11) induces a computation cost that is                    (high variance) and DB (low variance, high bias relative to
+quadratic in the trajectory length. However, a closer inspec-              the true TB gradient) losses.
+tion of the gradient of (11) with respect to the state flows
+log 𝐹 (𝑠𝑖 ; 𝜃) and the forward and backward policy logits                  Faster learning due to generalization of state flows. An-
+shows that gradient computation requires only one forward                  other benefit of subtrajectory balance for convergence speed
+and one backward pass through the neural networks giv-                     may come from the ability of estimated state flow functions
+ing log 𝐹 (𝑠; 𝜃), log 𝑃𝐹 (−|𝑠𝑖 ; 𝜃), and log 𝑃 𝐵 (−|𝑠𝑖 ; 𝜃). The           log 𝐹 (𝑠; 𝜃) to be modeled with high precision and general-
+quadratic computation cost is incurred only in performing                  ize between states 𝑠 faster than the often high-dimensional
+linear operations on these log-flows and policy logits, not in             policy logits log 𝑃𝐹 (−|𝑠; 𝜃), log 𝑃 𝐵 (−|𝑠; 𝜃). Such gener-
+the evaluation of the deep networks. Thus the SubTB loss                   alization is important in problems where the state graph
+has little computation overhead over DB or TB.                             becomes ‘wide’ far from the initial state, making the learn-
+   1When a batch of trajectories is used for training, the convex
+                                                                           ing signal sparse at states that are near termination. Indeed,
+                                                                           in all of our experiment domains except the hypergrids in
+combination weights may either be normalized over all subtrajec-
+tories of all trajectories in the batch, or normalized independently       §4.1 – and for the largest hypergrids – the number of termi-
+over the subtrajectories of each trajectory. For consistency, we           nal states is many orders of magnitude larger than the total
+choose the first option for the experiments in this paper.                 number of states seen in training.
+
+                                                                       4
+                        Learning GFlowNets from partial episodes for improved convergence and stability
+
+3. Related work                                                                                  0
+                                                                                                              TB
+                                                                                                                              0
+                                                                                                                                      SubTB(0.9)
+                                                                                                 5                            5
+Eligibility traces. SubTB(𝜆) draws inspiration from the                                         10                           10
+TD(𝜆) algorithm in RL (Sutton, 1988; Sutton & Barto,                                            15                           15
+2018), which forms an estimate of the expected return via                                       20                           20
+a convex combination of 𝑛-step returns, each weighed by                                         25                           25
+                                                                                                30                           30
+(1 − 𝜆)𝜆 𝑛−1 . The parameter 𝜆 ∈ [0, 1] enables a bias-                                              0   10        20   30        0   10     20    30
+variance tradeoff (Kearns & Singh, 2000). Larger 𝜆 leads
+to lower bias and higher variance, since the estimate of the
+expected return approaches the single-point Monte Carlo
+                                                                         Figure 1. Left: 16 × 16 hypergrid reward function. Right: Distri-
+estimate as 𝜆 → 1. We take inspiration from this idea to
+                                                                         bution of 2 × 105 samples from GFlowNets trained on the harder
+mix different (possibly all) subtrajectories, akin to how 𝑛-             variant of the 32 × 32 grid with TB and SubTB(𝜆) objectives.
+step returns are mixed together. We hypothesize that the
+right mixing may reduce variance, compared to TB, with
+the additional benefits of inducing consistency between the              new modes from those that have been already been visited.
+flows at intermediate states, and thus of helping propagate
+credit faster and enable faster convergence. In addition,                We study various sizes of 2-dimensional and 4-dimensional
+GFlowNet training objectives are reminiscent of residual                 hypergrids, using the hardest variant of the reward function
+gradient RL methods (Baird, 1995; Zhang et al., 2020),                   from past work (the minimal reward, away from the corners
+since the ‘endpoint’ (e.g., 𝐹 (𝑠 𝑛 ) in (9)) is also considered          of the grid, is set to 10−3 ). We train GFlowNets to sample
+in the gradient.                                                         from the target reward functions and plot the evolution of the
+                                                                         𝐿 1 distance between the target distribution and the empirical
+MaxEnt RL. RL has a rich literature on energy-based, or                  distribution of the last 2 · 105 states seen in training.2 In all
+maximum entropy, methods (Ziebart, 2010; Mnih et al.,                    cases, we tune the learning rates for the TB and SubTB(𝜆 =
+2016; Haarnoja et al., 2017; Nachum et al., 2017; Schulman               0.9) objectives. (See §A for details.)
+et al., 2017; Haarnoja et al., 2018), which are close or equiv-          The results (mean and standard deviation over three random
+alent to the GFlowNet framework in certain settings (in                  runs) are shown in the first two rows of Fig. 2. Models
+particular when the MDP has a tree structure (Bengio et al.,             trained with SubTB(𝜆) converge faster, and with less vari-
+2021a)). Also related are methods that maximize entropy                  ance between random seeds, to the true distribution than
+not on the policy, but rather on the state visitation distribu-          with TB for all hypergrid sizes.
+tion or some proxy of it (Hazan et al., 2019; Islam et al.,
+2019; Zhang et al., 2021; Eysenbach et al., 2018), which                 We also study an even sparser variant of the environment,
+achieve a similar objective to GFlowNet models by flatten-               in which the background reward is set to 10−4 . In this
+ing the state visitation distribution. If the state graph of the         case, SubTB(𝜆) continues to perform strongly (last row of
+environment is a directed tree, the loss LSubTB on individ-              Fig. 2), while models trained with TB do not even discover
+ual subtrajectories is equivalent to that of path consistency            all modes of the target distribution for grids larger than 8 × 8
+learning (PCL; Nachum et al., 2017). However, attempts to                (Fig. 1).
+use PCL in settings without intermediate rewards have only               Additional results are given in §A.1. In particular, SubTB(𝜆)
+computed the loss on subtrajectories that have length 1 or               continues to perform strongly when only subtrajectories of
+include a terminal state (Guo et al., 2021).                             less than a certain length are used for training, which can be
+                                                                         beneficial in realistic settings where only partial episodes
+4. Experiments                                                           are given. We also show the effect of 𝜆 on the convergence
+                                                                         rate (Fig. A.2) and of more exploratory training policies
+4.1. Hypergrid: Robustness to sparse rewards                             (Fig. A.3).
+We study the synthetic hypergrid environment introduced
+in Bengio et al. (2021a). The set of interior states is a                4.1.1. A CLOSER LOOK AT GRADIENT VARIANCE
+𝑑-dimensional hypergrid of size 𝐻 × 𝐻 × · · · × 𝐻 with a mul-            We take a closer look at gradient bias and variance to un-
+timodal reward function concentrated near each of the 2𝑑                 derstand the benefits of training GFlowNets with SubTB(𝜆).
+corners of the hypergrid (see Bengio et al. (2021a); Malkin              The methodology of these experiments is inspired by Ilyas
+et al. (2022) and Fig. 1). The initial state is (0, 0, . . . , 0),
+and each action is a step that increments one of the 𝑑 coor-                2 Such an evaluation is possible in this synthetic environment
+
+dinates by 1 without leaving the grid. A special termination             because the exact target distribution function can be tractably
+action is also allowed from each state. This environment is              computed. Note that the metric shown in Fig. 2 differs from what
+                                                                         is called ‘𝐿 1 distance’ in past work, as we do not divide by the
+designed to challenge a learning agent to infer and discover             total number of states.
+
+                                                                     5
+                                                                 Learning GFlowNets from partial episodes for improved convergence and stability
+
+
+                                   2.0
+                                                  8×8                     12 × 12                                16 × 16                                       20 × 20                        24 × 24                                               12 × 12 × 12 × 12 16 × 16 × 16 × 16 20 × 20 × 20 × 20
+                                          TB                                                                                                                                                                                                  2.0             TB
+                                          SubTB(0.9)
+                                   1.5    DB                                                                                                                                                                                                  1.5
+                                                                                                                                                                                                                                                              SubTB(0.9)
+                                                                                                                                                                                                                                                              DB
+                              L1   1.0                                                                                                                                                                                                   L1   1.0
+                                   0.5                                                                                                                                                                                                        0.5
+                                   0.0 3 4 5 6 3 4 5 6 3 4 5 6 3 4 5 6 3 4 5 6                                                                                                                                                                0.0 3 104 105 6 3 104 105 6 3 104 105 6
+                                     10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10                                                                                                                                                10               10 10             10 10             10
+                                   2.0
+                                                 28 × 28                  32 × 32                                40 × 40                                       50 × 50                        60 × 60                                             24 × 24 × 24 × 24 28 × 28 × 28 × 28 32 × 32 × 32 × 32
+                                                                                                                                                                                                                                              2.0
+                                   1.5                                                                                                                                                                                                        1.5
+                              L1   1.0                                                                                                                                                                                                   L1   1.0
+                                   0.5                                                                                                                                                                                                        0.5
+                                   0.0 3 4 5 6 3 4 5 6 3 4 5 6 3 4 5 6 3 4 5 6                                                                                                                                                                0.0 3 104 105 6 3 104 105 6 3 104 105 6
+                                     10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10                                                                                                                                                10         10 10       10 10       10
+
+                                                        8 × 8 (hard) 12 × 12 (hard) 16 × 16 (hard) 20 × 20 (hard) 24 × 24 (hard) 28 × 28 (hard) 32 × 32 (hard)
+                                                   2.0     TB
+                                                   1.5     SubTB(0.9)
+                                                           DB
+                                             L1    1.0
+                                                   0.5
+                                                   0.0103 104 105 106103 104 105 106103 104 105 106103 104 105 106103 104 105 106103 104 105 106103 104 105 106
+
+  Figure 2. 𝐿 1 distance between empirical and target distributions over the course of training on the hypergrid environment. SubTB(𝜆 = 0.9)
+  consistently gives faster convergence than TB, the strongest objective from past work, on all grid sizes. The difference is especially visible
+  for the harder variant of the reward function (last row). The 𝑥-axis is the cumulative number of training trajectories (episodes).
+
+
+                                                                                                                                                                                                                         Gradient Self-Similarity, Learned Flows                                          Similarity with TB Gradient, Learned Flows
+                               Training Step = 1000               Training Step = 2000                           Training Step = 3000                                                                                                                                                           0.8
+                    1.0                                                                                                                                                                                        0.9                                                                              0.7
+                    0.8                                                                                                                                                                                        0.8                                                                              0.6
+
+
+Cosine Similarity                                                                                                                                                                          Cosine Similarity                                                                Cosine Similarity
+                                                                                                                                                                   Loss Comp Name                                                                   Loss Comp Name                              0.5
+                    0.6                                                                                                                                               DB vs DB                                 0.7                                      DB vs DB
+                                                                                                                                                                      SubTB vs SubTB                                                                    SubTB vs SubTB                          0.4
+                    0.4                                                                                                                                               TB vs TB                                 0.6                                      TB vs TB                                0.3                                       Loss Comp Name
+                    0.2                                                                                                                                                                                        0.5                                                                              0.2                                           DB vs TB
+                                                                                                                                                                                                                                                                                                                                              SubTB vs TB
+                    0.0                                                                                                                                                                                        0.4                                                                              0.1                                           TB vs TB
+                          0    2     4       6     8    10   0   2       4         6       8       10    0       2       4               6       8       10
+                                         K                                     K                                                 K                                                                                   0   500     1000      1500     2000   2500    3000                               0     500    1000      1500    2000     2500     3000
+                                                                                                                                                                                                                                        Training Step                                                                     Training Step
+                               Training Step = 1000                  Training Step = 2000                            Training Step = 3000
+                    1.0
+                    0.8
+                                                                                                                                                                                           Figure 4. Mean cosine similarity between small-batch (64) and
+Cosine Similarity
+                                                                                                                                                                   Loss Comp Name
+                    0.6                                                                                                                                                 DB vs TB
+                    0.4
+                                                                                                                                                                        SubTB vs TB
+                                                                                                                                                                        TB vs TB
+                                                                                                                                                                                           large-batch (1024) gradients on the 8 × 8 grid environment. Left:
+                    0.2                                                                                                                                                                    Self-similarity of the DB, SubTB(𝜆), and TB gradients, showing
+                    0.0
+                          0    2     4       6      8   10   0    2        4           6       8    10       0       2       4               6       8        10
+                                                                                                                                                                                           DB < SubTB(𝜆) < TB in gradient variance. Right: Similarity of
+                                         K                                     K                                                     K
+                                                                                                                                                                                           small-batch DB, SubTB(𝜆), and TB gradients to the large-batch
+                                                                                                                                                                                           TB gradient, showing that the small-batch SubTB(𝜆) gradient is a
+  Figure 3. Mean cosine similarity between small-batch (2 𝑘 ) and                                                                                                                          good estimator of large-batch TB.
+  large-batch (1024) gradients at selected training iterations. Above:
+  Small-batch vs. large-batch gradients of DB, SubTB(𝜆), and TB
+  objectives. Below: Small-batch DB, SubTB(𝜆), and TB gradients                                                                                                                            or SubTB(𝜆)). A large batch of 210 = 1024 trajectories is
+  vs. large-batch TB gradient.                                                                                                                                                             sampled, and the gradient 𝑔 (0)𝑗 of the objective with respect
+                                                                                                                                                                                           to the policy logits at all states is computed for each trajec-
+   et al. (2020).                                                                                                                                                                          tory 𝜏 𝑗 in the batch. Then, for each 𝑘 ∈ {0, 1, . . . , 9}, the
+                                                                                                                                                                                           gradients 𝑔𝑖(0) are combined into 210−𝑘 sub-batches, each of
+  We train GFlowNets on the 8 × 8 grid environment using
+                                                                                                                                                                                           size 2 𝑘 . The sub-batch gradient 𝑔𝑖(𝑘 ) for the 𝑖-th sub-batch
+  SubTB(𝜆 = 0.8) and monitor various gradient metrics dur-
+  ing training. To remove the effect of parameter sharing                                                                                                                                  is set to the average of trajectory gradients 𝑔 (0)
+                                                                                                                                                                                                                                             𝑗 contained
+  between policies at different states and to isolate the ef-                                                                                                                              within the sub-batch and computed for 𝑖 ∈ {1, 2, . . . , 210−𝑘 }.
+  fect of the objective, we use a tabular representation of the                                                                                                                            We then report the average cosine similarity between the
+  GFlowNet, i.e., all flows and policy logits are optimized as                                                                                                                             sub-batch and full-batch gradients:
+  independent parameters.
+                                                                                                                                                                                                                                                             10−𝑘
+                                                                                                                                                                                                                                                    1
+                                                                                                                                                                                                                                                            2∑︁
+                                                                                                                                                                                                                                                                           𝑔𝑖(𝑘 ) · 𝑔1(10)
+   Gradient variance. To measure gradient variance, we use                                                                                                                                                                                                                                                             .
+                                                                                                                                                                                                                                               210−𝑘                       𝑔𝑖(𝑘 )                         𝑔1(10)
+   the following procedure for each training objective (DB, TB,                                                                                                                                                                                               𝑖=1
+
+
+                                                                                                                                                                                       6
+                      Learning GFlowNets from partial episodes for improved convergence and stability
+
+If this quantity is positive, then gradient steps of infinites-       ing the results over 3 random runs for each setting. We
+imally small norm along the stochastic sub-batch gradient             measure how well the trained models match the target dis-
+decrease the full-batch objective in expectation. Fig. 3 (left)       tribution by the correlation of log 𝑅(𝑥) and log 𝑝 𝜃 (𝑥), the
+shows the dependence of this metric on 𝑘 at various itera-            log-probability assigned to 𝑥 by the GFlowNet, computed
+tions. A steeper curve, such as those of DB and SubTB(𝜆),             on a held-out set of terminal states 𝑥.3
+indicates lower gradient variance.
+                                                                      The results are shown in Fig. 5. SubTB(𝜆), in particular
+Fig. 4 (left) shows the metric at 𝑘 = 6 (corresponding to             with 𝜆 = 1, performs better than both DB and TB when the
+the batch size of 64 used for training) over the course of            optimal hyperparameters 𝛼, 𝛽 are used (solid lines) and is
+training. The DB gradient has the highest self-consistency,           far more robust to the choice of hyperparameters (dashed
+TB has the lowest, and SubTB(𝜆 = 0.8) is in between.                  lines). Additional details can be found in §B.
+
+Gradient bias. We next compare the small-batch stochastic             4.3. Sequence generation
+gradients with large-batch stochastic gradients, using differ-
+ent objectives for the small and full batches. Specifically, we       We consider three sequence generation tasks in which se-
+compare the small-batch DB, SubTB(𝜆), and TB gradients                quences are generated left to right, with each action append-
+with the full-batch TB gradient. (The full-batch TB gradient          ing one symbol from a vocabulary to a partial sequence: a
+can be seen as a ‘canonical’ gradient against which bias              synthetic task with varying sequence lengths and vocabu-
+can be measured, as its expectation equals the gradient of            lary sizes (§4.3.1), a practical biological sequence design
+the KL divergence between the distribution over trajectories          task (§4.3.2), and a new protein design task with longer
+defined by 𝑃𝐹 and that defined by the reward 𝑅 and 𝑃 𝐵 ; see          sequences (4.3.3). For all three tasks, we consider the base-
+§A.3 of Malkin et al. (2022).)                                        lines Soft Actor-Critic (Haarnoja et al., 2018; Christodoulou,
+                                                                      2019), A2C with Entropy regularization (Williams & Peng,
+Fig. 4 (bottom) shows the cosine similarity at the batch size         1991; Mnih et al., 2016) and MARS-like MCMC (Xie et al.,
+used for training. Notably, at intermediate iterations, the           2021) and compare them with three GFlowNet training ob-
+similarity of SubTB(𝜆) with TB is higher than that of TB              jectives: TB, FM, and SubTB(𝜆).
+with TB: despite its bias, the small-batch SubTB(𝜆) gra-
+dient estimates the full-batch TB gradient better than                In §F, we also study a non-autoregressive sequence genera-
+the small-batch TB gradient does. Fig. 3 (right) shows the            tion problem (inverse protein folding).
+dependence of the similarity on 𝑘 at selected iterations and
+suggests that this effect may be even larger for smaller batch        4.3.1. B IT SEQUENCES
+sizes. Moreover, at 𝑘 = 10, the similarity of SubTB(𝜆) vs.
+                                                                      We consider the synthetic sequence generation setting from
+TB always lies between DB vs. TB and TB vs. TB, indicat-
+                                                                      Malkin et al. (2022), where the goal is to generate sequences
+ing that SubTB(𝜆) interpolates between TB’s unbiased and
+                                                                      of bits of fixed length 𝑛 = 120. The reward is specified by
+DB’s biased estimates of the TB gradient.
+                                                                      a set of modes 𝑀 ⊂ X = {0, 1} 𝑛 that is unknown to the
+The effect of learned state flows. See §A.2.                          learning agent. The reward of a generated sequence 𝑥 is
+                                                                      defined in terms of Hamming distance 𝑑 from the modes:
+                                                                      𝑅(𝑥) = exp(− min 𝑦 ∈ 𝑀 𝑑 (𝑥, 𝑦)).
+4.2. Small molecule synthesis
+                                                                      The vocabulary size can be varied: for any integer 𝑘 dividing
+We use SubTB(𝜆) to train models on the molecule genera-
+                                                                      120, we take a vocabulary consisting of words of length 𝑘
+tion task of Bengio et al. (2021a). The task is to generate
+                                                                      (so that the vocabulary size is 2 𝑘 and the full sequence
+binders of the sEH (soluble epoxide hydrolase) protein,
+                                                                      is generated in 𝑛𝑘 actions). By varying the value of 𝑘 and
+based on a docking prediction (Trott & Olson, 2010). To
+                                                                      keeping 𝑛 and 𝑀 constant, we study the behavior of learning
+be precise, molecules are generated by sequentially joining
+                                                                      agents with varying action space sizes and trajectory lengths
+‘blocks’ from a fixed library to the partial molecular graph
+                                                                      without changing the underlying modeling problem. Most
+(Jin et al., 2020; Kumar et al., 2012), resulting in a state
+                                                                      experiment settings are taken from Malkin et al. (2022); see
+space of estimated size 1012 . The reward function 𝑅 is given
+                                                                      §C.
+by a pretrained proxy model made available by Bengio et al.
+(2021a). To adjust the greediness of the agent, an inverse               3 Comparing the exact sampling and target distributions, like
+temperature hyperparameter 𝛽 is used, i.e., the reward used           in §4.1, is not possible here, since we cannot enumerate all ter-
+for training is 𝑅(𝑥) = 𝑅(𝑥)
+                         e 𝛽 , where 𝑅(𝑥)e    is the proxy’s          minal states. However, the marginal likelihood that a trained
+                                                                      GFlowNet generates a given 𝑥 is tractable to compute by dynamic
+prediction.                                                           programming. For a model that samples perfectly from the target
+We train models with the DB, TB, and SubTB(𝜆) objectives,             distribution, log(𝑅(𝑥)) and log 𝑝 𝜃 (𝑥) would differ by a constant
+                                                                      log 𝑍 independent of 𝑥 and thus be perfectly correlated.
+with four values each of 𝜆, 𝛽, and learning rate, averag-
+
+
+                                                                  7
+                                                                                              Learning GFlowNets from partial episodes for improved convergence and stability
+
+
+                                                                       0.8
+
+                                                                       0.6
+
+
+
+
+                                     logp (x) to logR(x) correlation
+                                                                       0.4
+
+                                                                       0.2
+
+                                                                       0.0
+
+                                                                       0.2
+
+                                                                       0.4          FM
+                                                                                    DB
+                                                                                    TB
+                                                                       0.6          SubTB(1)
+                                                                               4                  8        10                16                 10 4                          10 3     0     0.5   1   2       4
+                                                                                                                                                         learning rate               (DB)    SubTB parameter       (TB)
+                                                                                              reward exponent
+
+Figure 5. Correlation between marginal sampling log-likelihood and log-reward on the molecule task. For each hyperparameter setting on
+the 𝑥-axis, we plot the best result over choices of the other hyperparameter(s) – 𝛼 in the left plot, 𝛽 in the centre plot, and both 𝛼 and 𝛽 in
+the right plot – with a solid line. The mean result over values of other hyperparameter(s) is plotted with a dashed line.
+
+
+                               0.8                                                                                          GFN - SubTrajectory-lambda          the SubTB(𝜆) objective have a higher Spearman correlation
+                               0.7                                                                                          GFN - Trajectory Balance
+                                                                                                                            GFN - Flow Matching
+                                                                                                                                                                at the end of training and discover modes faster compared
+
+
+
+ Spearman Correlation (p, r)
+                               0.6                                                                                          A2C - Entropy                       to the other GFlowNet objectives and non-GFlowNet base-
+                               0.5                                                                                          Soft Actor-Critic
+                                                                                                                            MCMC                                lines.
+                               0.4
+                               0.3
+                                                                                                                                                                4.3.2. A NTIMICROBIAL PEPTIDE GENERATION
+                               0.2
+                               0.1                                                                                                                              Next, we consider the task of generating peptides with an-
+                                                                       2          4              6            8      10
+                                                                                                                                                                timicrobial properties (AMPs). These sequences have max-
+                                                                               Number of Bits in Action Space                                                   imum length 60 and use a vocabulary of 20 amino acids
+                               30
+                                                                                                                                                                (and an end-of-sequence token), resulting in a state space of
+                                                                                                                            GFN - SubTrajectory-lambda
+                                                                                                                            GFN - Trajectory Balance            size 2160 . The reward function is a pretrained proxy neural
+                               25
+                                                                                                                            GFN - Flow Matching                 network that estimates the antimicrobial activity. (See Jain
+                                                                                                                            A2C - Entropy
+                               20
+
+
+ Number of Modes
+                                                                                                                            Soft Actor-Critic                   et al. (2022) for details on this task.)
+                                                                                                                            MCMC
+                               15
+                                                                                                                                                                We train GFlowNets with the SubTB(𝜆), TB, and FM losses
+                               10
+                                                                                                                                                                and compare them with baselines. To evaluate the trained
+                                5                                                                                                                               models, we sample 2048 sequences from the policy, then
+                                0                                                                                                                               compute the mean reward and mean pairwise edit distance
+                                       0                                   10000     20000       30000      40000   50000
+                                                                                       Training Steps                                                           of the top-100 reward sequences. The metrics and model
+                                                                                                                                                                architecture are taken from Malkin et al. (2022); see §D.
+                                                                                                                                                                The results are presented in Table 2. SubTB(𝜆) provides
+Figure 6. Above: For the number of bits 𝑘 ∈ {1, 2, 4, 6, 8, 10} in                                                                                              significant improvements over all the baselines (including
+each vocabulary token, we plot the Spearman correlation between
+                                                                                                                                                                TB, FM, and DB GFlowNets) in both reward and diversity.
+the sampling probability and reward on a test set for each method.
+Training with SubTB(𝜆) leads to policies that have the highest
+correlation with the reward across all lengths and vocabulary sizes.
+                                                                                                                                                                4.3.3. F LUORESCENT PROTEIN GENERATION
+Below: For 𝑘 = 1, the number of modes discovered by each                                                                                                        We consider the task of generating protein sequences with
+method over the course of training is plotted. SubTB(𝜆) discovers                                                                                               fluorescence properties (Trabucco et al., 2022) to evaluate
+more modes faster.
+                                                                                                                                                                SubTB(𝜆) in settings with longer trajectories. In this task,
+                                                                                                                                                                sequences have a fixed length of 237, and the size of the
+                                                                                                                                                                state space is 20237 . The proxy reward function 𝑅(𝑥) is
+Models are evaluated by computing the Spearman correla-                                                                                                         trained on a dataset of proteins with their fluorescence scores
+tion, on a test set of sequences 𝑥, between the probability                                                                                                     from Sarkisyan et al. (2016). The metrics and models are
+of generating 𝑥 and the reward 𝑅(𝑥). We also track the                                                                                                          the same as in §4.3.2; see §E for details.
+number of modes discovered during the training process for
+all the methods, see Fig. 6. We find that models trained with                                                                                                   The GFlowNet objectives outperform all other methods
+
+                                                                                                                                                            8
+                        Learning GFlowNets from partial episodes for improved convergence and stability
+
+                                                                          sources provided by the Digital Research Alliance of
+Table 2. Results on the AMP generation task (above) and the GFP
+                                                                          Canada. All authors are funded by their primary institu-
+generation task (below). Mean and standard error over 3 runs.
+                                                                          tion. We also acknowledge funding from CIFAR, Samsung,
+   Algorithm          Top-100 Reward       Top-100 Diversity
+                                                                          IBM, and Microsoft.
+   GFN-LSubTB(𝜆)         0.96 ± 0.02          42.23 ± 3.4
+   GFN-LTB               0.90 ± 0.03         31.42 ± 2.9
+   GFN-LFM /LDB          0.78 ± 0.05         12.61 ± 1.32                 References
+   SAC                   0.80 ± 0.01         8.36 ± 1.44                  Baird, L. Residual algorithms: Reinforcement learning with
+   AAC-ER                0.79 ± 0.02          7.32 ± 0.76                   function approximation. International Conference on
+   MCMC                  0.75 ± 0.02         12.56 ± 1.45
+                                                                            Machine Learning (ICML), 1995.
+   GFN-LSubTB(𝜆)         1.18 ± 0.10         204.44 ± 0.45
+   GFN-LTB               0.76 ± 0.19         204.31 ± 0.44                Bengio, E., Pineau, J., and Precup, D. Interference and gen-
+   GFN-LFM /LDB          0.30 ± 0.08         190.21 ± 6.78                  eralization in temporal difference learning. International
+   SAC                   0.23 ± 0.03        120.32 ± 15.57                  Conference on Machine Learning (ICML), 2020.
+   AAC-ER                0.22 ± 0.02        113.65 ± 21.31
+   MCMC                  0.28 ± 0.01        169.17 ± 12.44                Bengio, E., Jain, M., Korablyov, M., Precup, D., and Ben-
+                                                                            gio, Y. Flow network based generative models for non-
+                                                                            iterative diverse candidate generation. Neural Information
+                                                                            Processing Systems (NeurIPS), 2021a.
+in both metrics, finding more diverse and higher-reward
+sequences (Table 2). SubTB(𝜆) significantly outperforms                   Bengio, Y., Lahlou, S., Deleu, T., Hu, E., Tiwari, M.,
+TB, while achieving a similar diversity. We note that the                   and Bengio, E. GFlowNet foundations. arXiv preprint
+advantage of SubTB(𝜆) is greater than that in the AMP                       2111.09266, 2021b.
+task (Table 2) and speculate that the benefits of SubTB(𝜆)
+become more prominent for longer action sequences.                        Brookes, D., Park, H., and Listgarten, J. Conditioning
+                                                                            by adaptive sampling for robust design. International
+                                                                            Conference on Machine Learning (ICML), 2019.
+5. Discussion and conclusion
+                                                                          Chaudhury, S., Lyskov, S., and Gray, J. J. PyRosetta: a
+We have given evidence of a bias-variance tradeoff in                       script-based interface for implementing molecular mod-
+GFlowNet training algorithms. The high-variance stochas-                    eling algorithms using Rosetta. Bioinformatics, 26(5):
+tic regression objective of TB and the low-variance local                   689–691, 2010.
+consistency objective of DB lie at opposite ends of this
+range. We showed that SubTB(𝜆) can harness the variance-                  Christodoulou, P. Soft actor-critic for discrete action settings.
+reducing effects of local objectives while retaining the fast               arXiv preprint 1910.07207, 2019.
+credit assignment properties of trajectory-level objectives.
+                                                                          Deleu, T., Góis, A., Emezue, C., Rankawat, M., Lacoste-
+We see learnable strategies for selecting and weighting
+                                                                            Julien, S., Bauer, S., and Bengio, Y. Bayesian structure
+(sub)trajectories for training – e.g., a dynamic choice of
+                                                                            learning with generative flow networks. Uncertainty in
+𝜆 and an active-learning approach to sampling trajectories
+                                                                           Artificial Intelligence (UAI), 2022.
+– as the most interesting questions for future work. The
+ability of subtrajectory objectives to learn from incomplete              Eysenbach, B., Gupta, A., Ibarz, J., and Levine, S. Diversity
+episodes also makes their application in RL environments                    is all you need: Learning skills without a reward function.
+and settings where reward signals for incomplete states are                 International Conference on Learning Representations
+available an appealing research direction.4 Finally, future                 (ICLR), 2018.
+work should empirically evaluate the connections between
+SubTB and variational methods developed in Malkin et al.                  Guo, H., Tan, B., Liu, Z., Xing, E. P., and Hu, Z. Text
+(2023).                                                                     generation with efficient (soft) Q-learning. arXiv preprint
+                                                                           2106.07704, 2021.
+
+Acknowledgments                                                           Haarnoja, T., Tang, H., Abbeel, P., and Levine, S. Re-
+                                                                            inforcement learning with deep energy-based policies.
+The authors thank Salem Lahlou for valuable suggestions                     International Conference on Machine Learning (ICML),
+about the experiments in §4.1.1.                                            2017.
+This research was enabled in part by computational re-                    Haarnoja, T., Zhou, A., Abbeel, P., and Levine, S. Soft actor-
+   4While the present paper was in submission, these settings               critic: Off-policy maximum entropy deep reinforcement
+were studied in Pan et al. (2023) and applied to Bayesian posterior         learning with a stochastic actor. International Conference
+inference over compositional objects in Hu et al. (2023).                   on Machine Learning (ICML), 2018.
+
+                                                                      9
+                      Learning GFlowNets from partial episodes for improved convergence and stability
+
+Hazan, E., Kakade, S., Singh, K., and Van Soest, A. Prov-             Pan, L., Malkin, N., Zhang, D., and Bengio, Y. Better
+  ably efficient maximum entropy exploration. Interna-                  training of GFlowNets with local credit and incomplete
+  tional Conference on Machine Learning (ICML), 2019.                   trajectories. International Conference on Machine Learn-
+                                                                        ing (ICML), 2023.
+Hu, E. J., Malkin, N., Jain, M., Everett, K., Graikos, A.,
+  and Bengio, Y. GFlowNet-EM for learning composi-                    Pirtskhalava, M., Amstrong, A. A., Grigolava, M., Chu-
+  tional latent variable models. International Conference               binidze, M., Alimbarashvili, E., Vishnepolsky, B.,
+  on Machine Learning (ICML), 2023.                                     Gabrielian, A., Rosenthal, A., Hurt, D. E., and Tar-
+                                                                        takovsky, M. Dbaasp v3: Database of antimicro-
+Ilyas, A., Engstrom, L., Santurkar, S., Tsipras, D., Janoos,            bial/cytotoxic activity and structure of peptides as a re-
+   F., Rudolph, L., and Madry, A. A closer look at deep                 source for development of new therapeutics. Nucleic
+   policy gradients. International Conference on Learning               Acids Research, 49(D1):D288–D297, 2021.
+   Representations (ICLR), 2020.
+                                                                      Rohl, C. A., Strauss, C. E., Misura, K. M., and Baker, D.
+Islam, R., Ahmed, Z., and Precup, D. Marginalized state                 Protein structure prediction using Rosetta. In Methods in
+   distribution entropy regularization in policy optimization.          enzymology, volume 383, pp. 66–93. Elsevier, 2004.
+   arXiv preprint 1912.05128, 2019.
+                                                                      Sarkisyan, K. S., Bolotin, D. A., Meer, M. V., Usmanova,
+Jain, M., Bengio, E., Hernandez-Garcia, A., Rector-Brooks,              D. R., Mishin, A. S., Sharonov, G. V., Ivankov, D. N.,
+   J., Dossou, B. F., Ekbote, C., Fu, J., Zhang, T., Kilgour,           Bozhanova, N. G., Baranov, M. S., Soylemez, O., et al.
+   M., Zhang, D., Simine, L., Das, P., and Bengio, Y. Bio-              Local fitness landscape of the green fluorescent protein.
+   logical sequence design with GFlowNets. International                Nature, 533(7603):397–401, 2016.
+   Conference on Machine Learning (ICML), 2022.
+                                                                      Schulman, J., Wolski, F., Dhariwal, P., Radford, A., and
+Jin, W., Barzilay, R., and Jaakkola, T. Chapter 11. junction            Klimov, O. Proximal policy optimization algorithms.
+   tree variational autoencoder for molecular graph gener-              arXiv preprint 1707.06347, 2017.
+   ation. Drug Discovery, pp. 228–249, 2020. ISSN 2041-
+   3211.                                                              Sinai, S., Wang, R., Whatley, A., Slocum, S., Locane, E.,
+                                                                        and Kelsic, E. AdaLead: A simple and robust adap-
+Kearns, M. J. and Singh, S. P. Bias-variance error bounds               tive greedy search algorithm for sequence design. arXiv
+  for temporal difference updates. Conference on Learning               preprint 2010.02141, 2020.
+  Theory (COLT), 2000.
+                                                                      Sutton, R. S. Learning to predict by the methods of temporal
+Kumar, A., Voet, A., and Zhang, K. Y. Fragment based drug               differences. Machine learning, 3(1):9–44, 1988.
+  design: from experimental to computational approaches.
+  Current medicinal chemistry, 19(30):5128–5147, 2012.                Sutton, R. S. and Barto, A. G. Reinforcement learning: An
+                                                                        introduction. MIT Press, 2018.
+Malkin, N., Jain, M., Bengio, E., Sun, C., and Bengio,
+ Y. Trajectory balance: Improved credit assignment in                 Trabucco, B., Geng, X., Kumar, A., and Levine, S. Design-
+ GFlowNets. Neural Information Processing Systems                       bench: Benchmarks for data-driven offline model-based
+ (NeurIPS), 2022.                                                       optimization. International Conference on Machine
+                                                                        Learning (ICML), 2022.
+Malkin, N., Lahlou, S., Deleu, T., Ji, X., Hu, E., Everett,
+ K., Zhang, D., and Bengio, Y. GFlowNets and varia-                   Trott, O. and Olson, A. J. AutoDock Vina: improving the
+ tional inference. International Conference on Learning                 speed and accuracy of docking with a new scoring func-
+ Representations (ICLR), 2023.                                          tion, efficient optimization, and multithreading. Journal
+                                                                        of computational chemistry, 31(2):455–461, 2010.
+Mnih, V., Badia, A. P., Mirza, M., Graves, A., Lillicrap,
+ T., Harley, T., Silver, D., and Kavukcuoglu, K. Asyn-                van Hasselt, H., Doron, Y., Strub, F., Hessel, M., Sonnerat,
+ chronous methods for deep reinforcement learning. Neu-                 N., and Modayil, J. Deep reinforcement learning and the
+ ral Information Processing Systems (NIPS), 2016.                       deadly triad. arXiv preprint 1812.02648, 2018.
+
+Nachum, O., Norouzi, M., Xu, K., and Schuurmans, D.                   Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones,
+  Bridging the gap between value and policy based rein-                 L., Gomez, A. N., Kaiser, Ł., and Polosukhin, I. Attention
+  forcement learning. Neural Information Processing Sys-                is all you need. Neural Information Processing Systems
+  tems (NIPS), 2017.                                                    (NIPS), 2017.
+
+                                                                 10
+                     Learning GFlowNets from partial episodes for improved convergence and stability
+
+Williams, R. and Peng, J. Function optimization using
+ connectionist reinforcement learning algorithms. Con-
+ nection Science, 3:241–, 09 1991. doi: 10.1080/
+ 09540099108946587.
+Xie, Y., Shi, C., Zhou, H., Yang, Y., Zhang, W., Yu, Y., and
+  Li, L. MARS: Markov molecular sampling for multi-
+  objective drug discovery. International Conference on
+  Learning Representations (ICLR), 2021.
+Zhang, C., Cai, Y., Huang, L., and Li, J. Exploration by
+  maximizing Rényi entropy for reward-free RL framework.
+  Association for the Advancement of Artificial Intelligence
+  (AAAI), 2021.
+
+Zhang, D., Malkin, N., Liu, Z., Volokhova, A., Courville,
+  A., and Bengio, Y. Generative flow networks for dis-
+  crete probabilistic modeling. International Conference
+  on Machine Learning (ICML), 2022.
+Zhang, S., Boehmer, W., and Whiteson, S. Deep residual
+  reinforcement learning. Autonomous Agents and Multi-
+  Agent Systems (AAMAS), 2020.
+Ziebart, B. D. Modeling purposeful adaptive behavior with
+  the principle of maximum causal entropy. Carnegie Mel-
+  lon University, 2010.
+
+
+
+
+                                                               11
+                           Learning GFlowNets from partial episodes for improved convergence and stability
+
+                         8×8×8×8    12 × 12 × 12 × 12 16 × 16 × 16 × 16 20 × 20 × 20 × 20 24 × 24 × 24 × 24 28 × 28 × 28 × 28 32 × 32 × 32 × 32 40 × 40 × 40 × 40
+                           (hard)         (hard)            (hard)            (hard)            (hard)            (hard)            (hard)            (hard)
+                   2.0
+
+
+                   1.5
+
+
+              L1   1.0
+
+
+                   0.5
+                                                                                                               TB
+                                                                                                               SubTB(0.9)
+                   0.0 3
+                      10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 105 106
+                           4  5  6  3  4  5  6  3  4  5  6  3  4  5  6  3  4  5  6  3  4  5  6  3  4  5  6  3  4
+
+
+
+
+                           8×8                      12 × 12                        16 × 16                       20 × 20                        24 × 24
+                                        150                                                           400                           600
+              60
+                                                                       200                            300
+                                        100                                                                                         400
+              40
+                                                                                                      200
+                                          50                           100                                                          200
+              20                                                                                      100
+                                           0 0                            0                              0                              0
+                100           104           10             104             100            104             100            104             100            104
+                         28 × 28                    32 × 32                        40 × 40                       50 × 50                        60 × 60
+             800                      1000                           1500
+             600                                                                                    2000                           3000
+                                        750
+                                                                     1000                                                          2000
+             400                        500
+                                                                                                    1000
+             200                        250                            500                                                         1000
+               0                           0                              0                              0                              0
+                100           104           100            104             100            104             100            104             100            104
+
+
+Figure A.1. Additional results for hypergrid experiments. Above: The evolution of the 𝐿 1 between empirical sampling and target
+distributions on the harder variants of 4-dimensional grids, in the same format as Fig. 2. Below: The number of cumulative distinct
+terminal states visited as a function of training time on the standard 2-dimensional grid. Models trained with SubTB(𝜆) discover more
+states faster.
+
+
+A. Experiment details: Hypergrid
+The environment is identical to that in Malkin et al. (2022), with reward function parameters (𝑅0 , 𝑅1 , 𝑅2 ) = (10−3 , 0.5, 2) for
+the standard variant of the grid and (10−4 , 1.0, 3.0) for the harder variant. The models giving logits of 𝑃𝐹 (−|𝑠) and 𝑃 𝐵 (−|𝑠),
+as well as log 𝐹 (𝑠), are MLPs of the same architecture as in Bengio et al. (2021a), taking a one-hot representation of the
+coordinates of 𝑠 as input and sharing all layers except the last. The initial state flow log 𝑍 = log 𝐹 (𝑠0 ) is an independent
+parameter whose learning rate is set to 10× the learning rate of other parameters.
+All models are trained with the Adam optimizer and a batch size of 16 for a total of 106 trajectories (62500 batches). The
+optimal learning rate for each experiment is chosen from {0.0005, 0.00075, 0.001, 0.003, 0.005, 0.0075, 0.01}, and 𝜆 = 0.9
+is chosen as the optimal value from the set {0.8, 0.9, 0.99}.
+Gradient bias and variance experiments are conducted in the harder variant of the 8 × 8 grid. The tabular GFlowNet is
+trained using Adam with a learning rate 0.007 and the SubTB(𝜆 = 0.8) objective.
+
+A.1. Additional experiments
+Fig. A.1 shows additional results on more difficult grid environments.
+We perform another experiment in which only short (up to length 4) subtrajectories are used for training with the SubTB(𝜆)
+
+                                                                                     12
+                       Learning GFlowNets from partial episodes for improved convergence and stability
+
+objective (i.e., the sum in (11) is truncated to exclude pairs (𝑖, 𝑗) with 𝑗 − 𝑖 > 4). The results, shown in Fig. A.4, show that
+SubTB(𝜆) continues to perform strongly in this restricted setting.
+Fig. A.2 shows the effect of the SubTB parameter 𝜆 on the training curves, showing a gradual interpolation between DB and
+TB and fastest convergence at values slightly less than 1.
+Fig. A.3 contains visualizations of the exploration behavior of different training algorithms. It shows that TB can perform
+better with off-policy training and can benefit from a higher temperature of the policy logits, but still does not learn as fast as
+SubTB(𝜆), nor does it find all the modes in the maximum number of training iterations.
+
+A.2. More on bias and variance: The effect of learned state flows
+To better understand the variance-reducing properties of SubTB(𝜆), we perform the gradient bias experiments with a
+modified computation of gradients that removes the factor of learning the state flows.
+Recall from §2.1 that a forward policy 𝑃𝐹 uniquely determines a distribution over trajectories. If the initial state flow 𝑍
+and forward policy 𝑃𝐹 are fixed, there is a unique state flow function 𝐹 𝐹 andÍbackward policy 𝑃 𝐵 that satisfy the detailed
+balance conditions (6). This ‘true forward’ flow function, written 𝐹 𝐹 (𝑠) = 𝑍 𝜏:𝑠∈ 𝜏 𝑃𝐹 (𝜏), is determined by an initial state
+                                              Í
+flow fixed to the true partition function 𝑍 = 𝑥 ∈ X 𝑅(𝑥) and the learned forward policy 𝑃𝐹 . Similarly, the ‘true backward’
+                                   Í
+flow function, written 𝐹 𝐵 (𝑠) = 𝜏:𝑠∈ 𝜏 𝑃 𝐵 (𝜏)𝑅(𝑥 𝜏 ) where 𝑥 𝜏 is the terminal state
+                                                                                  Í of 𝜏, is uniquely determined by the
+reward function 𝑅 and the learned backward policy 𝑃 𝐵 . In particular, 𝐹 𝐵 (𝑠0 ) = 𝑥 ∈ X 𝑅(𝑥).
+We repeat the experiments on gradient bias, but by replacing the learned state flows 𝐹 in the losses by either the true forward
+or the true backward state flows (𝐹 𝐹 or 𝐹 𝐵 respectively) computed exactly using the current values of the learned 𝑃𝐹 and
+𝑃 𝐵 . (These modifications are not applied in training, but are used only to compute the gradient similarities. The small size
+of the environment makes computation of the true state flows tractable; this is not possible in general.)
+The gradient similarity over the course of training is shown in Fig. A.5 (cf. Fig. 4 in the main text). The similar behavior
+of SubTB(𝜆) with learned and true forward state flows suggests that the learned state flows remain close enough to their
+optimal values and that the variance-reducing benefits of SubTB(𝜆) with true state flows are retained.
+
+B. Experiment details: Molecules
+All experiments with SubTB(𝜆) are based upon the published code of Malkin et al. (2022), which extends that of Bengio
+et al. (2021a). The proxy model giving the reward, the held-out set of molecules used to compute the correlation metric,
+and the GFlowNet model architecture – a graph neural network – are identical to those in Bengio et al. (2021a), and the
+off-policy exploration rate and early stopping likelihood are the same as those tuned for the training with the TB objective in
+Malkin et al. (2022). All models are trained for a maximum of 50000 batches of 4 trajectories each. (Some training runs
+terminated early because of numerical overflows in the gradients, in which case we report the metric of the last stable model
+whose cumulative number of batches is a multiple of 5000.)
+
+C. Experiment details: Bit sequences
+The modes 𝑀 as well as the test sequences are selected as described in Malkin et al. (2022). The policy for all methods is
+parameterized by a Transformer (Vaswani et al., 2017) with 3 layers, dimension 64, and 8 attention heads. All methods
+are trained for 50,000 iterations with minibatch size of 16 using Adam optimizer. For GFlowNets with FM objective as
+well as the baselines, we use the exact same implementation and hyperparameters reported in Malkin et al. (2022). For TB
+and SubTB(𝜆), we pick the best learning rate from {0.0075, 0.001, 0.001, 0.003, 0.005} for forward logits, and for Z, use a
+learning rate of 10× the learning rate for forward logits. For SubTB(𝜆), we found the best 𝜆 value of 1.9 from the values
+{0.8, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9, 2.0}.
+
+D. Experiment details: Antimicrobial peptide generation
+Following Malkin et al. (2022) we use the following amino acids: [‘A’, ‘C’, ‘D’, ‘E’, ‘F’, ‘G’, ‘H’,
+‘I’, ‘K’, ‘L’, ‘M’, ‘N’, ‘P’, ‘Q’, ‘R’, ‘S’, ‘T’, ‘V’, ‘W’, ‘Y’]. We take 6438 known
+AMP sequences and 9522 non-AMP sequences from the DBAASP database Pirtskhalava et al. (2021). The classifier
+that serves as the proxy reward function is trained on this dataset, using 20𝑃𝐸 𝑅𝐶𝐸 𝑁𝑇 of the data as the validation set.
+
+                                                                13
+                       Learning GFlowNets from partial episodes for improved convergence and stability
+
+The reward model is a Transformer, with 4 hidden layers, hidden dimension 64, and 8 attention heads. We train it with a
+minibatch of size 256, with learning rate 10−4 , and with early stopping on the validation set. We use a Transformer with 3
+hidden layers with hidden dimension 64 with 8 attention heads as the architecture of the policy for all methods. All methods
+are trained for 20, 000 iterations, with a minibatch size of 16, using the reported hyperparameters for all the baselines
+from (Malkin et al., 2022). For TB and SubTB(𝜆), we pick the best learning rates from {0.005, 0.007, 0.01, 0.03, 0.05, 0.07}
+for forward logits and from {0.007, 0.01, 0.03, 0.05} for log 𝑍. For SubTB(𝜆), the best performing 𝜆 value of 1.9 chosen
+from {0.9, 0.99, 1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 1.8, 1.9, 2.0} is used.
+
+E. Experiment details: Fluorescent protein generation
+We consider a variant of the GFP task from Trabucco et al. (2022). The vocabulary of amino acids is
+the same as §D: [‘A’, ‘C’, ‘D’, ‘E’, ‘F’, ‘G’, ‘H’, ‘I’, ‘K’, ‘L’, ‘M’, ‘N’, ‘P’, ‘Q’,
+‘R’, ‘S’, ‘T’, ‘V’, ‘W’, ‘Y’]. Following Trabucco et al. (2022), we consider the dataset of 56,086 proteins
+from Sarkisyan et al. (2016) processed based on Brookes et al. (2019). Each protein is accompanied by a score quantifying
+its fluorescence. As with the AMP data, we keep 20𝑃𝐸 𝑅𝐶𝐸 𝑁𝑇 of the data as a validation set used for early-stopping. The
+regressor trained with the dataset is a Transformer, with 4 hidden layers, hidden dimension 64, and 8 attention heads. We
+train it with a minibatch of size 256, with learning rate 10−4 , with early stopping on the validation set. The architecture
+of the policy for all methods is a Transformer with 3 hidden layers with hidden dimension 64 with 8 attention heads. All
+methods are trained for 20, 000 iterations, with a minibatch size of 16. We use the same implementation for all methods as
+the ones used in §D.
+To define an exploratory training policy, we set the the random action probability to 0.01 selected from
+{0.0001, 0.0005, 0.001, 0.01} and the reward exponent 𝛽 (having the same meaning as in §4.2) to 3 selected from {2, 3, 4}.
+For trajectory balance we use a learning rate of 5 × 10−3 selected from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 } for the flow
+parameters and 1 × 10−2 for log 𝑍. For SubTB(𝜆), we choose the best 𝜆 from {0.7, 0.8, 0.9, 0.99}, and found 𝜆 = 0.99 to
+perform the best. For TB and SubTB(𝜆), we tune for the best learning rates from {0.0001, 0.0003, 0.0005, 0.00075, 0.001}
+for the forward logits. For log 𝑍, we use a learning rate of 10× the learning rate for the forward logits.
+For FM we use a learning rate of 10−3 selected from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 } with leaf loss coefficient 𝜆𝑇 = 30.
+For A2C with entropy regularization we share parameters between the actor and critic networks, and use learning rate of
+5 × 10−3 selected from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 } with entropy regularization coefficient 5 × 10−2 selected from
+{10−4 , 10−3 , 5 × 10−3 , 10−2 , 5 × 10−2 }. For SAC we use the formulation in Christodoulou (2019) with a learning rate of
+10−3 selected from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 }, a target network update frequency of 400 and initial random steps
+of 200. For the MARS baseline, we set the learning rate to 5 × 10−4 selected from {10−5 , 10−4 , 5 × 10−4 , 10−3 , 5 × 10−3 }.
+We run the experiments on 3 seeds and report the mean and standard error over the three runs in Table 2.
+
+F. Inverse protein folding: Non-autoregressive sequence generation
+We consider the inverse protein folding problem suggested in Sinai et al. (2020). A target protein 3D backbone conformation
+is given, and the task is to sample amino acid sequences of a fixed length 𝐿 = 40 from the Boltzmann distribution
+corresponding to their energy in the target conformation. The energy is provided by a physics model (Rohl et al., 2004;
+Chaudhury et al., 2010). The policy model is a 3-layer convolutional architecture that closely follows previous work (Sinai
+et al., 2020). Specifically, for the policy function, the convolution size was set to 7 with 32 hidden features and ReLU
+activation in each layer. The policy network has one additional convolutional layer of size 20 (number of amino acids), and
+without the activation function. The flow network has an additional two linear layers of sizes [1280,64], and [64, 1] with
+ReLU activation in between. We report mean result over three runs.
+For this task, rather than generating sequences from left to right, we consider an action space in which actions modify
+one letter at a time at arbitrary positions. The first action uniformly randomly samples an amino acid sequence. On each
+subsequent action, the agent selects a position in the sequence and replaces the letter in this position with another letter in
+the vocabulary. Generation terminates after exactly 𝑁 = 40 replacement steps. The forward policy is conditioned on the
+number of steps taken so far in the trajectory; the backward policy is fixed to be uniform over the 𝑁 · 𝐿 actions.
+As a metric of how well the learned model matches the target distribution, we measure the correlation between log 𝑅(𝑥) and
+the marginal sampling likelihood log 𝑝 𝜃 (𝑥) on a held-out set of terminal states. The results are presented in Fig. F.1. We
+observe that intermediate values of lambda lead to the best fit to the target distribution.
+
+                                                               14
+                 Learning GFlowNets from partial episodes for improved convergence and stability
+
+
+
+
+                                                       interpolation (hard grid)
+       8 × 8, = 0.01                         8 × 8, = 0.1                        8 × 8, = 0.2                  8 × 8, = 0.3
+2.00                            2.00                               2.00                               2.00
+1.75                            1.75                               1.75                               1.75
+1.50                            1.50                               1.50                               1.50
+1.25                            1.25                               1.25                               1.25
+1.00                            1.00                               1.00                               1.00
+0.75                            0.75                               0.75                               0.75
+0.50                            0.50                               0.50                               0.50
+0.25                            0.25                               0.25                               0.25
+0.00                            0.00                               0.00                               0.00
+        103            105                    103           105                  103            105             103           105
+       8 × 8, = 0.7                          8 × 8, = 0.8                       8 × 8, = 0.9                   8 × 8, = 1.3
+2.00                            2.00                               2.00                               2.00
+1.75                            1.75                               1.75                               1.75
+1.50                            1.50                               1.50                               1.50
+1.25                            1.25                               1.25                               1.25
+1.00                            1.00                               1.00                               1.00
+0.75                            0.75                               0.75                               0.75
+0.50                            0.50                               0.50                               0.50
+0.25                            0.25                               0.25                               0.25
+0.00                            0.00                               0.00                               0.00
+        103            105                    103           105                  103            105             103           105
+       8 × 8, = 3.0                          8 × 8, = 5.0                      8 × 8, = 10.0                  8 × 8, = 15.0
+2.00                            2.00                               2.00                               2.00
+1.75                            1.75                               1.75                               1.75
+1.50                            1.50                               1.50                               1.50
+1.25                            1.25                               1.25                               1.25
+1.00                            1.00                               1.00                               1.00
+0.75                            0.75                               0.75                               0.75
+0.50                            0.50                               0.50                               0.50
+0.25                            0.25                               0.25                               0.25
+0.00                            0.00                               0.00                               0.00
+        103            105                    103           105                  103            105             103           105
+       8 × 8, = 20.0                        8 × 8, = 30.0                      8 × 8, = 50.0                  8 × 8, = 100.0
+2.00                            2.00                               2.00                               2.00
+1.75                            1.75                               1.75                               1.75
+1.50                            1.50                               1.50                               1.50
+1.25                            1.25                               1.25                               1.25
+1.00                            1.00                               1.00                               1.00
+0.75                            0.75                               0.75                               0.75
+0.50                            0.50                               0.50                               0.50   DB
+0.25                            0.25                               0.25                               0.25   SubTB( )
+                                                                                                             TB
+0.00                            0.00                               0.00                               0.00
+        103            105                    103           105                  103            105             103           105
+
+
+
+                             Figure A.2. Empirical 𝐿 1 curves on the 8 × 8 grid for varying values of 𝜆.
+
+
+
+
+                                                                  15
+                                                  Learning GFlowNets from partial episodes for improved convergence and stability
+
+
+                                                Training with tempered training policy                                                                                              Training with different uniform random action probabilities
+                12 × 12                                             16 × 16                                            20 × 20                                                 12 × 12                                            16 × 16                                 20 × 20
+  2.00                                             2.00                                           2.00                                        2.00                                                            2.00                                      2.00
+
+  1.75                                             1.75                                           1.75                                        1.75                                                            1.75                                      1.75
+
+  1.50                                             1.50                                           1.50                                        1.50                                                            1.50                                      1.50
+
+  1.25                                             1.25                                           1.25                                        1.25                                                            1.25                                      1.25
+
+  1.00                                             1.00                                           1.00                                        1.00                                                            1.00                                      1.00
+
+  0.75                                             0.75                                           0.75                                        0.75                                                            0.75                                      0.75
+
+  0.50                                             0.50                                           0.50                                        0.50                                                            0.50                                      0.50
+
+  0.25                                             0.25                                           0.25                                        0.25                                                            0.25                                      0.25
+
+  0.00                                             0.00                                           0.00                                        0.00                                                            0.00                                      0.00
+          104                 105           106               104             105           106                  104             105   106                              104              105            106                 104             105   106              104              105   106
+                24 × 24                                             28 × 28                                            32 × 32                                                 24 × 24                                            28 × 28                                 32 × 32
+  2.00                                             2.00                                           2.00                                        2.00                                                            2.00                                      2.00
+
+  1.75                                             1.75                                           1.75                                        1.75                                                            1.75                                      1.75
+
+  1.50                                             1.50                                           1.50                                        1.50                                                            1.50                                      1.50
+
+  1.25                                             1.25                                           1.25                                        1.25                                                            1.25                                      1.25
+
+
+  1.00                                             1.00                                           1.00                                        1.00                                                            1.00                                      1.00
+
+
+  0.75                                             0.75                                           0.75                                        0.75                                                            0.75                                      0.75
+
+
+  0.50                                             0.50                                           0.50                                        0.50                                                            0.50                                      0.50    =0.0
+                                                                                                                                                                                                                                                                =0.0625
+                                                                                                           temp=1                                                                                                                                               =0.125
+                                                                                                           temp=2                                                                                                                                               =0.25
+  0.25                                             0.25                                           0.25     temp=3                             0.25                                                            0.25                                      0.25    =0.5
+                                                                                                           temp=4                                                                                                                                               =1
+                                                                                                           SubTB                                                                                                                                               SubTB
+  0.00                                             0.00                                           0.00                                        0.00                                                            0.00                                      0.00
+          104                 105           106               104             105           106                  104             105   106                              104              105            106                 104             105   106              104              105   106
+
+
+
+
+Figure A.3. Training GFlowNets on the harder variants of 2-dimensional grids using a tempered training policy (left), and a training
+policy that takes a uniformly random action with probability 𝜖 at each sampling step (right).
+
+
+                                                                                                               32 × 32                                                              40 × 40
+                                                                                                                (hard)                                                               (hard)
+                                                                                    2.0
+                                                                                                                                                                                               TB
+                                                                                                                                                                                               SubTB(0.9)
+                                                                                                                                                                                               SubTB(0.9) short
+                                                                                    1.5
+
+
+                                                                         L1         1.0
+
+
+                                                                                    0.5
+
+
+                                                                                    0.0 3
+                                                                                       10                104              105          106          103                       104                 105                 106
+
+
+
+Figure A.4. Training GFlowNets using only short subtrajectories in different grid environments using the SubTB(𝜆 = 0.9) objective.
+
+
+
+                                                Similarity with TB Gradient, True Forward Flows                                                                           Similarity with TB Gradient, True Backward Flows
+                                      0.8
+                                                                                                                                                                  0.8
+                                      0.6
+                                                                                                                                                                  0.6
+
+
+                  Cosine Similarity                                                                                                           Cosine Similarity
+                                      0.4                                                                                                                         0.4
+                                      0.2                              Loss Comp Name                                                                             0.2                                         Loss Comp Name
+                                                                                     DB vs TB                                                                                                                           DB vs TB
+                                      0.0                                            SubTB vs TB                                                                  0.0                                                   SubTB vs TB
+                                                                                     TB vs TB                                                                                                                           TB vs TB
+                                            0        500 1000 1500 2000 2500 3000 3500 4000                                                                             0           500 1000 1500 2000 2500 3000 3500 4000
+                                                                              Training Step                                                                                                                          Training Step
+
+         Figure A.5. Gradient similarity with state flows analytically computed in two ways (see §A.2). (Compare with Fig. 4.)
+
+
+                                                                                                                                             16
+                        Learning GFlowNets from partial episodes for improved convergence and stability
+
+
+
+
+Figure F.1. The Spearman correlation between the sampling probability and reward on a test set is plotted over the course of training for
+each value of 𝜆.
+
+
+
+
+                                                                   17
+

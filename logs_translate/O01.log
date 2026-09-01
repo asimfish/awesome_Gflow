@@ -1,0 +1,14 @@
+Translating batch 1/1: 4 blocks, 124 chars
+Translated 4/4 text blocks
+Translating batch 1/1: 1 blocks, 3265 chars
+Translated 1/1 text blocks
+Translating batch 1/1: 8 blocks, 1838 chars
+Translated 8/8 text blocks
+Translating batch 1/1: 8 blocks, 2077 chars
+Translated 8/8 text blocks
+Translating batch 1/1: 8 blocks, 2105 chars
+Translated 8/8 text blocks
+Translating batch 1/1: 8 blocks, 1229 chars
+Warning: supplier response could not be parsed for 8 inputs; retrying one by one
+Warning: single-item JSON translation failed (Translation API request failed: timed out); using plain-text fallback
+Translation failed: Translation API request failed: timed out

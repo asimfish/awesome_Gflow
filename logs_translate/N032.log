@@ -1,0 +1,3 @@
+Translating batch 1/1: 8 blocks, 1338 chars
+Warning: supplier response could not be parsed for 8 inputs; retrying one by one
+Warning: single-item JSON translation failed (Translation API request failed: timed out); using plain-text fallback

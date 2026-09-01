@@ -1,0 +1,2078 @@
+                                                                  A Theory of Continuous Generative Flow Networks
+
+
+                                                  Salem Lahlou 1 2 Tristan Deleu 1 2 Pablo Lemos 1 3 2 Dinghuai Zhang 1 2 Alexandra Volokhova 1 2
+                                                      Alex Hernández-Garcı́a 1 2 Léna Néhale Ezzine 1 2 Yoshua Bengio 1 2 4 Nikolay Malkin 1 2
+
+
+                                                                     Abstract                                         policy learning and the ability to capture many modes of the
+                                                                                                                      target distribution, extend to general spaces. For example,
+
+
+
+
+arXiv:2301.12594v2 [cs.LG] 25 May 2023
+                                              Generative flow networks (GFlowNets) are amor-
+                                              tized variational inference algorithms that are                         molecule design implies specifying relative spatial positions
+                                              trained to sample from unnormalized target distri-                      of atoms and benefits from modeling continuous variables,
+                                              butions over compositional objects. A key limi-                         such as torsion angles (Jing et al., 2022), and Bayesian
+                                              tation of GFlowNets until this time has been that                       structure learning requires the discovery of not only the
+                                              they are restricted to discrete spaces. We present a                    structure of the graphical model, but also its parameters.
+                                              theory for generalized GFlowNets, which encom-                          As a first attempt at using GFlowNet losses to train an
+                                              passes both existing discrete GFlowNets and ones                        amortized sampler of a unnormalized continuous density,
+                                              with continuous or hybrid state spaces, and per-                        Malkin et al. (2023) showed that the off-policy benefits
+                                              form experiments with two goals in mind. First,                         of GFlowNets extend to a toy stochastic control problem.
+                                              we illustrate critical points of the theory and the                     However, a theory justifying the soundness GFlowNet losses
+                                              importance of various assumptions. Second, we                           in domains with continuous actions has been still lacking.
+                                              empirically demonstrate how observations about                          More recently, Li et al. (2023) presented an extension of the
+                                              discrete GFlowNets transfer to the continuous                           flow-matching conditions (Bengio et al., 2021a) to contin-
+                                              case and show strong results compared to non-                           uous domains; however, this extension relies upon several
+                                              GFlowNet baselines on several previously studied                        invalid assumptions, as we expand on in §3.1.
+                                              tasks. This work greatly widens the perspectives
+                                              for the application of GFlowNets in probabilistic                       This paper presents a theory extending all known GFlowNet
+                                              inference and various modeling settings.                                training objectives to arbitrary spaces. It relies on measur-
+                                                                                                                      able pointed graphs, a generalization of directed acyclic
+                                         1. Introduction                                                              graphs (DAGs) to measurable spaces, based on Markov ker-
+                                                                                                                      nels. Our main theoretical contributions are an extension
+                                         Generative flow networks (GFlowNets; Bengio et al., 2021a)                   of the flow-matching (FM; Bengio et al., 2021a), detailed
+                                         are an increasingly popular class of methods that amortize                   balance (DB; Bengio et al., 2021b), and trajectory balance
+                                         sampling from intractable distributions over spaces with a                   (TB; Malkin et al., 2022) conditions and a theorem proving
+                                         compositional structure by learning a sequential sampling                    that the learned forward kernel samples from the target dis-
+                                         policy. Their applications include the design of biological                  tribution when any of these conditions is satisfied. These
+                                         structures such as molecules (Bengio et al., 2021a; Jain                     conditions lead to training losses involving density functions
+                                         et al., 2022), Bayesian structure learning (Deleu et al., 2022;              and allowing gradient-based learning. Existing losses for
+                                         Nishikawa-Toomey et al., 2022), and robust combinatorial                     discrete GFlowNets are special cases of the ones we state.
+                                         optimization (Zhang et al., 2023b). Naturally, their devel-
+                                                                                                                      Additionally, we provide experimental results in multiple
+                                         opment and theoretical foundations (Bengio et al., 2021b;
+                                                                                                                      domains with different structures, some of which include
+                                         Malkin et al., 2023; Zimmermann et al., 2022) have been
+                                                                                                                      action spaces with both discrete and continuous compo-
+                                         geared towards environments with discrete structures.
+                                                                                                                      nents. These experiments serve both to validate the theo-
+                                         As many probabilistic inference and modeling problems                        retical claims and to inform practitioners of caveats that
+                                         involve continuous variables, it is natural to ask whether                   are specific to continuous domains. Our comparative ex-
+                                         the advantages of GFlowNets, which include stable off-                       periments confirm that the already-proven advantages of
+                                            1 Mila 2 Université de Montréal 3 Ciela Institute 4 CIFAR. Corre-
+                                                                                                                      discrete GFlowNets transfer to more general state spaces.
+                                         spondence to: Salem Lahlou <lahlosal@mila.quebec>.                           The remainder of the paper is structured as follows:
+                                         Proceedings of the 40 𝑡 ℎ International Conference on Machine                §2 reviews GFlowNets and work on stochastic sampling;
+                                         Learning, Honolulu, Hawaii, USA. PMLR 202, 2023. Copyright
+                                         2023 by the author(s).                                                       §3 presents the theoretical results and a practical summary;
+
+                                                                                                                  1
+A Theory of Continuous Generative Flow Networks                                                                                    2
+
+§4 is devoted to empirically validating the theory and com-           (2023a); Malkin et al. (2023); Zimmermann et al. (2022)
+paring generalized GFlowNets with baselines.                          proved a partial equivalence between GFlowNets and hi-
+                                                                      erarchical variational methods, but showed the superiority
+2. Background and related work                                        of GFlowNets when learning with trajectories sampled off-
+                                                                      policy. Zhang et al. (2022) used GFlowNets for approximate
+2.1. Stochastic sampling in continuous spaces                         maximum-likelihood training of energy-based models, by-
+                                                                      passing the need for a given target reward.
+Sequential sampling in continuous spaces has a long history.
+Specialized Markov chain Monte Carlo (MCMC) methods                   Jain et al. (2022) used GFlowNets within an active learning
+exist for sampling from continuous or differentiable den-             loop to design biological sequences. Zhang et al. (2023b)
+sities, such as Langevin and Hamiltonian MCMC (Coffey                 used GFlowNets for an NP-hard combinatorial optimiza-
+et al., 2004; Neal, 2012; Hoffman & Gelman, 2011).                    tion problem. Other applications include Bayesian struc-
+                                                                      ture learning: Deleu et al. (2022); Nishikawa-Toomey et al.
+Another line of work considers stochastic sampling in a
+                                                                      (2022) learn posteriors over the combinatorially large space
+finite number of steps. The family of sequential Monte
+                                                                      of causal graphs, which are naturally compositional.
+Carlo methods (Doucet et al., 2001) and the closely related
+annealed importance sampling (Neal, 2001) specify a se-               Review of discrete GFlowNets. Given a non-negative tar-
+quence of intermediate target densities with respect to which         get reward function 𝑅 on a finite space X, which coincides
+samplers aim to approximately satisfy detailed balance, but           with a subset of the vertices of a DAG called the terminat-
+the transition kernel is typically not a learned neural network       ing states, GFlowNet training objectives aim at learning
+policy. More recently, learnable-kernel sampling methods,             transition probabilities 𝑃𝐹 (𝑠′ | 𝑠) along the edges of the
+formulated as score-based or stochastic differential equation         DAG. The (forward) action policy 𝑃𝐹 induces a marginal
+modeling, have been used for maximum-likelihood gener-                distribution 𝑃⊤𝐹 over the terminating states, the final states
+ative modeling (e.g., Sohl-Dickstein et al., 2015; Song &             of trajectories that begin at the designated initial state and
+Ermon, 2019; Ho et al., 2020; Dockhorn et al., 2022), as              sample transitions according to 𝑃𝐹 . The parameters of the
+well as for learning to sample from an intractable target den-        forward policy 𝑃𝐹 are sequentially updated using a stochas-
+sity (Zhang & Chen, 2022). As we show in our experiments,             tic gradient of the objective function applied to a trajectory,
+such algorithms can be seen as special cases of GFlowNets             sampled either from the forward policy itself (on-policy), or
+where the state space is of a particular form (§4.2, §4.5).           a modified version thereof in order to incentivize exploration
+                                                                      (off-policy). When the loss is at a global minimum, the for-
+Another related direction is stochastic normalizing flows
+                                                                      ward policy is able to effectively sample from a probability
+(Wu et al., 2020), which have been interpreted with a
+                                                                      distribution over X proportional to 𝑅.
+Markov chain perspective (Hagemann et al., 2022), rely-
+ing on Markov kernels and Radon-Nikodym derivatives just              All GFlowNet losses must introduce additional objects into
+as our theory of generalized GFlowNets.                               the parametrization to cope with the intractable representa-
+                                                                      tion of 𝑃⊤ 𝐹 (𝑥) as a sum of the likelihoods of all (possibly
+2.2. Discrete GFlowNets                                               exponentially many) trajectories leading to 𝑥. For example,
+                                                                      the DB and TB objectives use a parametric backward policy
+GFlowNets were first framed as a reinforcement learning               𝑃 𝐵 (𝑠 | 𝑠′ ), which specifies a distribution over the parents
+(RL) algorithm (Bengio et al., 2021a), with discrete state            of any state in the DAG.
+and action spaces, that trains a sampler of a target distribu-
+tion given by its unnormalized probability mass function,
+called reward, using a local consistency objective known as           3. A theory for generalized GFlowNets
+flow matching. This contrasts with usual RL algorithms                3.1. Practical summary
+that aim at maximizing a given reward function, but is
+equivalent to entropy-regularized RL methods in special               A summary of the key differences and analogies between
+cases. Bengio et al. (2021b) laid out the theoretical foun-           discrete and generalized GFlowNets is provided in Table 1,
+dations of GFlowNets, based on flow networks defined on               and the precise way in which discrete GFlowNets are special
+DAGs, and proposed the detailed balance loss as a more                cases of generalized GFlowNets is stated in §B.
+efficient alternative that bypasses the need to sum the flows         The theory we develop in this section shows that the main
+over large sets of children and parents, opening the door             losses used to train discrete GFlowNets, namely the de-
+for continuous states. The trajectory balance and subtra-             tailed balance (Bengio et al., 2021b) and the trajectory bal-
+jectory balance losses (Malkin et al., 2022; Madan et al.,            ance (Malkin et al., 2022) losses, naturally extend to gen-
+2022) have been found to be yet more efficient. Pan et al.            eralized GFlowNets, simply by replacing probability mass
+(2022) proposed a framework to incorporate intrinsic ex-              functions with probability density functions. Most impor-
+ploration rewards when training a GFlowNet. Zhang et al.
+
+                                                                  2
+A Theory of Continuous Generative Flow Networks                                                                                                              3
+
+
+                                        Table 1. Dictionary between discrete and generalized GFlowNets
+                      Discrete GFlowNet                                                Generalized GFlowNet                                         Reference
+The state space is a finite set with distinguished source and   The state space is a topological space with distinguished                               Def. 1
+sink states                                                     source and sink states, and may consist of both continuous
+                                                                and discrete components
+Children and parents of a state 𝑠                               Supports of the measures 𝜅(𝑠, −), 𝜅 𝑏 (𝑠, −)                                            Def. 1
+All states are reachable from 𝑠0                                All open sets are reachable from 𝑠0 with nonzero likelihood                                (1)
+The state ⊥ has no outgoing edges                               The state ⊥ is absorbing                                                                   (2)
+The state graph is acyclic (⇒ trajectory lengths are bounded)   The measurable pointed graph is finitely absorbing                                         (7)
+State flow 𝐹, forward policy 𝑃𝐹 , backward policy 𝑃 𝐵           Flow measure 𝜇, forward kernel 𝑃𝐹 , backward kernel 𝑃 𝐵                          Defs. 3 and 5
+Transition likelihoods 𝑃𝐹 (−|𝑠) only positive along edges       Transition kernels 𝑃𝐹 (𝑠, −) absolutely continuous w.r.t. 𝜅                             Def. 3
+Terminating distribution 𝑃⊤
+                          𝐹                                     Terminating state measure 𝑃⊤                                                 Def. 9 and Thm. 1
+Flow-matching implies sampler matches reward function 𝑅         Flow-matching implies sampler matches reward measure 𝑅                       Def. 3 and Thm. 1
+Detailed balance: 𝐹 (𝑠)𝑃𝐹 (𝑠′ |𝑠) = 𝐹 (𝑠′ )𝑃 𝐵 (𝑠|𝑠′ )          Detailed balance: 𝜇(𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠′ ) = 𝜇(𝑑𝑠′ )𝑃 𝐵 (𝑠′ , 𝑑𝑠)                              Def. 5
+Trajectory balance: 𝑍 𝑃𝐹 (𝜏) = 𝑅(𝑥 𝜏 )𝑃 𝐵 (𝜏 | 𝑥 𝜏 )            Trajectory balance:              𝑍 𝑃𝐹 (𝑠0 , 𝑑𝑠1 ) . . . 𝑃𝐹 (𝑠 𝑛 , {⊥})   =              Def. 6
+                                                                𝑅(𝑑𝑠 𝑛 )𝑃 𝐵 (𝑠 𝑛 , 𝑑𝑠 𝑛−1 ) . . . 𝑃 𝐵 (𝑠1 , {𝑠0 })
+
+
+
+tantly, however, the soundness of the theory relies upon the                   method’s applicability.
+following assumptions, which need to be carefully verified
+when training a GFlowNet in an infinite space:                                 3.2. Structured state space
+(1) The structure of the state space must allow all states to                  Note. To help the reader form a mental picture, we list the
+    be reachable from the source state 𝑠0 (1);                                 concepts introduced and their discrete analogues in Table 1
+(2) The structure must ensure that the number of steps re-                     and formally state the connection in §B. Paragraphs marked
+    quired to reach any state from 𝑠0 is bounded (7);                          (★) explain the meaning of the technical results.
+(3) The learned probability measures need to be expressed
+    through densities over states, rather than over actions.                   (★) How could one describe a structure in general spaces,
+                                                                               similar to DAGs on finite sets? In finite sets, it would
+These assumptions are naturally verified in discrete domains,                  suffice to enumerate the child sets and parent sets of all
+as long as the state space is described by a pointed directed                  states, with the constraint that 𝑠′ is a child of 𝑠 if and only
+acyclic graph (Bengio et al., 2021b).                                          if 𝑠 is a parent of 𝑠′ . In general state spaces, however,
+On previous attempts to train continuous GFlowNets.                            enumeration is replaced by measure. One could thus define,
+While Li et al. (2023) proposed to train continuous                            for each state, a measure on the state space describing what
+GFlowNets by writing the flow matching conditions as inte-                     states can be accessed in one step.
+grals rather than sums, assumptions (1) and (3) are violated                   The structured state spaces we consider will be called mea-
+in a critical way. First, the environments considered in Li                    surable pointed graphs and rely on transition kernels (Num-
+et al. (2023)’s experiments violate assumption (1), without                    melin, 2004; Cappé et al., 2009; Petritis, 2015), of which
+which the main GFlowNet training theorems do not hold.                         we recall the definition in §A.
+Second, regarding (3), Li et al. (2023) implicitly assumes
+that for a state 𝑠 and flow function 𝐹 (𝑠 → 𝑠),                                Definition 1 (Measurable pointed graph). A measurable
+       ∫                         ∫                                             pointed graph 𝐺 = ( S̄, T , Σ, 𝑠0 , ⊥, 𝜅, 𝜅 𝑏 , 𝜈) consists of:
+               𝐹 (𝑠 → 𝑠′ ) 𝑑𝑠′ =    𝐹 (𝑠 → 𝑇 (𝑠, 𝑎)) 𝑑𝑎,                       • A topological space ( S̄, T ), where T is the set of open
+        𝑠 ′ :𝑠→𝑠 ′                       𝑎
+                                                                                 subsets of S̄ and Σ is the Borel 𝜎-algebra associated to
+where the second integral is taken over actions and 𝑇 (𝑠, 𝑎)                     the topology on S̄;
+is the state reached by taking action 𝑎 from 𝑠. This change                    • A pair of distinct distinguished states 𝑠0 ∈ S̄ and ⊥ ∈ S̄,
+of variables is invalid in general: the integrand on the right                   called the source state and sink state, such that {𝑠0 } and
+                                         (𝑠,𝑎)
+side is missing the Jacobian term 𝑑𝑇𝑑𝑎         , which need not                  {⊥} are both open and closed sets. We define S = S̄ \ {⊥}
+equal 1. In particular, it does not equal 1 in the environments                  and S ◦ = S \ {𝑠0 }, so the topology on S̄ is the disjoint
+studied by Li et al. (2023) (although it may hold in special                     union topology on {𝑠0 }, {⊥}, and S ◦ .
+cases, such as sampling in Euclidean spaces where 𝑇 (𝑠, 𝑎) =                   • A 𝜎-finite transition kernel 𝜅 on ( S̄, Σ), called the refer-
+𝑠 + 𝑎). These issues are concerning for the scope of that                        ence kernel,
+
+                                                                          3
+A Theory of Continuous Generative Flow Networks                                                                                       4
+
+• A 𝜎-finite transition kernel 𝜅 𝑏 on ( S̄, Σ), called the back-         3.3. Flows
+  ward reference kernel,
+                                                                         Definition 3 (Flows and flow-matching conditions). Given a
+• A strictly positive 𝜎-finite measure 𝜈 on ( S̄, Σ), called the
+                                                                         𝜎-finite measure 𝜇 over ( S̄, Σ) that is absolutely continuous
+  reference measure,
+                                                                         w.r.t. 𝜈 (we write 𝜇 ≪ 𝜈), and a 𝜎-finite Markov kernel 𝑃𝐹
+such that the following conditions hold:                                 on ( S̄, Σ) (i.e. a transition kernel such that each 𝑃𝐹 (𝑠, −)
+                                                                         is a probability measure) satisfying:
+        ∀𝐵 ∈ T \ {∅}      ∃𝑛 ≥ 0 : 𝜅 𝑛 (𝑠0 , 𝐵) > 0,          (1)
+                                                                         (1) 𝑃𝐹 (𝑠, −) ≪ 𝜅(𝑠, −) for every 𝑠 ∈ S̄,
+        𝜅(⊥, −) = 𝛿⊥ ,                                        (2)
+                                                                         (2) 𝑠 ↦→ 𝑃𝐹 (𝑠, 𝐵) is continuous for every 𝐵 ∈ Σ,
+        ∀𝐵 ∈ Σ, 𝑠 ↦→ 𝜅(𝑠, 𝐵) is continuous,                   (3)
+                                                                         𝑃𝐹 is said to be a forward kernel over 𝐺. We say that
+        ∀𝐵 ∈ Σ ⊗ Σ, ((𝑠0 , 𝑠0 ) ∉ 𝐵, (⊥, ⊥) ∉ 𝐵) ⇒
+                                                                         the tuple 𝐹 = (𝜇, 𝑃𝐹 ) satisfies the flow-matching (FM)
+                              𝜈 ⊗ 𝜅(𝐵) = 𝜈 ⊗ 𝜅 𝑏 (𝐵),         (4)        conditions if for any bounded measurable function 𝑓 : S̄ →
+                    𝑏
+        ∀𝐵 ∈ Σ, 𝜅 (𝑠0 , 𝐵) = 0,                               (5)        R satisfying 𝑓 (𝑠0 ) = 0, we have
+                                                                             ∫                   ∬
+        ∀𝑠 ∈ S, 𝜅(𝑠, {⊥}) > 0 ⇒ 𝜅(𝑠, {⊥}) = 1.                (6)                    ′       ′
+                                                                                 𝑓 (𝑠 )𝜇(𝑑𝑠 ) =         𝑓 (𝑠′ )𝜇(𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠′ ). (9)
+                                                                              S̄                   S× S̄
+The measurable pointed graph is called finitely absorbing if
+                                                                         In which case, we say that 𝐹 is a flow over 𝐺.
+             ∃𝑁 > 0 : supp(𝜅 𝑁 (𝑠0 , −)) = {⊥},               (7)
+                                                                         (★) The condition of absolute continuity w.r.t. the reference
+in which case the minimal such 𝑁 is called the maximal                   kernel 𝜅 indicates that the flow 𝐹 must follow the “structure”
+trajectory length.                                                       of the measurable pointed graph, by assigning positive mea-
+                                                                         sure only to parts of the space where the measure induced by
+(★) The reference transition kernel 𝜅 provides a notion of               𝜅 is also positive. The kernel 𝑃𝐹 can be represented through
+“structure” of the state space. The support of 𝜅(𝑠, −) (resp.            a density function with respect to 𝜅, which represents a prob-
+𝜅 𝑏 (𝑠, −)) can be thought of as the child set (resp. parent             ability mass (if the action space is discrete) or a probability
+set) of the state 𝑠. For example, in a discrete graph, 𝜅(𝑠, −)           density (if it is continuous). This allows to write conditions
+could be uniform over the children of 𝑠. The reference                   such as (9) using densities (Radon-Nikodym derivatives),
+kernel is not a policy to be sampled, but an object needed               thus providing practical loss functions to train GFlowNets.
+to define probability densities of policies. The measure 𝜈,              We expand on this point in §3.5.
+the reference with respect to which flows and rewards are                Definition 4 (Reward-matching conditions). Let 𝐹 =
+defined, is typically a simple measure, such as the counting             (𝜇, 𝑃𝐹 ) be a flow over 𝐺. Given a positive and finite mea-
+measure on a discrete set or the standard Lebesgue measure               sure 𝑅 over X, called the reward measure, satisfying 𝑅 ≪ 𝜈,
+on a Euclidean space.                                                    the flow 𝐹 is said to satisfy the reward-matching condition
+In practice, if the structure is only defined by the reference           w.r.t. 𝑅 if we have:
+kernel 𝜅, then 𝜈 and 𝜅 𝑏 satisfying the conditions of Def. 1                             𝑅(𝑑𝑥) = 𝜇(𝑑𝑥)𝑃𝐹 (𝑥, {⊥}).                 (10)
+can be defined from 𝜅 under some mild assumptions, as we
+discuss in Prop. 3 in §A.5.
+                                                                         The following theorem, proved in §E, ascertains that, similar
+From now on, we fix a finitely absorbing measurable pointed              to discrete GFlowNets, when the flow and reward matching
+graph 𝐺 = ( S̄, T , Σ, 𝑠0 , ⊥, 𝜅, 𝜅 𝑏 , 𝜈) with maximal trajectory       conditions are satisfied, then recursively sampling from the
+length 𝑁.                                                                Markov kernel 𝑃𝐹 starting from 𝑠0 (until reaching ⊥) yields
+                                                                         samples from the normalized reward.
+Definition 2 (Terminating states). The set of terminating
+states X is defined by:                                                  Theorem 1. If 𝐹 = (𝜇, 𝑃𝐹 ) is a flow over 𝐺, that satisfies
+                                                                         the reward matching conditions (10) w.r.t. a measure 𝑅, then
+               X = {𝑠 ∈ S : 𝜅(𝑠, {⊥}) > 0}.                   (8)        the corresponding terminating state measure 𝑃⊤ (Def. 10)
+                                                                         is a probability measure and satisfies for all 𝐵 ∈ Σ | X :
+(★) Terminating states are ones from which one can transi-                                              1
+                                                                                            𝑃⊤ (𝐵) =        𝑅(𝐵).                  (11)
+tion to ⊥ with positive probability. Any transition kernel                                             𝑅(X)
+can be sampled for 𝑛 steps, yielding a measure over 𝑛-step
+trajectories and a marginal measure over states reached after            (★) 𝑅(X), the reward measure taken over the set of all ter-
+𝑛 steps. As described in the Appendix (§A.4), this can be                minating states X, corresponds to the total reward or parti-
+used to define the marginal terminating measure 𝑃⊤ of a                  tion function 𝑍 of GFlowNets. Certain conditions (Def. 3
+transition kernel 𝑃𝐹 , used in the next section.                         and 4) on 𝜇, which represents a state flow, and 𝑃𝐹 , which
+
+                                                                     4
+A Theory of Continuous Generative Flow Networks                                                                                                                  5
+
+represents a policy, imply that the marginal terminating dis-                     (1) 𝜇({⊥}) = 𝜇({𝑠0 }) = 𝑍
+                                                                                  (2) ∀𝐵 ∈ Σ | S : 𝜇(𝐵) = 𝜇({𝑠0 }) ∞
+                                                                                                                  Í
+                                                                                                                    𝑛=0 𝑃 𝐹 (𝑠0 , 𝐵)
+tribution of the policy is proportional to the reward. These                                                              𝑛
+
+conditions correspond to the “flow in = flow out” condition
+                                                                                  satisfies both the flow-matching conditions (9) and the re-
+at vertices of a discrete DAG.
+                                                                                  ward matching conditions (10) w.r.t. 𝑅.
+3.4. Detailed balance and trajectory balance                                      (★) Analogues of the DB and TB conditions for discrete
+In finite GFlowNets, the detailed balance conditions (Bengio                      GFlowNets were stated and shown to imply the FM con-
+et al., 2021b) and the trajectory balance conditions (Malkin                      ditions. In the next section, they will be used to construct
+et al., 2022) were converted into training objectives in or-                      training objectives for parametric policies.
+der to sample from a target unnormalized distribution. In
+this section, we present analogous conditions for general                         3.5. Training losses for GFlowNets
+measurable pointed graphs.                                                        Above, we have presented three conditions under which a
+Definition 5. Let 𝜇 be a 𝜎-finite measure over ( S̄, Σ) such                      sampler based on a Markov kernel 𝑃𝐹 samples from the
+that 𝜇 ≪ 𝜈, 𝑃𝐹 a forward kernel over 𝐺, and 𝑃 𝐵 a transi-                         normalized version of a given reward measure. In practice,
+tion kernel on ( S̄, Σ) such that:                                                similar to discrete GFlowNets, the objects of interest (𝜇,
+                                                                                  𝑃𝐹 , 𝑃 𝐵 , 𝑍) are parametrized by a vector 𝜃, and the goal is
+(1) 𝑃 𝐵 (𝑠, −) ≪ 𝜅 𝑏 (𝑠, −) for every 𝑠 ∈ S̄,
+                                                                                  to learn 𝜃 using gradient-based learning. In this section, we
+(2) 𝑠 ↦→ 𝑃 𝐵 (𝑠, 𝐵) is continuous for every 𝐵 ∈ Σ,
+                                                                                  derive losses corresponding to the previous objectives.
+(3) 𝑃 𝐵 (𝑠, −) is a probability measure for every 𝑠 ≠ 𝑠0 ,
+                                                                                  We recall the Radon-Nikodym theorem that states that for
+𝑃 𝐵 is then said to be a backward kernel over 𝐺. We say that
+                                                                                  any two given 𝜎-finite measures 𝑝 and 𝑞 on a measurable
+(𝜇, 𝑃𝐹 , 𝑃 𝐵 ) satisfy the detailed balance (DB) conditions
+                                                                                  space (𝑈, U) satisfying 𝑝 ≪ 𝑞, there exists a measurable
+if for any bounded measurable function 𝑓 : S × S̄ → R
+                                                                                  function 𝑓 : 𝑈→R+ , which is unique up to a set of measure
+satisfying 𝑓 (𝑠, 𝑠0 ) = 0 for every 𝑠 ∈ S, we have
+                                                                                  zero under 𝑞, called the density or the Radon-Nikodym
+                                                                                  derivative of 𝑝 w.r.t. 𝑞, such that:
+        ∬
+                 𝑓 (𝑠, 𝑠′ )𝜇(𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠′ )                   (12)                                                ∫
+           S× S̄
+                       ∬                                                                        ∀𝐴 ∈ U, 𝑝( 𝐴) =                   𝑓 (𝑢)𝑞(𝑑𝑢).               (14)
+                                                                                                                              𝐴
+                    =          𝑓 (𝑠, 𝑠′ )𝜇(𝑑𝑠′ )𝑃 𝐵 (𝑠′ , 𝑑𝑠).
+                           S× S̄
+                                                                                  This theorem is convenient as it allows to bypass the need to
+                                                                                  define the measures 𝜇, 𝑃𝐹 (𝑠, −), 𝑃 𝐵 (𝑠, −) on every measur-
+The following proposition, proved in §E, shows an equiva-
+                                                                                  able set, and only requires parametrizing the corresponding
+lence between the DB and FM conditions.
+                                                                                  densities (w.r.t. 𝜈, 𝜅(𝑠, −), and 𝜅 𝑏 (𝑠, −) respectively).
+Proposition 1. If (𝜇, 𝑃𝐹 , 𝑃 𝐵 ) satisfy the detailed balance                     Definition 7 (Losses). Let 𝑢 : S→R+ , 𝑝 𝐹 : S × S̄→R+ ,
+conditions in Def. 5, then 𝐹 = (𝜇, 𝑃𝐹 ) satisfies the flow-                       and 𝑝 𝐵 : S × S→R+ be three functions, and 𝑍 ∈ R+ a
+matching conditions in Def. 3 and is thus a flow.                                 scalar, all parametrized by a vector 𝜃, and satisfying for
+Definition 6. Let 𝑃𝐹 be a forward kernel over 𝐺, 𝑃 𝐵 a                            every 𝜃:
+backward kernel over 𝐺, and 𝑍 ∈ R+ . Let 𝑅 be a positive
+                                                                                                       ∫
+finite measure on X. The triple (𝑍, 𝑃𝐹 , 𝑃 𝐵 ) satisfies the                                ∀𝑠 ∈ S̄,          𝑝 𝐹 (𝑠, 𝑠′ ; 𝜃)𝜅(𝑠, 𝑑𝑠′ ) = 1                 (15)
+                                                                                                        S̄
+trajectory balance (TB) conditions w.r.t. 𝑅 if for any 𝑛 ≥ 0                                            ∫
+and any bounded measurable function 𝑓 : S̄ 𝑛+2 → R:                                         ∀𝑠′ ∈ S̄,            𝑝 𝐵 (𝑠′ , 𝑠; 𝜃)𝜅 𝑏 (𝑠′ , 𝑑𝑠) = 1           (16)
+∫                                                                                                        S̄
+                      −→) 1                               −−−−−→
+         𝑍 𝑓 (𝑠, −
+                 𝑠−1:−𝑛+1
+                                            ⊗𝑛+1
+                            𝑠𝑛 ≠⊥,𝑠𝑛+1 =⊥ 𝑃 𝐹    (𝑠0 , 𝑑𝑠 𝑑𝑠1:𝑛+1 ) (13)          The flow-matching (FM) loss is defined for every 𝑠′ ∈ S as:
+  S̄ 𝑛+2
+        ∫
+                               →, ⊥)𝑅(𝑑𝑠 )𝑃 ⊗𝑛 (𝑠 , 𝑑𝑠′ −     −−−−−→                                                                                        !2
+               1𝑠=𝑠0 𝑓 (𝑠, − 𝑠−1:
+                                                                                                             ∫
+     =                            𝑛          𝑛   𝐵     𝑛      𝑑𝑠 𝑛−1:1 𝑑𝑠),                 ′                    S
+                                                                                                                     𝑢(𝑠; 𝜃) 𝑝 𝐹 (𝑠, 𝑠′ ; 𝜃)𝜅 𝑏 (𝑠′ , 𝑑𝑠)
+        S̄ 𝑛+1                                                                       𝐿 𝐹 𝑀 (𝑠 ; 𝜃) = log
+                                                                                                                                  𝑢(𝑠′ ; 𝜃)
+where −      → denotes (𝑠 , . . . , 𝑠 ) and −
+           𝑠−1:
+                                             −−→
+                                            𝑑𝑠1:𝑛 denotes
+                𝑛        1           𝑛                                            The detailed balance (DB) loss is defined for every (𝑠, 𝑠′ ) ∈
+𝑑𝑠1 . . . 𝑑𝑠 𝑛 .                                                                  S × S as:
+                                                                                                                                           2
+                                                                                                                 𝑢(𝑠; 𝜃) 𝑝 𝐹 (𝑠, 𝑠′ ; 𝜃)
+                                                                                                            
+The following proposition, proved in §E, shows an equiva-                                 𝐿 𝐷𝐵 (𝑠, 𝑠′ ; 𝜃) = log
+lence between the TB and both the FM and reward matching                                                         𝑢(𝑠′ ; 𝜃) 𝑝 𝐵 (𝑠′ , 𝑠; 𝜃)
+conditions.                                                                       Denoting by 𝑟 the density of the reward measure 𝑅 w.r.t.
+Proposition 2. If (𝑍, 𝑃𝐹 , 𝑃 𝐵 ) satisfy the TB conditions (13)                   the reference measure 𝜈, the reward-matching (RM) loss is
+w.r.t. a measure 𝑅, then 𝐹 = (𝜇, 𝑃 𝐵 ), where 𝜇 is defined by:                    defined for any 𝑥 ∈ X as:
+
+                                                                              5
+A Theory of Continuous Generative Flow Networks                                                                                                         6
+                                                   2
+                                                                                                                     = 0.25               = 0.1
+                        
+                             𝑢(𝑥; 𝜃) 𝑝 𝐹 (𝑥, ⊥; 𝜃)                                                   ⊥
+           𝐿 𝑅𝑀 (𝑥; 𝜃) = log                                                                                        TB Uniform PB
+                                     𝑟 (𝑥)                                                               10 1       TB Learned PB
+
+Finally, the trajectory balance (TB) loss is defined for every                                           10 2
+complete trajectory 𝜏 = (𝑠0 , 𝑠1 , . . . , 𝑠 𝑛 , 𝑠 𝑛+1 ) ∈ {𝑠0 } ×S 𝑛 ×
+                                                                                                         10 3                           DB Uniform PB
+{⊥} (also denoted −  𝑠−0:−𝑛+
+                          −→) where 𝑠 ∈ X and 𝑠
+                             1           𝑛                𝑛+1 = ⊥ as:                                                                   DB Learned PB
+                    
+                             𝑍 (𝜃) 𝑡=0 𝑝 𝐹 (𝑠𝑡 , 𝑠𝑡+1 ; 𝜃) 2
+                                    Î𝑛                                       s0                                0   106   2.106     0   106     2.106
+       𝑛
+     𝐿 𝑇 𝐵 (𝜏; 𝜃) = log             Î𝑛−1                          .           Figure 1. (a) Measurable pointed graph structure of the environ-
+                            𝑟 (𝑠 𝑛 ) 𝑡= 0 𝑝 𝐵 (𝑠 𝑡+1 , 𝑠 𝑡 ; 𝜃)
+                                                                              ment in §4.1: starting at 𝑠0 , the first action makes a step within
+                                                                              the grey quarter-disc, and subsequent actions make steps of a fixed
+Note that one could derive in a similar fashion a subtra-                     size or terminate. (b) Evolution of the JSD during training of TB
+jectory balance loss, similar to the one used in discrete                     and DB, with both a uniform 𝑃 𝐵 and a learned 𝑃 𝐵 , for 𝜌 = 0.25;
+GFlowNets (Madan et al., 2022).                                               (c) 𝜌 = 0.1. x-axis is the number of sampled trajectories. Shaded
+                                                                              areas represent standard deviations across 6 runs.
+(★) The above losses resemble discrete GFlowNet losses.
+When the action space is discrete, and the reference mea-
+                                                                              Í𝑛 stochastic gradients E 𝜏=𝑠0:𝑛+1 ∼Í𝜋𝑛[∇ 𝜃 L], where L is
+                                                                              with                                  −−−−→
+sures are the counting measures over vertices of a DAG,
+𝑝 𝐹 (𝑠, 𝑠′ ) is a transition probability 𝑃𝐹 (𝑠′ |𝑠). When it is                𝑡=1 𝐿 𝐹 𝑀  (𝑠 𝑡 ; 𝜃) +𝛼𝐿 𝑅𝑀  (𝑠 𝑛 ; 𝜃), or 𝑡=0 𝐿 𝐷𝐵 (𝑠𝑡 , 𝑠𝑡+1 ; 𝜃) +
+continuous, it represents a conditional probability density                   𝛼𝐿 𝑅𝑀 (𝑠 𝑛 ; 𝜃) or 𝐿 𝑇 𝐵 (𝜏; 𝜃).
+over 𝑠′ , given 𝑠.
+Conversely, from functions 𝑢(−; 𝜃), 𝑝 𝐹 (−; 𝜃), 𝑝 𝐵 (−; 𝜃),                   4. Experiments
+we can define a measure 𝜇(−; 𝜃) on ( S̄, Σ) whose den-                        4.1. A synthetic continuous environment
+sity w.r.t. 𝜈 is 𝑢 and forward and backward kernels
+𝑃𝐹 (−; 𝜃), 𝑃 𝐵 (−; 𝜃) such that 𝑝 𝐹 (𝑠, −; 𝜃) and 𝑝 𝐵 (𝑠′ , −; 𝜃)             In this section, we study a synthetic environment inspired
+are their densities of w.r.t. 𝜅(𝑠, −) and 𝜅 𝑏 (𝑠, −), respec-                 by the hypergrid environment (Bengio et al., 2021a; Malkin
+tively1 .                                                                     et al., 2022; 2023), with varying trajectory lengths and a
+                                                                              pointed graph structure imposing a mixed discrete and con-
+(★) The following theorem, proved in §E, ensures that, simi-                  tinuous probability measure for the policy 𝑃𝐹 . Code for
+lar to the discrete case, minimizing the losses above leads                   these experiments can be found at https://github.
+to samplers of the right probability measure.                                 com/saleml/continuous-gfn.
+Theorem 2. (1) If 𝐿 𝐹 𝑀 (−; 𝜃) = 0 𝜈-almost surely, then
+                                                                              Structure of the state space. The measurable pointed graph
+𝐹 = (𝜇, 𝑃𝐹 ) is a flow (i.e. satisfies the flow-matching condi-
+                                                                              is specified by S = [0, 1] 2 , and 𝑠0 = (0, 0). A hyperparam-
+tions in Def. 3).
+                                                                              eter 𝜌, called the step size, controls the maximal trajectory
+(2) If 𝐿 𝐷𝐵 (−; 𝜃) = 0 𝜈 ⊗ 𝜅-almost surely, then (𝜇, 𝑃𝐹 , 𝑃 𝐵 )
+                                                                              length. 𝜅(𝑠0 , −) is the Lebesgue measure on 𝐷 0 , the north-
+satisfy the detailed balance conditions in Def. 5.
+                                                                              eastern quarter disk of radius 𝜌 centered at 𝑠0 . When 𝑠 ≠ 𝑠0 ,
+(3) If 𝐿 𝑅𝑀 (−; 𝜃) = 0 𝜈 | X -almost surely, then (𝜇, 𝑃𝐹 ) satis-
+                                                                              and ||𝑠|| < 1 − 𝜌, 𝜅(𝑠, −) is the sum of the one-dimensional
+fies the reward matching conditions in (10).
+                                                                              Lebesgue arclength measure on 𝐶𝑠+ (the intersection of the
+(4) If 𝐿 𝑇𝑛 𝐵 (−; 𝜃) = 0 ((𝜈 ⊗ 𝜅 ⊗𝑛+1 ) | {𝑠0 } × S 𝑛 × {⊥} )-almost
+                                                                              northeastern quarter circle of radius 𝜌 centered at 𝑠 and S)
+surely for every 𝑛 ≥ 0, then (𝑍 𝜈({𝑠0 }), 𝑃𝐹 , 𝑃 𝐵 ) satisfy
+                                                                              and the Dirac measure 𝛿⊥ . Finally, when ||𝑠|| > 1 − 𝜌,
+the trajectory balance condition in Def. 6.
+                                                                              𝜅(𝑠, −) = 𝛿⊥ . The forward structure is depicted in Fig. 1(a).
+An important consequence of Thm. 2 is that if we can find                     The backward reference kernel 𝜅 𝑏 is defined similarly.
+density functions that achieve zero loss using any of the                     The reference measure 𝜈 is the sum of the Lebesgue measure
+above objectives almost surely, in addition to the reward-                    on S, 𝛿 𝑠0 , and 𝛿⊥ . All states besides 𝑠0 are terminating.
+matching loss, then we obtain a way to sample terminating
+states (i.e., elements of X) proportionally to the reward                     The reward measure 𝑅 on X is specified by a density func-
+measure 𝑅, according to Thm. 1.                                               tion 𝑟 depicted in Fig. 2(a). The densities 𝑝 𝐹 and 𝑝 𝐵 are
+                                                                              parametrized with mixtures of Beta distributions for the
+Training generalized GFlowNets. The FM, DB, and TB                            continuous components.
+losses can be minimized using states (resp. pairs of subse-
+quent states, trajectories) obtained from trajectories sampled                In Fig. 1(b,c), we compare DB and TB on two versions
+from a training policy 𝜋, which can be 𝑃𝐹 itself (on-policy),                 of the environment (𝜌 ∈ {0.1, 0.25}), with both a uniform
+or a modification of it to encourage exploration (off-policy).                and a learned 𝑃 𝐵 , using the Jensen-Shannon divergence
+Thm. 2 suggests that the parameters 𝜃 could be updated                        (JSD, §C.1) between the learned terminating state distri-
+                                                                              bution and the target distribution as an evaluation metric.
+   1 The measures at ⊥ are irrelevant.                                        The results confirm the findings of Malkin et al. (2022) on
+
+                                                                          6
+A Theory of Continuous Generative Flow Networks                                                                                                           7
+
+
+                                                                              Table 2. Log-partition function estimation bias using importance-
+                                                                              weighted bound 𝐵RW (mean and standard deviation over 10 runs).
+                                                                              The bold value in each column shows the best result and all those
+0           1 0             1 0            0                0                 statistically equivalent to it (𝑝 > 0.1 under a Welch’s 𝑡-test). Algo-
+Figure 2. (a) Reward density in [0, 1] 2 . (b) KDE fit on terminating         rithms assuming access to the gradient of the reward (non-black-
+states of the models trained with TB, 𝜌 = 0.25. (c) KDE fit on                box) are shown for comparison. Rows marked with ∗ require
+samples from the reward, brought back to 𝐷 0 using a uniform 𝑃 𝐵 ,            importance weighting for gradient estimation. Cells with – were
+corresponding to what 𝑃 𝐹 (𝑠0 , −) needs to be in order to satisfy            unstable to optimize. Last three rows from Zhang & Chen (2022).
+DB or TB. A richer search space for the densities 𝑝 𝐹 (𝑠, −) is               Black box?                              Gaussian mixture      Funnel
+required to fit this distribution. (d) 𝑃 𝐹 (𝑠0 , −) for a trained model           ✓        Off-policy   GFlowNet TB   −0.003 ± 0.011     −0.026 ± 0.020
+with learnable 𝑃 𝐵 . (e) The measure induced by a trained 𝑃 𝐵 on                  ✓        Off-policy   Reverse KL∗   −1.609 ± 0.546           –
+𝐷 0 , which matches the learned 𝑃 𝐹 (𝑠0 , −) in (d).                              ✓        Off-policy   Forward KL∗   −0.001 ± 0.013     −0.087 ± 0.081
+                                                                                  ✓        On-policy    GFlowNet TB   −1.301 ± 0.434     −0.012 ± 0.108
+                                                                                  ✓        On-policy    Reverse KL    −1.237 ± 0.413     −0.040 ± 0.023
+            s1         s2                  s99       s100
+                                                                                  ✓        On-policy    Forward KL∗   −0.007 ± 0.023     −0.034 ± 0.143
+                                                                                  ✓        Non-SDE      SMC           −0.362 ± 0.293     −0.216 ± 0.157
+                                                                                  ×        On-policy    PIS-NN        −1.192 ± 0.482     −0.018 ± 0.020
+s0                                                                  ⊥             ×        Non-SDE      HMC           −1.876 ± 0.527     −0.835 ± 0.257
+
+
+
+                                                                              x𝑡 ∈ R𝑛 and 1 ≤ 𝑡 ≤ 𝑇; we identify 𝑠0 with (0, 0). Tra-
+                                                                              jectories begin at 𝑠0 and make successive steps through the
+Figure 3. The GFlowNet state space for stochastic control tasks.
+The solid arrows show a possible sampling trajectory and the
+                                                                              copies of R𝑛 until reaching the sink state.2 Learning a for-
+dashed arrows show other possible actions, i.e., point to other               ward policy amounts to learning a conditional probability
+states in the support of the reference kernel 𝜅.                              density 𝑝(x𝑡+1 |x𝑡 , 𝑡) over R𝑛 . In particular, if this density is
+                                                                              Gaussian, then the policy is the 𝑇-step Euler-Maruyama dis-
+                                                                              cretization of an Itô stochastic differential equation (SDE).
+the discrete grid domain: the TB loss is more efficient in                    Zhang & Chen (2022) studied this problem in the case where
+terms of credit assignment, as it learns to model the target                  the backward policy is fixed to be the discretization of a
+distribution faster and more precisely than DB, and the en-                   Brownian motion with fixed variance 𝜎      𝑇 pinned at (0, 0),
+vironment with longer trajectory lengths is harder to model.                  and the forward policy is constrained to be Gaussian with
+Additionally, learning a backward policy significantly im-                    the same variance 𝜎𝑇 but with learned mean. (The theory of
+proves the learning curves of both methods. A justification                   SDEs implies that in the 𝑇 → ∞ limit, the forward policy
+of the importance of learning in a backward policy is pro-                    𝑃𝐹 that minimizes the GFlowNet loss is indeed Gaussian
+vided in Fig. 2(c,d,e). Fig. 2(b) shows a KDE plot fit on                     with the same variance as the fixed 𝑃 𝐵 .) We thus aim to
+terminating states sampled from the model trained with TB                     learn a function 𝜇(x𝑡 , 𝑡), the mean of the forward policy, so
+on the 𝜌 = 0.25 domain. We provide more details in §C.2.                      as to make the policy sample from the target reward density.
+                                                                              The path integral sampler (PIS) training objective proposed
+4.2. Low-dimensional stochastic control
+                                                                              by Zhang & Chen (2022) minimizes the reverse KL diver-
+In this section, we show how generalized GFlowNets with                       gence between two measures over trajectories: that defined
+a state space of a particular form can be used to learn (dis-                 by 𝑃𝐹 and that defined by 𝑅 and 𝑃 𝐵 . By Theorem 1 of
+cretizations of) stochastic differential equations so as to                   Malkin et al. (2023) (the proof of which trivially generalizes
+sample from a black-box target density. We bridge two re-                     to the continuous case), the gradient of this objective with
+cent works: Zhang & Chen (2022), from which we borrow                         respect to the parameters of 𝑃𝐹 is proportional, in expecta-
+the datasets and many parts of the experimental setup, and                    tion, to that of the TB gradient when trained on-policy. A
+Malkin et al. (2023), where various algorithms for training                   key difference between PIS and the on-policy TB objective
+stochastic samplers in discrete spaces were considered and                    is that the latter does not require access to the gradient of
+whose claims we validate in the continuous case.                              the reward distribution, but treats it as a black box.
+We restate the problem considered by Zhang & Chen (2022)                      Datasets, algorithms, and baselines.                       We evaluate
+in GFlowNet terms. A reward density is given on a Eu-                             2 To be precise, the reference measure 𝜈 is the Lebesgue mea-
+clidean space R𝑛 (e.g., the plane in Fig. 3). The state space                 sure on each copy of R𝑛 and the counting measure on {𝑠0 }. If 𝑠𝑖
+is S = {𝑠0 } ∪ (R𝑛 × {1, 2, . . . , 𝑇 }), where 𝑇 is the num-                 is a state in the 𝑖-th copy of R𝑛 (if 𝑖 > 0) or the initial state 𝑠0 (if
+ber of moves an agent will make before terminating (here,                     𝑖 = 0), the reference kernel 𝜅(𝑠𝑖 , −) is Lebesgue on the (𝑖 + 1)-st
+𝑇 = 100). Thus the noninitial states are pairs (x𝑡 , 𝑡) where                 copy of R𝑛 if 𝑖 < 𝑇 and 𝛿⊥ if 𝑖 = 𝑇; 𝜅 𝑏 is defined similarly.
+
+                                                                          7
+A Theory of Continuous Generative Flow Networks                                                                                   8
+
+GFlowNets and baselines on two synthetic densities: a 2-
+dimensional mixture of 9 Gaussians and the 10-dimensional
+funnel from MCMC literature (Hoffman & Gelman, 2011).
+In addition to GFlowNet TB, we evaluate the two algorithms
+for minimizing divergences between trajectory measures
+studied by Malkin et al. (2023): the reverse KL optimized
+via policy gradient – equivalent in expectation to TB – and
+the forward KL, for which gradient estimation requires im-
+portance weighting. We also evaluate the algorithms in an
+off-policy setting, where the training trajectories are sam-
+pled with additional variance injected into the policy to
+encourage exploration (see §C for details). We include
+baselines from Zhang & Chen (2022) as well.
+All algorithms use the same model architecture as the PIS
+baseline for 𝜇(x𝑡 , 𝑡) and are evaluated using two metrics
+as defined in Zhang & Chen (2022): the log-partition func-
+tion estimation bias using simple and importance-weighted
+variational bounds, as defined in §C.3.
+Results and discussion. From the results in Table 2, and            Figure 4. KDEs fit on samples from the reward functions (a: syn-
+the extended results in Table C.1, we conclude that the two         thetic multimodal reward function, c: Boltzmann distribution of
+main observations of Malkin et al. (2023) continue to hold          principal torsion angles of the alanine dipeptide molecule – de-
+in this continuous setting. First, as expected, on-policy TB        tails in §C.4) and on samples from the corresponding trained
+and reverse KL perform similarly when both can be stably            GFlowNets (b, d). The topology of the torus imposes periodic
+                                                                    boundary conditions on [0, 2𝜋) 2 .
+optimized. Second, in settings where off-policy exploration
+is important, TB is more stable and achieves a better fit to
+the target than the other objectives, which require impor-          4.4. Posterior over continuous parameters in Bayesian
+tance weighting for gradient estimation. Fig. C.1 shows that             structure learning
+exploration is necessary to discover modes. Finally, we note
+that TB is competitive with the PIS objective despite not           To show the capacity of GFlowNets to model a distribution
+having access to gradients of the reward density.                   over a mixed space of discrete and continuous quantities,
+                                                                    we study here the problem of learning the structure of a
+4.3. Stochastic control on a torus                                  Bayesian network and its parameters, from a Bayesian per-
+                                                                    spective. Extending the work of Deleu et al. (2022), our
+We consider a variant of the samplers discussed in §4.2             goal here is to approximate the (joint) posterior distribution
+to model reward densities on the surface of a 2D torus.             𝑃(𝐺, 𝜃 | D) over the directed acyclic graph (DAG) struc-
+Distributions over tori are useful to model torsion angles          ture 𝐺 of the Bayesian Network (discrete component) and
+in molecular conformations, as we illustrate in §C.4 and            the parameters 𝜃 of its conditional probability distributions
+Fig. C.2 with the alanine dipeptide molecule.                       (continuous component), given a dataset of observations D.
+To model the surface of a torus, the measurable pointed             We use a GFlowNet that is structured as follows: starting
+graph is defined by S = {𝑠0 }∪[0, 2𝜋) 2 ×{𝑡 ∈ N, 1 ≤ 𝑡 ≤ 𝑇 },       from the empty graph, the DAG 𝐺 is first generated one
+where 𝑡 denotes the step number and 𝑇 the trajectory length,        edge at a time, following the structure of DAG-GFlowNet
+and 𝑠0 = ((0, 0), 0). Note that here [0, 2𝜋) has the topology       (Deleu et al., 2022). Once the graph 𝐺 has been completely
+of the circle, not that induced from the real line.                 generated, we then sample the parameters 𝜃 associated to
+We consider two reward densities: a synthetic multimodal            it, in order to reach a valid terminating state (𝐺, 𝜃). Details
+density, and a density based on the energy E of the ala-            about the state space, and the forward transition probability
+nine dipeptide molecule as a function of two of the angles          are given in §C.5. We use the subtrajectory balance loss
+defining the conformation of the molecule. More details             (Madan et al., 2022) to train the GFlowNet with 𝑅(𝐺, 𝜃) =
+are provided in §C.4. We provide a visual representation of         𝑃(D | 𝜃, 𝐺)𝑃(𝜃, 𝐺) as a reward function.
+learned and reward distributions in Fig. 4.                         In order to evaluate our approximation against the target
+                                                                    distribution, we consider problems where the true poste-
+                                                                    rior 𝑃(𝐺, 𝜃 | D) may be computed in closed form. More
+                                                                    precisely, we assume that the Bayesian network follows
+
+                                                                8
+A Theory of Continuous Generative Flow Networks                                                                                     9
+
+                                                                        conditional Gaussians with a known variance.
+Table 3. Comparison between GFlowNet and other methods based
+on variational inference on the Bayesian structure learning task.       More specifically, recall that diffusion models begin with a
+(Graphs) RMSE between the estimated edge marginals and the              sample x1 from a noise distribution and transform it through
+exact edge marginals. (Params.) Average negative log-probability        a sequence of conditional Gaussian steps 𝑥1 → 𝑥2 → · · · →
+of the parameter samples under the exact posterior 𝑃(𝜃 | 𝐺, D).         𝑥𝑇 (note the unconventional reversed and one-based index-
+                               Number of variables (𝑑)                  ing). Viewing the intermediate samples x𝑡 as states (x𝑡 , 𝑡),
+                           3             4               5              we can cast sampling from the diffusion model as sampling
+            BCD Nets        –        2.13 × 10−1   2.61 × 10−1          from a GFlowNet, where the first action samples x1 by tran-
+  Graphs    DiBS       3.28 × 10−1   2.95 × 10−1   3.15 × 10−1          sitioning from the abstract initial state 𝑠0 and subsequent
+            GFlowNet   1.50 × 10−2   1.61 × 10−2   1.80 × 10−2          actions follow a forward kernel 𝑃𝐹 (− | (x𝑡 , 𝑡)) whose sup-
+                                      2.17 × 102    2.63 × 102          port is {(x, 𝑡 + 1) : x ∈ R𝑛 } and whose density is a Gaussian
+  Params.
+            BCD Nets        –
+            DiBS        5.87 × 102    1.12 × 103    2.12 × 103          conditioned on x𝑡 and 𝑡.
+            GFlowNet   −1.75 × 100   −3.06 × 100   −5.17 × 100          Noising process. While DDPMs typically fix the noising
+                                                                        process – corresponding to the backward policy 𝑃 𝐵 in the
+                                                                        GFlowNet – and learn only the denoiser (forward process),
+a linear-Gaussian model and that the number of random                   MLE-GFN allows learning both 𝑃𝐹 and 𝑃 𝐵 as Gaussian
+variables 𝑑 ≤ 5. Additional details about the experimental              policies. The description and proof of soundness of MLE-
+settings and metrics are available in §C.5. In Table 3, we              GFN, as well as details of the parametrization of means and
+compare the performance of the GFlowNet with two base-                  variances, can be found in Zhang et al. (2023a).
+line methods based on variational inference: DiBS (Lorch                Experimental result. We train a GFlowNet as described
+et al., 2021) and BCD Nets (Cundy et al., 2021). In Table 3             above on the ImageNet-32 dataset (treated as a set of termi-
+(top), we report the root mean-square error (RMSE) between              nating states) with 𝑇 = 100 steps. Table 4 demonstrates the
+the edge marginals computed with the approximation and                  efficacy of our method compared to the DDPM baseline in
+the exact posterior 𝑃(𝐺 | D); we observe that the model                 terms of both the sample quality (FID) and density modeling
+learned by the GFlowNet is significantly more accurate on               (NLL). We defer other details and example images to §C.6.
+the discrete component, supporting the observation made
+in Malkin et al. (2023). Moreover, in Table 3 (bottom), we
+observe that the sampled 𝜃 from the GFlowNet are signif-                5. Conclusion
+icantly more likely under the exact posterior 𝑃(𝜃 | 𝐺, D),              We have developed a theory for generalized GFlowNets
+suggesting that the GFlowNet’s approximation of the con-                and illustrated it through experiments. Future work will
+tinuous component is also more accurate.                                exploit this theory and scale the experiments up to more
+                                                                        complex and high-dimensional spaces where generation in-
+4.5. Connections with diffusion models                                  cludes both discrete and continuous choices. Possible appli-
+We show how the gener-        Table 4. ImageNet-32 results.             cation areas include estimation of Bayesian neural network
+alized GFlowNet frame-        Method        FID↓ NLL↓
+                                                                        posteriors, molecular conformer generation (discussed in
+work can be applied be-                                                 §C.4), and simulation-based inference for inverse problems
+                              Baseline      17.65    4.57               in the natural sciences.
+yond the setting of fit-      MLE-GFN 16.36          4.47
+ting a sampler to a tar-
+get reward function. As                                                 Acknowledgments
+shown in Zhang et al. (2023a), GFlowNets can also be
+trained to maximize likelihood of a given set of terminating            The authors acknowledge funding from CIFAR, IVADO,
+states with an algorithm called MLE-GFN. Here we apply                  Genentech, Samsung, and IBM.
+MLE-GFN to generalized GFlowNets to improve denoising                   N.M. thanks Alexander Tong and Yatin Dandi for useful
+diffusion probabilistic models (DDPMs; Ho et al., 2020).                discussions.
+Sampling process. The generative process in a DDPM                      A.V. thanks Luca Thiede and Santiago Miret for their help
+can be seen as a special case of the sampling process in a              with the experiments with the alanine dipeptide molecule.
+generalized GFlowNet of the same form as in §4.2 and Fig. 3.
+A fixed number of steps 𝑇 is made through a sequence of                 T.D. thanks Mizu Nishikawa-Toomey and Jithendaraa Sub-
+copies of a high-dimensional space R𝑛 (with the 𝑖-th state              ramanian for their help and useful discussions about the
+in the trajectory representing, e.g., an image at noise level           Bayesian structure learning experiments.
+𝑇 − 𝑖). The policy at the first step, from 𝑠0 to (x1 , 1), is
+constrained to be unit Gaussian, while subsequent steps are
+
+                                                                    9
+A Theory of Continuous Generative Flow Networks                                                                                  10
+
+Author contributions                                                  Hoffman, M. D. and Gelman, A. The No-U-turn sampler:
+                                                                        adaptively setting path lengths in Hamiltonian Monte
+S.L., T.D., N.M. developed the theory and L.N.E. con-                   Carlo. Journal of Machine Learning Research (JMLR),
+tributed some proofs. Experiments in §4 were done by S.L.              15:1593–1623, 2011.
+(synthetic grid), N.M. (stochastic control), A.V. and A.H.
+(torus), T.D. (Bayesian structure learning), D.Z. (diffusion).        Jain, M., Bengio, E., Hernandez-Garcia, A., Rector-Brooks,
+Experiments on the importance of modeling assumptions                    J., Dossou, B. F., Ekbote, C., Fu, J., Zhang, T., Kilgour,
+were also done by P.L. Y.B. conceived and guided the project.            M., Zhang, D., Simine, L., Das, P., and Bengio, Y. Bio-
+All authors contributed to designing the experiments and                 logical sequence design with GFlowNets. International
+writing the paper.                                                       Conference on Machine Learning (ICML), 2022.
+
+                                                                      Jing, B., Corso, G., Jeffrey Chang, R. B., and Jaakkola, T.
+References                                                               Torsional diffusion for molecular conformer generation.
+Bengio, E., Jain, M., Korablyov, M., Precup, D., and Ben-                Neural Information Processing Systems (NeurIPS), 2022.
+  gio, Y. Flow network based generative models for non-
+                                                                      Li, Y., Luo, S., Wang, H., and Hao, J. CFlowNets: Continu-
+  iterative diverse candidate generation. Neural Information
+                                                                         ous control with generative flow networks. International
+  Processing Systems (NeurIPS), 2021a.
+                                                                        Conference on Learning Representations (ICLR), 2023.
+Bengio, Y., Lahlou, S., Deleu, T., Hu, E., Tiwari, M.,
+  and Bengio, E. GFlowNet foundations. arXiv preprint                 Lipman, Y., Chen, R. T. Q., Ben-Hamu, H., Nickel, M., and
+  2111.09266, 2021b.                                                    Le, M. Flow matching for generative modeling. arXiv
+                                                                        preprint 2210.02747, 2022.
+Bergwerf, H. Molview, 2014. URL https://molview.
+  org.                                                                Lorch, L., Rothfuss, J., Schölkopf, B., and Krause, A. DiBS:
+                                                                        Differentiable Bayesian structure learning. Neural Infor-
+Cappé, O., Moulines, E., and Rydén, T. Inference in hidden            mation Processing Systems (NeurIPS), 2021.
+  markov models. In Proceedings of EUSFLAT conference,
+  2009.                                                               Madan, K., Rector-Brooks, J., Korablyov, M., Bengio, E.,
+                                                                       Jain, M., Nica, A., Bosc, T., Bengio, Y., and Malkin, N.
+Coffey, W., Kalmykov, Y., and Waldron, J. The Langevin                 Learning GFlowNets from partial episodes for improved
+  Equation: With Applications to Stochastic Problems in                convergence and stability. arXiv preprint 2209.12782,
+  Physics, Chemistry and Electrical Engineering. 09 2004.              2022.
+Cundy, C., Grover, A., and Ermon, S. BCD Nets: Scal-
+                                                                      Malkin, N., Jain, M., Bengio, E., Sun, C., and Bengio,
+  able variational approaches for Bayesian causal discovery.
+                                                                       Y. Trajectory balance: Improved credit assignment in
+  Neural Information Processing Systems (NeurIPS), 2021.
+                                                                       GFlowNets. Neural Information Processing Systems
+Deleu, T., Góis, A., Emezue, C., Rankawat, M., Lacoste-               (NeurIPS), 2022.
+  Julien, S., Bauer, S., and Bengio, Y. Bayesian structure
+                                                                      Malkin, N., Lahlou, S., Deleu, T., Ji, X., Hu, E. J., Everett,
+  learning with generative flow networks. Uncertainty in
+                                                                       K. E., Zhang, D., and Bengio, Y. GFlowNets and varia-
+ Artificial Intelligence (UAI), 2022.
+                                                                       tional inference. International Conference on Learning
+Dockhorn, T., Vahdat, A., and Kreis, K. Score-based gener-             Representations (ICLR), 2023.
+  ative modeling with critically-damped langevin diffusion.
+  International Conference on Learning Representations                Mironov, V., Alexeev, Y., Mulligan, V. K., and Fedorov,
+ (ICLR), 2022.                                                         D. G. A systematic study of minima in alanine dipep-
+                                                                       tide. Journal of Computational Chemistry, 40(2):297–
+Doucet, A., Freitas, N., and Gordon, N. An Introduction                309, 2018.
+  to Sequential Monte Carlo Methods, pp. 3–14. Springer
+  New York, 2001.                                                     Neal, R. M. Annealed importance sampling. Statistics and
+                                                                        Computing, 11(2):125–139, 2001.
+Hagemann, P., Hertrich, J., and Steidl, G. Stochastic nor-
+  malizing flows for inverse problems: A Markov chains                Neal, R. M. MCMC using Hamiltonian dynamics. arXiv
+  viewpoint. SIAM/ASA Journal on Uncertainty Quantifi-                  preprint 1206.1901, 2012.
+  cation, 10(3):1162–1190, 2022.
+                                                                      Nishikawa-Toomey, M., Deleu, T., Subramanian, J., Bengio,
+Ho, J., Jain, A., and Abbeel, P. Denoising diffusion proba-             Y., and Charlin, L. Bayesian learning of causal structure
+  bilistic models. Neural Information Processing Systems                and mechanisms with GFlowNets and variational bayes.
+ (NeurIPS), 2020.                                                       arXiv preprint 2211.02763, 2022.
+
+                                                                 10
+A Theory of Continuous Generative Flow Networks                   11
+
+Nummelin, E. General irreducible Markov chains and non-
+  negative operators. Cambridge University Press, 2004.
+Pan, L., Zhang, D., Courville, A., Huang, L., and Bengio,
+  Y. Generative augmented flow networks. International
+  Conference on Learning Representations (ICLR), 2022.
+Petritis, D. Markov chains on measurable spaces.
+  2015. URL http://perso.univ-rennes1.fr/
+  dimitri.petritis/enseignement/markov/
+  markov.pdf.
+Sohl-Dickstein, J. N., Weiss, E. A., Maheswaranathan,
+  N., and Ganguli, S. Deep unsupervised learning using
+  nonequilibrium thermodynamics. International Confer-
+  ence on Machine Learning (ICML), 2015.
+Song, Y. and Ermon, S. Generative modeling by estimating
+  gradients of the data distribution. Neural Information
+  Processing Systems (NeurIPS), 2019.
+
+Thiede, L., Miret, S., Sadowski, K., Xu, H., Phielipp, M.,
+  and Aspuru-Guzik, A. Conformer search using SE3-
+  transformers and imitation learning. NeurIPS 2022 AI for
+  Accelerated Materials Design Workshop, 2022.
+Wu, H., Köhler, J., and Noé, F. Stochastic normalizing
+ flows. Neural Information Processing Systems (NeurIPS),
+ 2020.
+Zhang, D., Malkin, N., Liu, Z., Volokhova, A., Courville,
+  A., and Bengio, Y. Generative flow networks for dis-
+  crete probabilistic modeling. International Conference
+  on Machine Learning (ICML), 2022.
+Zhang, D., Chen, R. T. Q., Malkin, N., and Bengio, Y.
+  Unifying generative models with GFlowNets and beyond.
+  arXiv preprint 2209.02606, 2023a.
+Zhang, D., Rainone, C., Peschl, M., and Bondesan, R. Ro-
+  bust scheduling with GFlowNets. International Confer-
+  ence on Learning Representations (ICLR), 2023b. To
+  appear.
+Zhang, Q. and Chen, Y. Path integral sampler: a stochastic
+  control approach for sampling. International Conference
+  on Learning Representations (ICLR), 2022.
+Zimmermann, H., Lindsten, F., van de Meent, J.-W., and
+  Naesseth, C. A. A variational perspective on generative
+  flow networks. arXiv preprint 2210.07992, 2022.
+
+
+
+
+                                                             11
+A Theory of Continuous Generative Flow Networks                                                                                    12
+
+A. Transition kernels: Additional notations and definitions
+We first recall the definition of transition kernels and Markov kernels
+Definition 8 (Transition kernel). Let ( S̄, Σ) be a measurable (state) space. A function 𝜅 : S̄ × Σ → [0, +∞) is called a
+positive 𝜎-finite transition kernel if
+
+  1. For any 𝐵 ∈ Σ, the mapping 𝑠 ↦→ 𝜅(𝑠, 𝐵) is measurable, where the space [0, +∞) is associated with the Borel 𝜎-algebra
+     B ( [0, +∞));
+
+  2. For any 𝑠 ∈ S, the mapping 𝐵 ↦→ 𝜅(𝑠, 𝐵) is a positive 𝜎-finite measure on ( S̄, Σ).
+
+A transition kernel such that the mappings 𝐵 ↦→ 𝜅(𝑠, 𝐵) are probability measures is called a Markov kernel.
+
+Notations. Given a measurable space ( S̄, Σ), we denote by Σ | U the restriction of Σ to any subset U of S̄.
+
+A.1. Products of kernels.
+Given a measurable space ( S̄, Σ), a positive measure 𝜈 on ( S̄, Σ), and a transition kernel 𝜅 on ( S̄, Σ), we denote by 𝜈𝜅 (resp.
+𝜈 ⊗ 𝜅) the measure on ( S̄, Σ) (resp. ( S̄ × S̄, Σ ⊗ Σ)) defined for 𝐵 ∈ Σ (resp. 𝐵 ∈ Σ ⊗ Σ) as:
+                                                     ∫
+                                            𝜈𝜅(𝐵) =       𝜈(𝑑𝑠)𝜅(𝑠, 𝐵).                                                      (17)
+                                                       S̄
+                                                          ∬
+                                            𝜈 ⊗ 𝜅(𝐵) =        1 𝐵 (𝑠, 𝑠′ )𝜈(𝑑𝑠)𝜅(𝑠, 𝑑𝑠′ )                                    (18)
+                                                            S̄ 2
+
+In particular, for any state 𝑠 ∈ S̄, the 𝑛-step measure 𝜅 𝑛 (𝑠, −) is recursively defined by 𝜅 0 (𝑠, −) = 𝛿 𝑠 , the Dirac at 𝑠, and:
+
+                                                      𝜅 𝑛+1 (𝑠, −) = 𝜅 𝑛 (𝑠, −)𝜅.                                                (19)
+
+The following lemma, proved in §F ensures that absolute continuity between transition kernels transfers to 𝑛-step measures
+Lemma 1. Let 𝑃𝐹 be a transition kernel on ( S̄, Σ) such that 𝑃𝐹 (𝑠, −) ≪ 𝜅(𝑠, −) for every 𝑠 ∈ S̄. Then for every 𝑛 ≥ 1,
+𝑃𝐹𝑛 (𝑠, −) and 𝑠 ∈ S is absolutely continuous wrt. 𝜅 𝑛 (𝑠, −).
+
+A.2. Equality between measures
+Given two measures 𝑝 and 𝑞 on ( S̄, Σ), and a function 𝑔 : S̄→R, we use the notation:
+
+                                                        𝑝(𝑑𝑠) = 𝑔(𝑠)𝑞(𝑑𝑠)
+
+to say that for any measurable bounded function 𝑓 : S̄→R:
+                                          ∫                 ∫
+                                              𝑓 (𝑠) 𝑝(𝑑𝑠) =   𝑓 (𝑠)𝑔(𝑠)𝑞(𝑑𝑠).                                                    (20)
+                                                S̄                  S̄
+
+Throughout the paper, we use the two notations interchangeable when the context allows it. Our proofs rely mostly on
+writing the equality with measurable bounded functions.
+Equalities between product measures require a special care, especially when using both the kernel 𝜅 and the backward
+reference kernel 𝜅 𝑏 . For example (4) means that for any measurable bounded function 𝑓 : S̄ × S̄→R satisfying 𝑓 (𝑠0 , 𝑠0 ) =
+ 𝑓 (⊥, ⊥) = 0:
+                               ∬                                   ∬
+                                       𝑓 (𝑠, 𝑠′ )𝜈(𝑑𝑠)𝜅(𝑠, 𝑑𝑠′ ) =    𝑓 (𝑠, 𝑠′ )𝜈(𝑑𝑠′ )𝜅 𝑏 (𝑠′ , 𝑑𝑠).
+                                  S̄× S̄                                 S̄× S̄
+
+We choose not to write (4) with the notation 𝜈(𝑑𝑠)𝜅(𝑠, 𝑑𝑠′ ) = 𝜈(𝑑𝑠′ )𝜅(𝑠′ , 𝑑𝑠) as it does not convey any information about
+when “𝑑𝑠” and “𝑑𝑠′ ” represent {𝑠0 }, {𝑠0 } or {⊥}, {⊥}.
+
+                                                                   12
+A Theory of Continuous Generative Flow Networks                                                                                          13
+
+A.3. Trajectory measures
+Definition 9. Let 𝑃𝐹 be a transition kernel on ( S̄, Σ). For any 𝑛 ≥ 0 and 𝑠 ∈ S̄, 𝑃𝐹 induces a measure 𝑃𝐹⊗𝑛 (𝑠, −) over the
+product space ( S̄ 𝑛+1 , Σ ⊗ (𝑛+1 ) ). 𝑃𝐹⊗𝑛 (𝑠, −), called the 𝑛-step trajectory measure at 𝑠 recursively defined by
+                                                       𝑃𝐹⊗0 (𝑠, −) = 𝛿 𝑠 ,                                                             (21)
+                                                   𝑃𝐹⊗𝑛+1 (𝑠, −) = 𝑃𝐹⊗𝑛 (𝑠, −) ⊗ 𝑃𝐹 .                                                  (22)
+
+
+Notation. We use − → to denote (𝑠 , . . . , 𝑠 ) and −
+                 𝑠−1:
+                                                     −−→
+                                                    𝑑𝑠1:𝑛 to denote 𝑑𝑠1 . . . 𝑑𝑠 𝑛 .
+                      𝑛          1           𝑛
+
+We can write for example: 𝑃𝐹⊗1 (𝑠, 𝑑𝑠′ 𝑑𝑠1 ) = 𝛿 𝑠 (𝑑𝑠′ )𝑃𝐹 (𝑠′ , 𝑑𝑠1 ) and 𝑃𝐹⊗2 (𝑠, 𝑑𝑠′ 𝑑𝑠1 𝑑𝑠2 ) = 𝛿 𝑠 (𝑑𝑠′ )𝑃𝐹 (𝑠′ , 𝑑𝑠1 )𝑃𝐹 (𝑠1 , 𝑑𝑠2 ),
+and more generally:
+                                               −−−→                       −−−−−−→
+                                  𝑃𝐹⊗𝑛 (𝑠, 𝑑𝑠′ 𝑑𝑠1:𝑛 ) = 𝑃𝐹⊗𝑛−1 (𝑠, 𝑑𝑠′ 𝑑𝑠1:𝑛−1 )𝑃𝐹 (𝑠 𝑛−1 , 𝑑𝑠 𝑛 )
+
+A.4. Terminating state measure
+Given a measurable pointed DAG 𝐺 = ( S̄, T , Σ, 𝑠0 , ⊥, 𝜅, 𝜅 𝑏 , 𝜈), any transition kernel 𝑃𝐹 on ( S̄, Σ) induces a terminating
+state measure 𝑃⊤ , which is the sum of the 𝑛-step terminating state measures defined as follows:
+Definition 10. Let 𝑃𝐹 be a transition kernel on ( S̄, Σ). For any 𝑛 ≥ 0 we define the 𝑛-step terminating state measure 𝑃⊤𝑛
+over (X, Σ | X ), for any 𝐵 ∈ Σ | X as:
+                                               ∫
+                                     𝑃⊤𝑛 (𝐵) =   𝑃𝐹⊗𝑛 (𝑠0 , 𝑑𝑠1 . . . 𝑑𝑠 𝑛+1 ) 1 𝐵 (𝑠 𝑛 ) 1𝑠𝑛+1 =⊥ .                       (23)
+                                                  S̄ 𝑛+1
+
+The terminating state measure is defined as:
+                                                                              ∞
+                                                                             ∑︁
+                                                      𝑃⊤ : 𝐵 ∈ Σ | X ↦→            𝑃⊤𝑛 (𝐵)                                             (24)
+                                                                             𝑛=1
+
+The following lemma, proved in §F, relates the 𝑛-step terminating measures to the 𝑛-step measures 𝑃𝐹𝑛 (𝑠0 , −):
+Lemma 2. Let 𝑃𝐹 be a transition kernel on ( S̄, Σ). For every 𝑛 ≥ 1, we have:
+                                                 𝑃⊤𝑛 (𝑑𝑥) = 𝑃𝐹 (𝑥, {⊥})𝑃𝐹𝑛−1 (𝑠0 , 𝑑𝑥)                                                 (25)
+
+A.5. Backward reference kernels
+Given a reference kernel 𝜅, designing a backward reference kernel 𝜅 𝑏 can be done using reverse kernels (Cappé et al., 2009),
+which we redefine below:
+Definition 11 (Reverse kernel). Let ( S̄, Σ) be a measurable space, 𝜅 be a transition kernel on ( S̄, Σ), and 𝜈 be a positive
+measure on ( S̄, Σ). A reverse kernel 𝜅 𝑟𝜈 associated to 𝜈 and 𝜅 is a transition kernel over ( S̄, Σ) such that:
+                                                            𝜈 ⊗ 𝜅 = (𝜈𝜅) ⊗ 𝜅 𝑟𝜈                                                        (26)
+
+
+Note how (26) is different from the condition of the backward reference kernel (4). Conveniently, there is a reference
+measure 𝜈 for which the two conditions are equivalent, meaning that the backward reference kernel can be defined as the
+reverse kernel associated to 𝜈 and 𝜅. While there is no guarantee that the reverse kernel exists or is unique in general,
+existence is guaranteed if ( S̄, T ) is a Polish space (e.g. a discrete space, the Euclidian space R𝑛 , hyperrectangles or balls in
+R𝑛 , or products or disjoint unions of countable families thereof) (Cappé et al., 2009). The following proposition, proved in
+§F shows that.
+Proposition 3. Given a Polish space ( S̄, T ), with source and sink states 𝑠0 , ⊥ ∈ S̄ such that {𝑠0 } and {⊥} are both open
+and closed sets, and a transition kernel 𝜅 on ( S̄, Σ) satisfying (1), (2) and (7). Let 𝜈 be the measure defined by:
+                                                                  𝑁
+                                                                 ∑︁
+                                                            𝜈=         𝜅 𝑛 (𝑠0 , −),                                                   (27)
+                                                                 𝑛=0
+
+
+                                                                       13
+A Theory of Continuous Generative Flow Networks                                                                                 14
+
+and let 𝜅 𝑟𝜈 be any reverse kernel associated to 𝜅 and 𝜈 that satisfies the following two conditions:
+                                              𝜅 𝑟𝜈 (𝑠0 , −) = 0 i.e. it’s the trivial measure                                 (28)
+                                                         𝑏
+                                              ∀𝑠 ∈ S, 𝜅 (𝑠, {⊥}) = 0.                                                         (29)
+
+Let 𝜅 𝑏 be a transition kernel on ( S̄, Σ) defined by:
+                                            ∀𝑠 ≠ ⊥, 𝜅 𝑏 (𝑠, −) = 𝜅 𝑟𝜈 (𝑠, −),
+                                                                           1
+                                            ∀𝐵 ∈ Σ | S , 𝜅 𝑏 (⊥, 𝐵) =         𝜈 ⊗ 𝜅(𝐵 × {⊥}),
+                                                                       𝜈({⊥})
+                                            𝜅 𝑏 (⊥, {⊥}) = 0.
+
+𝜈 is strictly positive and 𝜅 𝑏 satisfies (4). Note that the existence of a reverse kernel satisfying (28) and (29) is guaranteed by
+Lemma 3 below, proved in §F.
+Lemma 3. Given a Polish space ( S̄, T ), with source and sink states 𝑠0 , ⊥ ∈ S̄ such that {𝑠0 } and {⊥} are both open and
+closed sets, and a transition kernel 𝜅 on ( S̄, Σ) satisfying (1), (2) and (7). Then the measure 𝜈 defined by:
+                                                                     𝑁
+                                                                    ∑︁
+                                                             𝜈=           𝜅 𝑛 (𝑠0 , −),                                       (30)
+                                                                    𝑛=0
+
+If 𝜅 𝑏 is a reverse kernel associated to 𝜈 and 𝜅, then the kernel 𝜅 ′ defined by:
+                                   𝜅 ′ (𝑠0 , −) = 0,                                                                          (31)
+                                    ′               𝑏
+                                   𝜅 (⊥, −) = 𝜅 (⊥, −),                                                                       (32)
+                                        ′                ′      ′
+                                   ∀𝑠 ∈ S \ {𝑠0 }, 𝜅 (𝑠 , {⊥}) = 0                                                            (33)
+                                        ′                                             ′   ′   𝑏
+                                   ∀𝑠 ∈ S \ {𝑠0 }, ∀𝐵 ∈ Σ, ⊥ ∉ 𝐵 ⇒ 𝜅 (𝑠 , 𝐵) = 𝜅 (𝑠, 𝐵),                                      (34)
+is also a reverse kernel associated to 𝜈 and 𝜅.
+
+B. Pointed DAGs as measurable pointed graphs
+The following example shows that pointed directed acyclic graphs (Bengio et al., 2021b) are a special case of finitely
+absorbing measurable pointed graphs.
+Example 1. Finite state spaces are special cases of measurable pointed graphs. Let 𝐺 = (𝑉, 𝐸, 𝑠0 , ⊥) be a pointed directed
+acyclic graph, where 𝑉 is the finite set of vertices, 𝐸 ⊂ 𝑉 × 𝑉 is the set of directed edges, 𝑠0 ∈ 𝑉 is the initial state, and
+⊥ ∈ 𝑉 is the sink state.
+The set of vertices 𝑉 with the discrete topology corresponds to the state space. We can define a transition kernel 𝜅 such that
+for any vertex 𝑠 ∈ 𝑉, and any 𝐵 ∈ P (𝑉), with P (𝑉) the power set of 𝑉, containing all subsets of 𝑉:
+
+                                                           1𝑠→𝑠′ ∈𝐸 + 1𝑠=⊥,⊥∈ 𝐵
+                                                        ∑︁
+                                              𝜅(𝑠, 𝐵) =
+                                                                𝑠′ ∈ 𝐵
+
+Using this transition kernel, the measure 𝐵 ↦→ 𝜅 𝑛 (𝑠, 𝐵) over (𝑉, P (𝑉)) counts the number of trajectories of length 𝑛 starting
+at 𝑠 that ends at a vertex in 𝐵 in the pointed graph 𝐺.
+The reverse kernel can be defined for any vertex 𝑠′ ∈ 𝑉 and any 𝐵 ∈ P (𝑉) as:
+
+                                                                   1𝑠→𝑠′ ∈𝐸 ,
+                                                                ∑︁
+                                                 𝜅 𝑏 (𝑠′ , 𝐵) =
+                                                                          𝑠∈ 𝐵
+
+and the reference measure 𝜈 can be defined as the counting measure (that counts the number of elements in any 𝐵 ∈ P (𝑉)).
+Since (𝑉, P (𝑉)) is a discrete space, the condition of accessibility in (1) can be verified for only singletons 𝐵 = {𝑠}. This
+condition then corresponds to having a positive number of trajectories of any length 𝑛 > 0 starting at 𝑠0 and ending in
+𝑠, which is exactly the notion of accessibility in 𝐺. The continuity condition is trivially satisfied because the topology is
+discrete, and (4) is trivially satisfied. Finally, (7) is satisfied given the acyclicity of 𝐺.
+
+                                                                          14
+A Theory of Continuous Generative Flow Networks                                                                                                     15
+
+C. Experimental details
+C.1. Approximating the Jensen-Shannon Divergence
+Given an unnormalized target reward measure 𝑟 with respect to the Lebesgue measure on a bounded space X, and a
+GFlowNet sampler 𝑃⊤ of terminating states, we approximate the JSD between the learned sampler and the normalized
+distribution 𝑅(𝑑𝑥) = ∫ 𝑟 ( 𝑥1′ ) 𝑑 𝑥 ′ 𝑟 (𝑥)𝑑𝑥 as follows:
+                         X
+
+(1) We sample 𝑁 points from the the target distribution using rejection sampling, with a uniform distribution as a proposal,
+(2) We fit a kernel density estimator (KDE) on the above samples,
+(3) We fit a second KDE on 𝑁 samples from 𝑃⊤
+(4) We use both KDEs to score a fixed set of points defining a discretization of the sample space X,
+(5) We normalize both sets of scores in order to obtain valid probability mass functions on the grid,
+(6) We evaluate the JSD between the two probability mass functions.
+
+C.2. A synthetic continuous environment
+The forward and backward kernels 𝑃𝐹 , 𝑃 𝐵 are defined by their densities 𝑝 𝐹 and 𝑝 𝐵 wrt. the reference kernels 𝜅, 𝜅 𝑏 .
+𝜅, 𝜈, 𝜅 𝑏 satisfy the requirements
+                      l√ m         of a finitely absorbing measurable pointed graph. More notably, all states can be reached
+                         2
+from 𝑠0 within 1 + 𝜌 steps.
+
+The topology T on S̄ = S ∪ {⊥} is the disjoint union topology on {𝑠0 , ⊥} and S.
+We parametrized 𝑝 𝐹 (𝑠0 , −) using a mixture of four Beta distributions for both the radius 𝑟 ∈ (0, 𝜌) and the angle 𝜃 ∈ (0, 2𝜋 ).
+We used a mixture of two Beta distributions for the angle 𝜃 ∈ (𝜃 𝑚𝑖𝑛 (𝑠), 𝜃 𝑚𝑎𝑥 (𝑠)) when modeling 𝑝 𝐹 (𝑠, −) and 𝑝 𝐵 (𝑠, −).
+The forward policy neural network has an extra output head corresponding to the probability of terminating the trajectory,
+i.e. 𝑝 𝐹 (𝑠0 , ⊥). The learned probabilities were effectively multiplied by the right Jacobians to account for the support of the
+Beta distributions ([0, 1]) being different from that of 𝜃 or 𝑟.
+Reward density.
+The reward measure 𝑅 was specified using a density 𝑟 wrt. the Lebesgue measure 𝜆 on X = (0, 1) 2 . Following Bengio et al.
+(2021a) and Malkin et al. (2022), the (unnormalized) density is defined for every 𝑥 = (𝑥1 , 𝑥2 ) ∈ X as:
+                   𝑟 (𝑥) = 0.1 + 0.51 | 𝑥1 −0.5 | ∈ ( 0.25,5 ] 1 | 𝑥2 −0.5 | ∈ ( 0.25,5 ] + 21 | 𝑥1 −0.5 | ∈ ( 0.25,5 ] 1 | 𝑥2 −0.5 | ∈ ( 0.3,4 )
+
+Hyperparameters.
+We learned the concentration parameters of the Beta distributions, which were restrained to the interval [0.1, 5.1], using a
+three-layered neural network with 128 units per layer, and leaky ReLU activation for 𝑠 ≠ 𝑠0 . The parameters corresponding
+to 𝑝 𝐹 (𝑠0 , −) were learned separately.
+Each iteration consisted of sampling 128 trajectories from the forward policy, and evaluating the TB or the DB loss (with
+𝛼 = 1), before taking a gradient step on the learned parameters. We trained the models for 20,000 iterations.
+For both the DB and TB losses, we used a learning rate of 10−3 for the parameters of 𝑝 𝐹 , 𝑝 𝐵 , 𝑝 𝐹 (𝑠0 , −) (and log 𝑍 for TB,
+𝑢 for DB). The learning rate was annealed using a discount factor of 0.5 every 2500 iterations.
+In experiments with learned 𝑝 𝐵 , both 𝑝 𝐹 and 𝑝 𝐵 shared parameters except in the output layer. In DB, 𝑝 𝐹 and 𝑢 shared
+parameters except in the output layer.
+Evaluation metric. We approximated the JSD between the learned the terminating state distribution and the target
+distribution following the scheme described in §C.1.
+
+C.3. Low-dimensional stochastic control
+The neural network computing 𝜇(x𝑡 , 𝑡) had the same architecture as in Zhang & Chen (2022): a pair of 2-layer MLP
+processing x𝑡 and a 128-dimensional Fourier feature representation of 𝑡, followed by a 3-layer MLP on the concatenation of
+the features derived from x𝑡 and from 𝑡. We set 𝜎 = 5 for the Gaussians density and 𝜎 = 1 for funnel density. Exploration
+                              2
+algorithms added a constant 𝜖𝑇 to the sampling policy variance at each step; we used a value of 𝜖 = 0.1 linearly annealed to
+
+                                                                                15
+A Theory of Continuous Generative Flow Networks                                                                                    16
+
+                                                   GFlowNet TB                   Reverse KL               Forward KL
+
+
+
+
+                  No exploration
+
+
+
+
+            Fixed exploration 𝜖 = 0.1
+
+
+
+
+       Annealed exploration 𝜖 = 0.1 ↘ 0
+
+
+
+
+                       Target
+
+
+
+
+Figure C.1. The target density for 9 Gaussians and samples from models trained with various algorithms trained for 1500 batches. (When
+trained longer, GFlowNet TB policies with exploration learn to model the modes with higher precision.)
+
+
+0 over the course of training. All models are trained for 1500 batches of 300 samples with a learning rate of 10−2 for the
+policy and 10−1 for log 𝑍 (in the case of GFlowNet algorithms); we found that higher learning rates made optimization
+unstable. We also observed that the off-policy forward KL and TB algorithms continue to improve with longer training,
+unlike the on-policy algorithms, which experience mode collapse and cease to discover new areas of the density landscape.
+Fig. C.1 shows samples from models trained with various algorithms and highlights the importance of exploration.
+The simple and importance-weighted estimates of the log-partition function from Zhang & Chen (2022) are defined, in
+GFlowNet terms, as
+                                                                      (𝑖)   ⊗𝑇       (𝑖)
+                                                   1 ∑︁
+                                                         𝐾
+                                                             𝑅(𝑥𝑇 ) 𝑝 𝐵 (𝜏 (𝑖) |𝑥𝑇 )
+                                                𝐵=       log                         ,
+                                                   𝐾 𝑖=1          𝑝 𝐹⊗𝑇 (𝜏 (𝑖) )
+                                                                 (𝑖)    ⊗𝑇         (𝑖)
+                                                         1 ∑︁ 𝑅(𝑥𝑇 ) 𝑝 𝐵 (𝜏 (𝑖) |𝑥𝑇 )
+                                                            𝐾
+                                            𝐵RW = log                                  ,
+                                                         𝐾 𝑖=1      𝑝 𝐹⊗𝑇 (𝜏 (𝑖) )
+
+where the 𝜏 (𝑖) are 𝐾 trajectories sampled from 𝑃𝐹 , the 𝑥 (𝑖) are their terminating states, and 𝑝 𝐹⊗𝑇 (𝜏 (𝑖) ), 𝑝 ⊗𝑇  (𝑖) (𝑖)
+                                                                                                                   𝐵 (𝜏 |𝑥 𝑇 ) are
+
+                                                                 16
+A Theory of Continuous Generative Flow Networks                                                                                        17
+
+
+Table C.1. Estimation bias of the log-partition function using simple (𝐵) and importance-weighted (𝐵RW ) bounds (mean and standard
+deviation over 10 runs). The bold value in each column shows the best result and all those statistically equivalent to it (𝑝 > 0.1 under a
+Welch’s 𝑡-test). Algorithms assuming access to the gradient of the reward (non-black-box) are shown for comparison. Rows marked with ∗
+require importance weighting for gradient estimation. Cells with – were unstable to optimize. Last three rows from Zhang & Chen (2022).
+                                                       Gaussian mixture (𝑑 = 2)                           Funnel (𝑑 = 10)
+Black box?                                                𝐵                   𝐵RW                     𝐵                   𝐵RW
+      ✓       Off-policy      GFlowNet TB         −0.150 ± 0.019        −0.003 ± 0.011        −0.219 ± 0.020        −0.026 ± 0.020
+      ✓       Off-policy      Reverse KL∗         −1.706 ± 0.537        −1.609 ± 0.546              –                     –
+      ✓       Off-policy      Forward KL∗         −0.306 ± 0.036        −0.001 ± 0.013        −2.822 ± 0.576        −0.087 ± 0.081
+      ✓       On-policy       GFlowNet TB         −1.409 ± 0.427        −1.301 ± 0.434        −0.265 ± 0.026        −0.012 ± 0.108
+      ✓       On-policy       Reverse KL          −1.348 ± 0.397        −1.237 ± 0.413        −0.259 ± 0.018        −0.040 ± 0.023
+      ✓       On-policy       Forward KL∗         −0.254 ± 0.032        −0.007 ± 0.023        −1.384 ± 0.284        −0.034 ± 0.143
+      ✓       Non-SDE         SMC                             −0.362 ± 0.293                              −0.216 ± 0.157
+      ×       On-policy       PIS-NN              −1.691 ± 0.370        −1.192 ± 0.482        −0.098 ± 0.005        −0.018 ± 0.020
+      ×       Non-SDE         HMC                             −1.876 ± 0.527                              −0.835 ± 0.257
+
+
+the products of forward (resp. backward) Gaussian policy densities along the trajectories. Note that both estimates would
+equal the true integral of the reward density for a perfect sampler. Identically to Zhang & Chen (2022), we use 𝐾 = 2000 for
+the 2-dimensional Gaussian mixture dataset and 𝐾 = 6000 for the 10-dimensional funnel dataset.
+We show extended results, including both simple and importance-weighted variational bounds, in Table C.1.
+
+C.4. Stochastic control on a torus environment
+The transition kernel 𝜅(𝑠, −) for any 𝑠 = (˜𝑠, 𝑡) when 𝑡 < 𝑇 is the product of the Lebesgue measure on [0, 2𝜋) 2 with the Dirac
+measure at 𝑡 + 1, and 𝜅((˜𝑠, 𝑇), −) = 𝛿⊥ for every 𝑠˜ ∈ [0, 2𝜋) 2 . Similar to §4.2, the reference measure is 𝜈 = 𝛿 𝑠0 + 𝑇𝑡=1 𝜆 ⊗ 𝛿𝑡 ,
+                                                                                                                        Í
+where 𝜆 is the Lebesgue measure on each copy of the torus [0, 2𝜋) 2 .
+We parameterized the densities 𝑝 𝐹 and 𝑝 𝐵 with mixtures of independent von Mises distributions defined by a measure of
+location 𝜇 and a measure of concentration 𝜅. We considered two tasks in the torus environment defined by different reward
+functions.
+Synthetic multimodal task. For this task, we designed a reward density with six modes on the torus surface:
+
+                                               𝑅6 (𝜓, 𝜑) = (sin(3𝜓) + cos(2𝜑) + 2) 3 .
+
+Molecule conformation task. In this task, we define the reward function using the energy E of an alanine dipeptide
+molecule, which depends on the conformation of the molecule C (spatial arrangement of its atoms). This conformation can
+be efficiently parametrizeded using internal coordinates: bond lengths, bond angles, and torsion angles (Jing et al., 2022;
+Thiede et al., 2022). For alanine dipeptide, there are four torsion angles largely influencing the energy (see Fig. C.2). In our
+experiments, the GFlowNet generates values for the angles 𝜓 and 𝜑 while keeping all other coordinates fixed. In this way,
+the support of the reward function remains a torus, and its values are proportional to the Boltzmann distribution with energy
+E:
+                                               𝑅 𝐴𝐷 (𝜓, 𝜑) = exp(−E (C(𝜓, 𝜑))),
+
+The plots in Fig. 4 show the results of training a GFlowNet on a toroidal space with a continuous synthetic multimodal
+reward function 𝑅6 (see text) and a reward function defined by the Boltzmann distribution of the alanine dipeptide molecule
+𝑅 𝐴𝐷 . The images represent the density over a discretization of the space [0, 2𝜋) 2 , obtained after fitting KDE with 100,000
+samples. The samples to fit the reward densities (Fig. 4(a-c)) were obtained via rejection sampling, and the GFlowNet
+densities (Fig. 4b-d) use GFlowNet samples from the learned distribution over terminating states 𝑃⊤ .
+Results. To evaluate the performance of the GFlowNet trained with the TB loss, we calculated the Jensen-Shannon divergence
+
+                                                                   17
+A Theory of Continuous Generative Flow Networks                                                                                            18
+
+
+                                                                           Figure C.2. Alanine dipeptide 3D structure. Torsion angles 𝜓, 𝜑,
+                                                                           𝜃 1 , 𝜃 2 have the biggest impact on the energy of the molecule. A
+                                                                           pair of torsion angles 𝜑 and 𝜓 can take any values ∈ [0, 2𝜋], while
+                                                                           𝜃 1 and 𝜃 2 can be either close to 0 or 𝜋 due to energy barriers
+                                                                           (Mironov et al., 2018). The image is rendered using MolView
+                                                                           (Bergwerf, 2014)
+
+
+
+
+(see §C.1 for details about its estimation) between the learned terminating state distribution 𝑃⊤ and the normalized reward
+distribution. We provide a visual representation of learned and reward distributions in Fig. 4. Quantitatively, the GFlowNet
+achieved a JSD of 0.063 for the synthetic multimodal task and 0.009 for the molecule conformation task. These results
+show that the generalized GFlowNet can model probability densities over non-Euclidean spaces.
+Hyperparameters. We modeled both 𝑝 𝐹 and 𝑝 𝐵 with 5-layer perceptrons with 512 hidden units per layer, training the full
+set of parameters of each model separately. These models output, for each angle 𝜓 and 𝜑, the location 𝜇𝑖 and concentration
+𝜅 𝑖 of 5 independent von Mises distributions, mixed with learned weights 𝑤 𝑖 . To take into account the topology of the torus,
+we encoded input angles with trigonometric transformations (sin(𝑘𝜓), cos(𝑘𝜓), 𝑘 = 1, . . . , 5, for both angles 𝜓 and 𝜑). We
+used a learning rate of 10−5 for the model parameters and 10−2 for log 𝑍, updating the parameters with batches of 100
+trajectories of length 𝑇 = 10. With the synthetic reward, the model converged in about 5,000 iterations; in the molecular
+conformation task, we trained for 40k iterations.
+
+C.5. Posterior over continuous parameters in Bayesian structure learning
+Bayesian Networks. Recall that a Bayesian Network is a probabilistic model, where the joint distribution over 𝑑 random
+variables {𝑋1 , . . . , 𝑋𝑑 } factorizes according to a directed acyclic graph (DAG) 𝐺 as:
+                                                                     𝑑
+                                                                     Ö
+                                       𝑃(𝑋1 , . . . , 𝑋𝑑 ; 𝜃, 𝐺) =         𝑃(𝑋𝑖 | Pa𝐺 (𝑋𝑖 ); 𝜃 𝑖 ),
+                                                                     𝑖=1
+
+where Pa𝐺 (𝑋𝑖 ) is the set of parents of 𝑋𝑖 in 𝐺, and 𝜃 𝑖 is the set of parameters for the conditional probability distribution of
+𝑋𝑖 . We denote by 𝜃 = {𝜃 1 , . . . , 𝜃 𝑑 } the set of all the parameters of this model.
+We assume that 𝜃 ∈ Θ𝐺 , where Θ𝐺 is the space of all parameters for the Bayesian Network. Note that this space of
+parameters depends on the structure 𝐺 of the Bayesian Network. For example, the Bayesian Network where all the random
+variables are mutually independent (corresponding to 𝐺 being empty) has fewer parameters than another Bayesian Network
+that encodes dependencies between those random variables. We will also denote by G the space of DAG over 𝑑 nodes; the
+number of elements in this space grows super-exponentially with 𝑑.
+Linear Gaussian model. In order to compute the exact posterior distribution 𝑃(𝐺, 𝜃 | D) in closed-form, we consider
+here a linear-Gaussian model for the parametrization of the conditional probability distributions appearing in the Bayesian
+Network. More precisely, the conditional probability distribution is given by
+                                                                                                ∑︁
+              𝑃(𝑋𝑖 | Pa𝐺 (𝑋𝑖 ); 𝜃 𝑖 ) = N (𝑋𝑖 | 𝜇𝑖 , 𝜎 2 )        where                𝜇𝑖 =            𝜃𝑖 𝑗 𝑋 𝑗 .
+                                                                                                          𝑋 𝑗 ∈ Pa𝐺 (𝑋𝑖 )
+
+
+In other words, 𝑋𝑖 follows a Normal distribution, whose mean 𝜇𝑖 is given by a linear combination of its parents, and with
+fixed variance 𝜎 2 . For this class of models,
+                                                       ? 𝑑
+                                                  Θ𝐺 ≃     R | Pa𝐺 (𝑋𝑖 ) |
+                                                               𝑖=1
+
+                                                                     18
+A Theory of Continuous Generative Flow Networks                                                                             19
+
+GFlowNet over a mixed state space. We are using the GFlowNet in order to approximate the joint posterior distribution
+𝑃(𝐺, 𝜃 | D), and therefore its terminating states have the form (𝐺, 𝜃), where 𝐺 ∈ G is a DAG, and 𝜃 ∈ Θ𝐺 are the
+associated parameters. Unlike Nishikawa-Toomey et al. (2022), which uses Variational Bayes to update the distribution over
+parameters 𝜃, we model the distribution over both the graphs and parameters using a single GFlowNet.
+The generation of a terminating state follows 2 phases: during the first phase, the DAG 𝐺 is constructed by adding one
+edge at a time, starting from the empty graph, following the structure of DAG-GFlowNet (Deleu et al., 2022). To reach a
+graph 𝐺 with 𝑘 edges, we therefore are taking 𝑘 steps in the GFlowNet. The states traversed during this first phase have no
+parameters associated to them; we denote by (𝐺, ♯) ∈ S such an (intermediate) state, where ♯ ∉ Θ𝐺 ′ for any 𝐺 ′ ∈ G is a
+symbol indicating that 𝐺 has no corresponding parameters.
+Then once we have finished adding edges (in practice, this decision is made by selecting a special “stop” action), we sample
+the parameters 𝜃 ∈ Θ𝐺 associated to 𝐺 by taking a final step in the GFlowNet to reach the terminating state (𝐺, 𝜃) ∈ X.
+Since the space of parameters depends on the graph 𝐺, we define the state space of the GFlowNet as
+                         Ø                                                                 Ø
+                    S=          {𝐺} × Θ̄𝐺                     and                    X=          {𝐺} × Θ𝐺 ,
+                         𝐺∈ G                                                             𝐺∈ G
+
+
+where Θ̄𝐺 = Θ𝐺 ∪ {♯} indicates the space of parameters, augmented with the special symbol ♯. All the states in this state
+space are guaranteed to be accessible from the initial state (𝐺 0 , ♯), where 𝐺 0 is the empty graph.
+Reference kernel. Given a DAG 𝐺, the measure 𝜅((𝐺, ♯), −) is the sum of a discrete measure (to transition to another
+intermediate state (𝐺 ′ , ♯)) and a continuous measure (to transition to a terminating state (𝐺, 𝜃)). We can write this measure
+as
+                                                          ∑︁
+                                         𝜅((𝐺, ♯), −) =           𝛿 (𝐺 ′ ,♯) + (𝛿𝐺 ⊗ 𝜆Θ𝐺 ),
+                                                      𝐺 ′ ∈ Ch (𝐺)
+
+where Ch(𝐺) represents the children of 𝐺 in DAG-GFlowNet (Deleu et al., 2022), i.e. the graphs 𝐺 ′ obtained by adding an
+edge to 𝐺, and 𝜆Θ𝐺 is the Lebesgue measure over Θ𝐺 . Moreover, we also have 𝜅((𝐺, 𝜃), −) = 𝛿⊥ for all terminating state
+(𝐺, 𝜃) ∈ X; in other words, there is no transition from a terminating state other than to the sink state.
+The backward reference kernel 𝜅 𝑏 on the other hand is simpler: it is always a discrete transition kernel, regardless of the
+state. We have
+                                                                                              ∑︁
+               𝜅 𝑏 ((𝐺, 𝜃), −) = 𝛿 (𝐺,♯)            and                  𝜅 𝑏 ((𝐺 ′ , ♯), −) =        𝛿 (𝐺,♯) ,
+                                                                                             𝐺 ∈ Pa (𝐺 ′ )
+
+
+where Pa(𝐺 ′ ) are the parents of 𝐺 ′ in DAG-GFlowNet, i.e. they are the graphs obtained by removing a single edge from 𝐺 ′ .
+Forward transition probability. In order to define the 𝑃𝐹 , we consider 2 cases: either we have a distribution of the
+form 𝑃𝐹 (𝐺 ′ | 𝐺), where 𝐺 ′ is the result of adding an edge to 𝐺, or a distribution of the form 𝑃𝐹 (𝜃 | 𝐺). Note that
+here we are using a slight abuse of notation, where 𝑃𝐹 (𝐺 ′ | 𝐺) (resp. 𝑃𝐹 (𝜃 | 𝐺)) represents 𝑃𝐹 ((𝐺 ′ , ♯) | (𝐺, ♯)) (resp.
+𝑃𝐹 ((𝐺, 𝜃) | (𝐺, ♯))). The distribution 𝑃𝐹 (𝜃 | 𝐺) is parametrized by a Normal distribution, whose mean and (diagonal)
+covariance are returned by a neural network. Similar to (Deleu et al., 2022), 𝑃 𝐵 is fixed to the uniform distribution.
+Data generation. We sampled a dataset D as follows: (1) we first generated a DAG 𝐺 ∗ from an Erdös-Renyi model, then
+(2) we sampled the parameters 𝜃 ∗ of the conditional probability distributions from a Normal distribution, each edge having a
+weight 𝜃 𝑖∗𝑗 ∼ N (0, 1), and finally (3) we sampled 𝑁 = 100 datapoints from the Bayesian Network described above with
+(𝐺 ∗ , 𝜃 ∗ ), using ancestral sampling. Note that the ground-truths 𝐺 ∗ and 𝜃 ∗ are unknown to the GFlowNet, and it only uses
+the observations from D.
+Evaluations. To evaluate the quality of the approximation learned by the GFlowNet, and to compare it against the baseline
+methods based on variational inference (Lorch et al., 2021; Cundy et al., 2021), we study the distribution over graphs
+(discrete component) and the distribution over graphs (continuous component) separately. Recall that since we assume that
+our model is linear-Gaussian over small graphs (𝑑 ≤ 5), we can compute the exact posterior distribution 𝑃(𝐺, 𝜃 | D) in
+closed form.
+In Table 3, we compared the edge marginals estimated using the posterior approximations to the exact edge marginals. For
+
+                                                               19
+A Theory of Continuous Generative Flow Networks                                                                                  20
+
+
+Table C.2. Comparison between GFlowNet and other methods based on variational inference on the Bayesian structure learning task, for
+different marginals of interest of the distribution over graphs 𝑃(𝐺 | D).
+                                                            RMSE                                    Pearson’s r
+            Number of variables (𝑑)            3               4                     5       3          4           5
+                        BCD Nets              –           2.13 × 10−1        2.61 × 10−1      –       0.8578      0.7886
+            Edges       DiBS             3.28 × 10−1      2.95 × 10−1        3.15 × 10−1   0.6903     0.7085      0.7170
+                        GFlowNet         1.50 × 10−2      1.61 × 10−2        1.80 × 10−2   0.9993     0.9990      0.9990
+                        BCD Nets              –           2.59 × 10−1        3.08 × 10−1      –       0.8378      0.7500
+            Paths       DiBS             3.50 × 10−1      3.35 × 10−1        3.48 × 10−1   0.6951     0.7080      0.7020
+                        GFlowNet         3.39 × 10−3      1.07 × 10−2        1.99 × 10−2   1.0000     0.9996      0.9989
+                        BCD Nets              –           3.02 × 10−1        3.49 × 10−1      –       0.8831      0.7864
+            Markov
+            blanket     DiBS             3.88 × 10−1      3.80 × 10−1        4.45 × 10−1   0.7840     0.7892      0.6888
+                        GFlowNet         2.14 × 10−2      2.38 × 10−2        2.83 × 10−2   0.9986     0.9982      0.9980
+
+
+any pair of random variables (𝑋𝑖 , 𝑋 𝑗 ), this means evaluating the following marginals
+                                                                   ∑︁
+                                          𝑃(𝑋𝑖 → 𝑋 𝑗 | D) =                 𝑃(𝐺 | D).
+                                                               𝐺 | 𝑋𝑖 ∈ Pa𝐺 (𝑋 𝑗 )
+
+
+To estimate this marginal using samples {(𝐺 𝑘 , 𝜃 𝑘 )} 𝐾
+                                                       𝑘=1 from the GFlowNet (or from the variational inference methods), we
+can simply use the sample graphs 𝐺 𝑘 in order to get an empirical approximation of the maginal posterior 𝑃(𝐺 | D). In
+other words,
+                                                                𝐾
+                                                             1 ∑︁
+                                         ˆ
+                                        𝑃(𝑋𝑖 → 𝑋 𝑗 ) =             1 (𝑋𝑖 → 𝑋 𝑗 ∈ 𝐺 𝑘 )
+                                                             𝐾 𝑘=1
+
+We then report the root mean-square error (RMSE) between the edge marginals estimated using the posterior approximations,
+and those computed using the exact posterior:
+                                                                                        ! 1/2
+                                           1     ∑︁
+                                                      ˆ
+                                                                                     2
+                          RMSE( ˆ
+                               𝑃, 𝑃) =                𝑃(𝑋𝑖 → 𝑋 𝑗 ) − 𝑃(𝑋𝑖 → 𝑋 𝑗 | D)          .
+                                       𝑑 (𝑑 − 1) 𝑖≠ 𝑗
+
+In Table C.2, we also report the RMSE for other marginals: the marginal of having a directed path between two nodes
+𝑃(𝑋𝑖 ⇝ 𝑋 𝑗 | D), as well as the marginal of node 𝑋𝑖 being in the Markov blanket of 𝑋 𝑗 𝑃(𝑋𝑖 ∈ MarkovBlanket(𝑋 𝑗 ) | D).
+In addition to the RMSE between those marginals, we also report the Pearson correlation coefficient, as in (Deleu et al.,
+2022). Note that no metric is reported on graphs over 𝑑 = 3 nodes for BCD Nets (Cundy et al., 2021) due to technical
+reasons (the method is not applicable for graphs smaller than 4 nodes).
+To evaluate the accuracy of the approximation on the continuous part of the distribution, we report in Table 3 the (average)
+negative log-probability of the sampled parameters 𝜃 𝑘 from the different approximations (GFlowNet, DiBS (Lorch et al.,
+2021), and BCD Nets (Cundy et al., 2021)) against the exact posterior distribution 𝑃(𝜃 | 𝐺, D). More precisely, we compute
+                                                                       𝐾
+                                                  ˆ 𝑃) = − 1
+                                                                 ∑︁
+                                      Measure 𝜃 ( 𝑃,                 log 𝑃(𝜃 𝑘 | 𝐺 𝑘 , D)
+                                                          𝐾 |D | 𝑘=1
+
+In other words, the lower this metric is, the more likely the samples 𝜃 𝑘 from those approximations are under the exact
+posterior distribution over parameters.
+
+C.6. Connections with diffusion models
+We train a diffusion model-specified GFlowNet with 𝑇 = 100 for 200, 000 steps. This is much shorter than other state-of-
+the-art work (such as Lipman et al. (2022)) and takes less than 3 days on a single V100 GPU. All NLL results are computed
+
+                                                                20
+A Theory of Continuous Generative Flow Networks                                                                                                       21
+
+
+
+
+                                Figure C.3. Generated samples from MLE-GFN on ImageNet-32 dataset.
+
+
+in bits per dimension (BPD). We use 50, 000 generated samples to compute the FID score for evaluating the sample quality.
+The Adam learning rate is 2 × 10−4 for the forward policy and 2 × 10−5 for the backward policy. The parameter of backward
+policy is {𝜙𝑖 }𝑇𝑖=1 , where the variance coefficient 𝛽𝑖 satisfies 𝛽𝑖 = 𝛽¯𝑖 · exp (𝜙𝑖 ) and 𝛽¯𝑖 is the original variance coefficient used
+in Ho et al. (2020). For details about the MLE-GFN algorithm, we refer to Zhang et al. (2023a). Fig. C.3 shows examples of
+images generated by the algorithm.
+
+D. Additional lemmas and propositions
+In this section, we will write and prove lemmas and propositions that would help explain and shorten the proofs of the main
+results presented in the main text and in §A, which we provide in §E.
+The following lemma ensures that in a measurable pointed graph, {𝑠0 } is not accessible.
+Lemma 4. ∀𝑠 ∈ S, 𝜅(𝑠, {𝑠0 }) = 0
+
+Proof We will present a proof by contradiction.
+Let N = {𝑠 ∈ S̄, 𝜅(𝑠, {𝑠0 }) > 0}, and assume that N ≠ ∅. (0, ∞) being an open set, and 𝑠 ↦→ 𝜅(𝑠, {𝑠0 }) continuous, this
+means that N ∈ T̄ (i.e. it is open). From (1), it follows that there is some 𝑛 ≥ 0 such that 𝜅 𝑛 (𝑠0 , N ) > 0.
+Applying (19), we obtain:
+                                                 ∫                                       ∫
+                          𝜅 𝑛+1 (𝑠0 , {𝑠0 }) =          𝜅 𝑛 (𝑠0 , 𝑑𝑠′ )𝜅(𝑠′ , {𝑠0 }) ≥       𝜅 𝑛 (𝑠0 , 𝑑𝑠′ )𝜅(𝑠′ , {𝑠0 }) > 0.
+                                                   S̄                                    N
+
+Writing, for all 𝑚 > 1:
+                                      ∫                                                      ∫
+           𝜅 𝑚(𝑛+1 ) (𝑠0 , {𝑠0 }) =       𝜅 (𝑚−1 ) (𝑛+1 ) (𝑠0 , 𝑑𝑠′ )𝜅 𝑛+1 (𝑠′ , {𝑠0 }) ≥             𝜅 (𝑚−1 ) (𝑛+1 ) (𝑠0 , 𝑑𝑠′ )𝜅 𝑛+1 (𝑠′ , {𝑠0 })
+                                      S̄                                                      {𝑠0 }
+                                      (𝑚− 1 ) (𝑛+1 )
+                                 =𝜅                    (𝑠0 , {𝑠0 })𝜅 𝑛+1 (𝑠0 , {𝑠0 }),
+
+it follows from a simple induction that ∀𝑚 ≥ 1, 𝜅 𝑚(𝑛+1 ) (𝑠0 , {𝑠0 }) > 0, which contradicts (7).
+N is thus necessarily empty.
+
+
+
+                                                                            21
+A Theory of Continuous Generative Flow Networks                                                                                                                22
+
+The following lemma ensures a compatibility between the definition of the terminating states X and 𝜅 𝑏 (⊥, −):
+Lemma 5. The support of 𝜅 𝑏 (⊥, −) is the closure of X.
+
+Proof Let 𝑠 be an element in the support of 𝜅 𝑏 (⊥, −). By definition of the support, it means that for any 𝐵 ∈ T containing
+𝑠, there is some 𝐵′ ⊆ 𝐵 such that 𝐵′ ⊆ X. In particular, 𝐵 ∩ X ≠ ∅. This means that 𝑠 is a point of closure of X.
+Conversely, let 𝑠 be a point of closure of X. Given any open set 𝐵 ∈ T containing 𝑠, 𝑠 being a closure point means that
+𝐵 ∩ X (which is measurable) is non-empty. Following (4), we get:
+                                                         ∫
+                                           𝑏
+                                   𝜈({⊥})𝜅 (⊥, 𝐵 ∩ X) =     1 𝐵∩X (𝑠′ )𝜈(𝑑𝑠′ )𝜅(𝑠′ , {⊥})
+                                                                              S̄
+The RHS of the previous equality is positive because 𝜈 is a strictly positive measure and 𝜅(𝑠′ , {⊥}) > 0 for every 𝑠′ ∈ X,
+following Def. 2. Hence 𝜅 𝑏 (⊥, 𝐵 ∩ X) > 0. It follows that 𝜅 𝑏 (⊥, 𝐵) ≥ 𝜅 𝑏 (⊥, 𝐵 ∩ X) > 0. Meaning that 𝑠 is indeed within
+the support of 𝜅 𝑏 (⊥, −).
+
+
+The proof of Lemma 2 relies on an the following intermediary lemma, which relates the 𝑛-step trajectory measures 𝑃𝐹⊗𝑛 (𝑠, −)
+to the 𝑛-step measures 𝑃𝐹𝑛 (𝑠, −) defined by (19).
+Lemma 6. Let 𝑃𝐹 be a transition kernel on ( S̄, Σ). For every 𝑠 ∈ S̄, 𝑛 ≥ 0, and for any bounded measurable function
+ 𝑓 : S̄ → R, we have:             ∫                                  ∫
+                                                   𝑓 (𝑠′ )𝑃𝐹⊗𝑛 (𝑠, 𝑑𝑠1 . . . 𝑑𝑠 𝑛 𝑑𝑠′ ) =            𝑓 (𝑠′ )𝑃𝐹𝑛 (𝑠, 𝑑𝑠′ )                                     (35)
+                                          S̄ 𝑛+1                                                S̄
+
+
+Proof We prove the lemma by induction on 𝑛. First, for 𝑛 = 0, using (21)
+                                ∫                                ∫
+                                        ′  ⊗0       ′
+                                    𝑓 (𝑠 )𝑃𝐹 (𝑠, 𝑑𝑠 ) = 𝑓 (𝑠) =      𝑓 (𝑠′ )𝑃0𝐹 (𝑠, 𝑑𝑠′ ).
+                                              S̄                                          S̄
+Then, assuming that (35) is satisfied for some 𝑛 ≥ 0, we get:
+       ∫                                                   ∫
+                𝑓 (𝑠′ )𝑃𝐹⊗𝑛+1 (𝑠, 𝑑𝑠1 . . . 𝑑𝑠 𝑛+1 𝑑𝑠′ ) =         𝑓 (𝑠′ )𝑃𝐹⊗𝑛 (𝑠, 𝑑𝑠1 . . . 𝑑𝑠 𝑛+1 )𝑃𝐹 (𝑠 𝑛+1 , 𝑑𝑠′ )
+         S̄   2                                                  2
+                                                           ∫S̄ ∫
+            𝑛+                                                 𝑛+
+
+
+                                                         =             𝑓 (𝑠′ )𝑃𝐹 (𝑠 𝑛+1 , 𝑑𝑠′ ) 𝑃𝐹⊗𝑛 (𝑠, 𝑑𝑠1 . . . 𝑑𝑠 𝑛+1 )
+                                                            S̄ 𝑛+1 S̄
+                                                                   |           {z             }
+                                                                                   ≜𝑔 (𝑠𝑛+1 )
+                                                               ∫                                       ∬
+                                                           =         𝑔(𝑠 𝑛+1 )𝑃𝐹𝑛 (𝑠, 𝑑𝑠 𝑛+1 ) =                   𝑓 (𝑠′ )𝑃𝐹 (𝑠 𝑛+1 , 𝑑𝑠′ )𝑃𝐹𝑛 (𝑠, 𝑑𝑠 𝑛+1 )
+                                                               ∫S̄                                        S̄× S̄
+                                                                         ′
+                                                           =         𝑓 (𝑠 )𝑃𝐹𝑛+1 (𝑠, 𝑑𝑠 𝑛+1 ),
+                                                                S̄
+
+where we applied the inductive hypothesis to a new bounded and measurable3 function 𝑔, and applied the recursive
+definition of 𝑃𝐹𝑛+1 .
+
+
+The next proposition is crucial in proving Thm. 1.
+Proposition 4. Let 𝐹 = (𝜇, 𝑃𝐹 ) be a flow over 𝐺 (i.e. 𝐹 satisfies the flow-matching conditions (9)), then the measure 𝑢
+defined by:
+                                                                ∞
+                                                               ∑︁
+                                              𝑢 : 𝐵 ∈ Σ | S ↦→    𝑃𝐹𝑛 (𝑠0 , 𝐵),                                     (36)
+                                                                                   𝑛=0
+is finite, and satisfies for all 𝐵 ∈ Σ | S
+                                                                   𝜇({𝑠0 })𝑢(𝐵) = 𝜇(𝐵)                                                                        (37)
+
+   3 This can be seen by writing 𝑓 = 𝑓 + − 𝑓 − , where 𝑓 + , 𝑓 − are non-negative, writing each of 𝑓 + , 𝑓 − as a limit of step functions, and
+using the monotone convergence theorem.
+
+                                                                              22
+A Theory of Continuous Generative Flow Networks                                                                                   23
+
+Proof First, using a simple recursion, we show that ∀𝑛 ≥ 𝑁, 𝑃𝐹𝑛 (𝑠0 , −) = 𝛿⊥ . The base case (𝑛 = 𝑁) is satisfied as a
+consequence of Lemma 1, and the fact that the measurable pointed graph is finitely absorbing. Assuming it holds for some
+𝑛 ≥ 𝑁, going back to the definition of the 𝑛-step measure, we have for every 𝐵 ∈ Σ:
+                                    ∫                          ∫
+                   𝑃𝐹𝑛+1 (𝑠0 , 𝐵) =   𝑃𝐹𝑛 (𝑠0 , 𝑑𝑠)𝑃𝐹 (𝑠, 𝐵) =   𝛿⊥ (𝑑𝑠)𝑃𝐹 (𝑠, 𝐵) = 𝑃𝐹 (⊥, 𝐵) = 𝛿⊥ (𝐵),
+                                        S̄                                   S̄
+
+where the last equality stems from the absolute continuity of 𝑃𝐹 (⊥, −) wrt. 𝜅(⊥, −) and (7).
+This shows that for every 𝐵 ∈ Σ | S :
+                                                                      𝑁
+                                                                      ∑︁−1
+                                                           𝑢(𝐵) =            𝑃𝐹𝑛 (𝑠0 , 𝐵).
+                                                                       𝑛=0
+Which shows the measure 𝑢 is finite.
+Next, we partition S into 𝑁 disjoint sets S0 , . . . , S𝑁 −1 , where:
+
+                            𝑠 ∈ S𝑛 ⇔ 𝑛 = max{𝑚 ∈ N0 : ∀𝐵 ∈ T , 𝑠 ∈ 𝐵 ⇒ 𝑃𝐹𝑚 (𝑠0 , 𝐵) > 0}
+
+S𝑛 ∈ Σ given that S𝑛 = S𝑛′ \ ∞      ′            ′
+                            Ð
+                               𝑘=1 S𝑛+𝑘 , where S𝑛 is the support of 𝑃 𝐹 (𝑠0 , −), which is known to be a closed set, and hence
+                                                                       𝑛
+
+measurable.
+Writing any 𝐵 ∈ Σ | S as:
+                                                                      𝑁
+                                                                      Ø −1
+                                                                 𝐵=          𝐵 ∩ S𝑛 ,
+                                                                      𝑛=0
+and using the additivity property of the measures 𝑢 and 𝜇, then proving (37) for all 𝐵 ∈ Σ | S , amounts to proving it for all
+𝐵 ∈ Σ | S𝑛 for all 𝑛 ∈ {0, . . . , 𝑁 − 1}, given that the sets S𝑖 are themselves measurable. We prove this by strong induction on
+𝑛.
+Base case: For 𝑛 = 0, S0 = {𝑠0 }, and Σ | S0 = {{𝑠0 }}.
+
+
+                                               𝑢({𝑠0 }) = 𝑃0𝐹 (𝑠0 , {𝑠0 }) = 𝛿 𝑠0 ({𝑠0 }) = 1,
+Hence (37) is satisfied for 𝐵 = {𝑠0 }.
+Induction step: Assume that for some 𝑛 ≥ 0, (37) is satisfied for all 𝐵 ∈ Σ | S𝑚 for all 𝑚 ≤ 𝑛, and let 𝐵 ∈ Σ | S𝑛+1 .
+Define 𝐵′ = {𝑠′ ∈ S : 𝑃𝐹 (𝑠′ , 𝐵) > 0}. We first show that 𝐵′ ⊆ 𝑛𝑚=0 S𝑚 . If there is 𝑠′ ∈ 𝐵′ and 𝑛′ > 𝑛 such that 𝑠′ ∈ S𝑛′ ,
+                                                                         Ð
+                                                              ′
+then for any open set 𝐵˜ (i.e. 𝐵˜ ∈ T ) containing 𝑠′ , 𝑃𝐹𝑛 (𝑠0 , ˜𝐵) > 0. 𝑠˜ ↦→ 𝑃𝐹 (˜𝑠, 𝐵) being a continuous function, it follows
+                                  ′
+that 𝐵′ itself is open. Hence 𝑃𝐹𝑛 (𝑠0 , 𝐵′ ) > 0. And noting that:
+                                           ∫                                ∫
+                            ′                     ′                                ′
+                         𝑃𝐹𝑛 +1 (𝑠0 , 𝐵) =     𝑃𝐹𝑛 (𝑠0 , 𝑑𝑠′ )𝑃𝐹 (𝑠′ , 𝐵) ≥     𝑃𝐹𝑛 (𝑠0 , 𝑑𝑠′ )𝑃𝐹 (𝑠′ , 𝐵) > 0,
+                                               S̄                                    𝐵′
+
+which would contradict the fact that 𝐵 ⊆ S𝑛+1 , given that 𝑛′ + 1 > 𝑛 + 1. This shows that 𝐵′ ⊆
+                                                                                                                     Ð𝑛
+                                                                                                                       𝑚=0 S𝑚 .
+
+Hence:
+                                                    𝑛+1
+                                                    ∑︁                                              𝑛
+                                                                                                   ∑︁
+                    𝜇({𝑠0 })𝑢(𝐵) = 𝜇({𝑠0 })             𝑃𝐹𝑚 (𝑠0 , 𝐵) = 𝜇({𝑠0 }) 𝛿 𝑠0 (𝐵) +𝜇({𝑠0 })     𝑃𝐹𝑚+1 (𝑠0 , 𝐵)
+                                                    𝑚=0                         |  {z  }           𝑚=0
+                                                                                          =0
+                                                     𝑛 ∫
+                                                    ∑︁                                         ∫
+                                   = 𝜇({𝑠0 })                  𝑃𝐹𝑚 (𝑠0 , 𝑑𝑠′ )𝑃𝐹 (𝑠′ , 𝐵) =         𝜇({𝑠0 })𝑢(𝑑𝑠′ )𝑃𝐹 (𝑠′ , 𝐵)
+                                                    𝑚=0   𝐵′                                   𝐵′
+                                       ∫
+                                   =         𝜇(𝑑𝑠′ )𝑃𝐹 (𝑠′ , 𝐵) = 𝜇(𝐵),
+                                        𝐵′
+
+where the last two equalities stem from the induction hypothesis and the flow matching conditions respectively.
+
+
+
+                                                                         23
+A Theory of Continuous Generative Flow Networks                                                                                       24
+
+The following lemma, relates the flow measures at the source and sink states to the reward measure and shows that the
+source and sink flows correspond to the ”total reward” 𝑅(X) (called the partition function with discrete GFlowNets):
+Lemma 7. Let 𝐹 = (𝜇, 𝑃𝐹 ) be a flow over 𝐺 satisfying reward-matching conditions in (10) w.r.t. a measure 𝑅, then
+                                                          𝜇({𝑠0 }) = 𝜇({⊥}) = 𝑅(X).                                                  (38)
+
+Proof Applying (10) to the function 𝑓 : 𝑥 ∈ X ↦→ 1, we get:
+                                           ∫          ∫
+                                              𝑅(𝑑𝑥) =     𝜇(𝑑𝑥)𝑃𝐹 (𝑥, {⊥}).                                                          (39)
+                                                     X                   X
+Additionally, from (8), we get ∀𝑠 ∈ S \ X, 𝜅(𝑠, {⊥}) = 0. It follows from the absolute continuity requirements of 𝑃𝐹 that
+∀𝑠 ∈ S \ X, 𝑃𝐹 (𝑠, {⊥}) = 0. Hence:
+              ∫           ∫                      ∬                               ∫
+                 𝑅(𝑑𝑥) =     𝜇(𝑑𝑠)𝑃𝐹 (𝑠, {⊥}) =         1𝑠′ =⊥ 𝜇(𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠 ) = 1𝑠′ =⊥ 𝜇(𝑑𝑠′ ) = 𝜇({⊥}),
+                                                                             ′
+                 X              S                               S× S̄                                  S̄
+where the last line follows from (9). This shows that 𝜇({⊥}) = 𝑅(X).
+Note that as a consequence of Lemma 4 and the absolute continuity requirement, a 𝑃𝐹 satisfies:
+                                                           ∀𝑠 ∈ S̄, 𝑃𝐹 (𝑠, {𝑠0 }) = 0                                                (40)
+
+Next, following (9) and (40), we have:
+             ∬                           ∬                                              ∫
+                     𝜇(𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠′ ) =                  1𝑠′ ≠𝑠0 𝜇(𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠′ ) =        1𝑠′ ≠𝑠0 𝜇(𝑑𝑠′ ) = 𝜇( S̄) − 𝜇({𝑠0 }).    (41)
+                   S× S̄                          S× S̄                                 S̄
+
+On the other hand, because each 𝑃𝐹 (𝑠, −) is a probability measure on S̄:
+                        ∬                          ∫ ∫                        ∫
+                               𝜇(𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠′ ) =         𝑃𝐹 (𝑠, 𝑑𝑠′ ) 𝜇(𝑑𝑠) =   𝜇(𝑑𝑠) = 𝜇(S)                                       (42)
+                                S× S̄                           S       S̄                         S
+Subtracting (41) from (42), we get:
+                                              𝜇({𝑠0 }) = 𝜇( S̄) − 𝜇(S) = 𝜇({⊥}) = 𝑅(X)
+
+
+
+
+The following lemma is crucial to prove Prop. 2.
+Lemma 8. If (𝑃𝐹 , 𝑃 𝐵 , 𝑍) satisfy the trajectory balance conditions wrt. 𝑅, then for any 𝑛 ∈ {0, ..., 𝑁 }, and for any
+measurable bounded function 𝑓 : S → R:
+                                ∫                                   ∫
+                             𝑍      𝑓 (𝑠)𝑃𝐹𝑛 (𝑠0 , 𝑑𝑠)𝑃𝐹 (𝑠, {⊥}) =   𝑓 (𝑠)𝑃 𝑛𝐵 (𝑠, {𝑠0 })𝑅(𝑑𝑠)                     (43)
+                                        S                                         S
+
+
+Proof Using Lemma 6, we have:
+            ∫                                      ∫
+          𝑍     𝑓 (𝑠)𝑃𝐹𝑛 (𝑠0 , 𝑑𝑠)𝑃𝐹 (𝑠, {⊥}) = 𝑍            1𝑠≠⊥ 𝑓 (𝑠)𝑃𝐹 (𝑠, {⊥})𝑃𝐹⊗𝑛 (𝑠0 , 𝑑𝑠′ 𝑑𝑠1 . . . 𝑑𝑠𝑛−1 𝑑𝑠)
+              S                                       S̄ 𝑛+1
+                                                   ∫
+                                              =𝑍             1𝑠≠⊥,𝑠𝑛+1 =⊥ 𝑓 (𝑠)𝑃𝐹⊗𝑛+1 (𝑠0 , 𝑑𝑠′ 𝑑𝑠1 . . . 𝑑𝑠𝑛−1 𝑑𝑠𝑑𝑠𝑛+1 )
+                                                           2
+                                                ∫ S̄
+                                                         𝑛+
+
+
+                                              =           1𝑠≠⊥ 1𝑠′′ =𝑠0 𝑓 (𝑠)𝑅(𝑑𝑠)𝑃 𝐵⊗𝑛 (𝑠, 𝑑𝑠′ 𝑑𝑠𝑛−1 . . . 𝑑𝑠1 , 𝑑𝑠′′ )
+                                                  S̄ 𝑛+2
+                                                ∫                         ∫
+                                              =       𝑓 (𝑠) 1𝑠≠⊥ 𝑅(𝑑𝑠)             1𝑠′′ =𝑠0 𝑃 𝐵⊗𝑛 (𝑠, 𝑑𝑠′ 𝑑𝑠𝑛−1 . . . 𝑑𝑠1 , 𝑑𝑠′′ )
+                                                  S̄                        S̄ 𝑛+1
+                                                ∫                         ∫
+                                              =       𝑓 (𝑠) 1𝑠≠⊥ 𝑅(𝑑𝑠)          1𝑠′′ =𝑠0 𝑃 𝑛𝐵 (𝑠, 𝑑𝑠′′ )
+                                                ∫S̄                         S̄
+                                                                     𝑛
+                                              =       𝑓 (𝑠)𝑅(𝑑𝑠)𝑃 𝐵 (𝑠, {𝑠0 })
+                                                            S
+
+
+                                                                             24
+A Theory of Continuous Generative Flow Networks                                                                                   25
+
+
+
+
+The following proposition generalizes Lemma 5 of (Bengio et al., 2021b) to measurable pointed graphs, and is crucial in
+proving Prop. 2
+Proposition 5. Let 𝑃 𝐵 be a backward kernel over 𝐺. Let 𝑃 𝐵,𝑇 be the measure defined by:
+                                                                     ∞
+                                                                    ∑︁
+                                                      𝑃 𝐵,𝑇 (𝑠) =         𝑃 𝑛𝐵 (𝑠, {𝑠0 })                                       (44)
+                                                                    𝑛=0
+
+We have ∀𝑠 ∈ S:
+                                                             𝑃 𝐵,𝑇 (𝑠) = 1                                                      (45)
+
+
+Proof First, using a simple recursion, we show that ∀𝑛 ≥ 𝑁, 𝑃 𝑛𝐵 (𝑠, {𝑠0 }) = 0. The base case (𝑛 = 𝑁) is trivially satisfied
+because the measurable pointed graph has maximal trajectory length 𝑁 and 𝑃 𝐵 (𝑠0 , −) is the trivial measure (i.e. it assigns
+zero to every measurable set), given that it is absolutely continuous wrt. 𝜅 𝑏 (𝑠0 , −). Assuming it holds for some 𝑛 ≥ 𝑁, we
+have:
+                                                ∫                                  ∫
+                                                             ′    𝑛 ′
+                             𝑃 𝑛+
+                               𝐵
+                                  1
+                                    (𝑠, 𝑠 0 ) =   𝑃 𝐵 (𝑠, 𝑑𝑠   )𝑃 𝐵 (𝑠 , {𝑠 0 }) =   𝑃 𝐵 (𝑠, 𝑑𝑠′ ).0 = 0
+                                                 S̄                                         S̄
+
+
+This shows that for every 𝑠 ∈ S:
+                                                                    𝑁
+                                                                    ∑︁−1
+                                                      𝑃 𝐵,𝑇 (𝑠) =          𝑃 𝑛𝐵 (𝑠, 𝑑𝑠0 ).
+                                                                    𝑛=0
+Which shows the measure 𝑃 𝐵,𝑇 is finite.
+Next, we partition S into 𝑁 disjoint sets S0 , . . . , S𝑁 −1 , where:
+
+                                         𝑠 ∈ S𝑛 ⇔ 𝑛 = max{𝑚 ∈ N0 : 𝑃 𝑚
+                                                                     𝐵 (𝑠, {𝑠0 }) > 0}
+                                   Ð∞
+S𝑛 ∈ Σ given that S𝑛 = S𝑛′ \             ′            ′
+                                    𝑘=0 S𝑛+𝑘 , where S𝑛 is the support of 𝑃 𝐵 (−, {𝑠0 }), which is known to be a closed set, and
+                                                                            𝑛
+
+hence measurable.
+Writing :
+                                                                    𝑁
+                                                                    Ø −1
+                                                             S=             S𝑛 ,
+                                                                     𝑛=0
+
+Then proving (45) for all 𝑠 ∈ S, amounts to proving it for all 𝑠 ∈ S𝑛 for all 𝑛 ∈ {0, . . . , 𝑁 − 1}. We prove this by strong
+induction on 𝑛.
+Base case: For 𝑛 = 0, S0 = {𝑠0 }, and
+
+                                            𝑃 𝐵,𝑇 (𝑠0 ) = 𝑃0𝐵 (𝑠0 , {𝑠0 }) = 𝛿 𝑠0 ({𝑠0 }) = 1,
+
+Hence it is satisfied for n = 0.
+Induction step: Assume that for some 𝑛 ≥ 0, (45) is satisfied for all 𝑠 ∈ S𝑚 for all 𝑚 ≤ 𝑛, and let 𝑠 ∈ S𝑛+1 .
+Define 𝐵𝑠 = {𝑠′ ∈ S : ∀𝐵 ∈ T , 𝑠′ ∈ 𝐵 => 𝑃 𝐵 (𝑠, 𝐵) > 0}. We first show by contradiction that 𝐵𝑠 ⊆ 𝑛𝑚=0 S𝑚 . If there is
+                                                                                                                       Ð
+                                                     ′                                                      ′
+𝑠′ ∈ 𝐵𝑠 and 𝑛′ > 𝑛 such that 𝑠′ ∈ S𝑛′ , then 𝑃 𝑛𝐵 (𝑠′ , {𝑠0 }) > 0, and by continuity of 𝑠˜ ↦→ 𝑃 𝑛𝐵 (˜𝑠, {𝑠0 }), there exists an open
+                                                  ′
+set 𝐵˜ (i.e. 𝐵˜ ∈ T ) containing 𝑠′ such that 𝑃 𝑛𝐵 (˜𝑠, {𝑠0 }) > 0 for all 𝑠˜ ∈ 𝐵.
+                                                                                ˜ Hence:
+                                          ∫                                    ∫
+                           𝑛 ′ +1                         ′    𝑛′ ′                                 ′
+                         𝑃 𝐵 (𝑠, {𝑠0 }) =     𝑃 𝐵 (𝑠, 𝑑𝑠 )𝑃 𝐵 (𝑠 , {𝑠0 }) ≥        𝑃 𝐵 (𝑠, 𝑑𝑠′ )𝑃 𝑛𝐵 (𝑠′ , {𝑠0 }) > 0,
+                                            S̄                                      ˜
+                                                                                    𝐵
+
+which would contradict the fact that 𝑠 ∈ S𝑛+1 , given that 𝑛′ + 1 > 𝑛 + 1.
+
+                                                                     25
+A Theory of Continuous Generative Flow Networks                                                                                                             26
+
+Hence:
+                         𝑛+1
+                         ∑︁                         𝑛+1
+                                                    ∑︁
+           𝑃 𝐵,𝑇 (𝑠) =           𝑃𝑚
+                                  𝐵 (𝑠, {𝑠0 }) =          𝑃𝑚
+                                                           𝐵 (𝑠, {𝑠0 })     given that 𝑠 ≠ 𝑠0
+                         𝑚=0                        𝑚=1
+               ∑︁1 ∫
+               𝑛+                                                  ∫                                𝑛
+                                                                                                   ∑︁                       ∫
+                                         ′       1 ′                                           ′              ′
+           =                    𝑃 𝐵 (𝑠, 𝑑𝑠 )𝑃 𝑚−
+                                              𝐵   (𝑠 , {𝑠0 }) =                 𝑃 𝐵 (𝑠, 𝑑𝑠 )             𝑃𝑚
+                                                                                                          𝐵 (𝑠 , {𝑠0 }) =              𝑃 𝐵 (𝑠, 𝑑𝑠′ ) = 1
+               𝑚=1   𝑠 ′ ∈ 𝐵𝑠                                        𝑠 ′ ∈ 𝐵𝑠                      𝑚=0                      𝑠 ′ ∈ 𝐵𝑠
+                                                                                                   |       {z       }
+                                                                                                            =1
+
+
+
+
+E. Proofs of results in the main text
+We are now ready to prove the main theorem of the paper, which we restate here:
+Theorem 1. If 𝐹 = (𝜇, 𝑃𝐹 ) is a flow over 𝐺, that satisfies the reward matching conditions (10) wrt. a measure 𝑅, then the
+terminating state measure:
+                                                                   ∞
+                                                                  ∑︁
+                                               𝑃𝑇 : 𝐵 ∈ Σ | X ↦→     𝑃𝑇𝑛 (𝐵)                                          (46)
+                                                                                         𝑛=1
+is a probability measure and satisfies for all 𝐵 ∈ Σ | X :
+                                                                                 1
+                                                                 𝑃𝑇 (𝐵) =            𝑅(𝐵)                                                                  (47)
+                                                                                𝑅(X)
+
+Proof Using Lemma 2, the terminating state measure 𝑃𝑇 satisfies for any bounded measurable function 𝑓 : X→R:
+                               ∫                  ∫                   ∞
+                                                                     ∑︁
+                                   𝑓 (𝑥)𝑃𝑇 (𝑑𝑥) =    𝑓 (𝑥)𝑃𝐹 (𝑥, ⊥)      𝑃𝐹𝑛 (𝑠0 , 𝑑𝑥).
+                                                X                      X                            𝑛=0
+
+It follows from Prop. 4 that
+                                                          ∫                          ∫
+                                             𝜇({𝑠0 })          𝑓 (𝑥)𝑃𝑇 (𝑑𝑥) =             𝑓 (𝑥)𝑃𝐹 (𝑥, ⊥)𝜇(𝑑𝑥).
+                                                           X                         X
+
+Following Lemma 7, and the positivity assumption on 𝑅 that:
+                                  ∫                         ∫
+                                                       1
+                                      𝑓 (𝑥)𝑃𝑇 (𝑑𝑥) =          𝑓 (𝑥)𝑃𝐹 (𝑥, ⊥)𝜇(𝑑𝑥).
+                                    X                𝑅(X) X
+Finally, using (10), we obtain:
+                                                    ∫                                     ∫
+                                                                                 1
+                                                          𝑓 (𝑥)𝑃𝑇 (𝑑𝑥) =                           𝑓 (𝑥)𝑅(𝑑𝑥).
+                                                     X                          𝑅(X)        X
+
+𝑃𝑇 being a probability measure follows by applying the last equality to the function 𝑓 : 𝑥 ↦→ 1.
+
+
+Next, we will prove Prop. 1.
+Proposition 1. If (𝜇, 𝑃𝐹 , 𝑃 𝐵 ) satisfy the detailed balance conditions in Def. 5, then 𝐹 = (𝜇, 𝑃𝐹 ) satisfies the flow-matching
+conditions in Def. 3 and is thus a flow.
+
+Proof For any bounded measurable function 𝑓 : S̄ → R satisfying 𝑓 (𝑠0 ) = 0, we can define a function 𝑔 : S × S̄ → R
+such that for all (𝑠, 𝑠′ ) ∈ S × S̄, 𝑔(𝑠, 𝑠′ ) = 𝑓 (𝑠′ ). Note that 𝑔 satisfies 𝑔(𝑠, 𝑠0 ) = 0 for every 𝑠 ∈ S. Applying the detailed
+balance conditions to the function 𝑔, we have
+                                ∬                                      ∬
+                                        𝑔(𝑠, 𝑠′ )𝜇(𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠′ ) =            𝑓 (𝑠′ )𝜇(𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠′ )
+                                        S× S̄                                             S× S̄
+
+                                                                                26
+A Theory of Continuous Generative Flow Networks                                                                                             27
+
+On the other hand, using the RHS of (12) in the detailed balance conditions, we get
+            ∬                                   ∬                                ∫              ∫
+                         ′     ′       ′                  ′     ′       ′              ′     ′
+                   𝑔(𝑠, 𝑠 )𝜇(𝑑𝑠 )𝑃 𝐵 (𝑠 , 𝑑𝑠) =       𝑓 (𝑠 )𝜇(𝑑𝑠 )𝑃 𝐵 (𝑠 , 𝑑𝑠) =   𝑓 (𝑠 )𝜇(𝑑𝑠 )   𝑃 𝐵 (𝑠′ , 𝑑𝑠),
+               S× S̄                                     S× S̄                                                 S̄                   S
+
+Following (2) and the the absolute continuity conditions of 𝑃 𝐵 with respect to 𝜅 𝑏 , we have:
+                                                     ∀𝑠′ ∈ S, 𝑃 𝐵 (𝑠′ , {⊥}) = 0,
+from which it follows that:
+                               ∬                                                 ∫                         ∫
+                                             ′       ′                ′                      ′         ′
+                                        𝑔(𝑠, 𝑠 )𝜇(𝑑𝑠 )𝑃 𝐵 (𝑠 , 𝑑𝑠) =                      𝑓 (𝑠 )𝜇(𝑑𝑠 )       𝑃 𝐵 (𝑠′ , 𝑑𝑠)
+                                S× S̄                                                S̄                       S̄
+                                                                                                           |   {z       }
+                                                                                                                     =1
+
+This shows that (𝜇, 𝑃𝐹 ) satisfy the flow matching conditions.
+
+
+Next, we will prove Prop. 2, which we restate here:
+Proposition 2. If (𝑍, 𝑃𝐹 , 𝑃 𝐵 ) satisfy the trajectory balance condition (13) wrt. a measure 𝑅, then 𝐹 = (𝜇, 𝑃 𝐵 ), where 𝜇 is
+defined by
+(1) 𝜇({⊥}) = 𝜇({𝑠0 }) = 𝑍
+(2) ∀𝐵 ∈ Σ | S : 𝜇(𝐵) = 𝜇({𝑠0 }) ∞
+                                Í
+                                  𝑛=0 𝑃 𝐹 (𝑠0 , 𝐵)
+                                        𝑛
+
+satisfies both the flow-matching conditions (9) and the reward matching conditions (10) wrt. 𝑅.
+
+Proof First we show that 𝜇 satisfies the flow-matching condition. for any bounded measurable function 𝑓 : S̄ → R
+satisfying 𝑓 (𝑠0 ) = 0, we have :
+                    ∬                                  ∬                ∞
+                                                                       ∑︁
+                            𝑓 (𝑠′ )𝜇(𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠′ ) =   𝑓 (𝑠′ )𝜇(𝑠0 )    𝑃𝐹𝑛 (𝑠0 , 𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠′ )
+                       S× S̄                                     S× S̄                      𝑛=0
+                                                             ∫                        ∞
+                                                                                     ∑︁
+                                                     =               𝑓 (𝑠′ )𝜇(𝑠0 )          𝑃𝐹𝑛+1 (𝑠0 , 𝑑𝑠′ )
+                                                              S̄                     𝑛=0
+                                                             ∫                        ∞
+                                                                                     ∑︁
+                                                     =               𝑓 (𝑠′ )𝜇(𝑠0 )          𝑃𝐹𝑛 (𝑠0 , 𝑑𝑠′ )         (because 𝑓 (𝑠0 ) = 0)
+                                                              S̄                     𝑛=0
+                                                             ∫
+                                                     =               𝑓 (𝑠′ )𝜇(𝑑𝑠′ )
+                                                              S̄
+
+Now, we will show the reward matching condition. For any bounded measurable function 𝑓 : X → R
+                   ∫                          ∫                         ∞
+                                                 1 X (𝑠) 𝑓 (𝑠) 𝜇({𝑠0 }) 𝑃𝐹𝑛 (𝑠0 , 𝑑𝑠)𝑃𝐹 (𝑠, ⊥)
+                                                                       ∑︁
+                        𝑓 (𝑠)𝜇(𝑑𝑠)𝑃𝐹 (𝑠, ⊥) =
+                     X                         S               | {z } 𝑛=0
+                                                                                     =𝑍
+                                                      ∞ ∫
+                                                                     1 X (𝑠) 𝑓 (𝑠)𝑅(𝑑𝑠)𝑃 𝑛𝐵 (𝑠, {𝑠0 })
+                                                     ∑︁
+                                                 =
+                                                     𝑛=0         S
+                                                     ∫                                      ∞                          ∫
+                                                             1 X (𝑠) 𝑓 (𝑠)𝑅(𝑑𝑠)
+                                                                                           ∑︁
+                                                 =                                               𝑃 𝑛𝐵 (𝑠, {𝑠0 }) =            𝑓 (𝑠)𝑅(𝑑𝑠)
+                                                         S                                 𝑛=0                            X
+
+
+where we used Prop. 5 and Lemma 8.
+
+
+
+
+The following is the proof of Thm. 2, which we restate here:
+
+                                                                            27
+A Theory of Continuous Generative Flow Networks                                                                                            28
+
+Theorem 2. (1) If 𝐿 𝐹 𝑀 (−; 𝜃) = 0 𝜈-almost surely, then 𝐹 = (𝜇, 𝑃𝐹 ) is a flow (i.e. satisfies the flow-matching conditions
+in Def. 3).
+(2) If 𝐿 𝐷𝐵 (−; 𝜃) = 0 𝜈 ⊗ 𝜅-almost surely, then (𝜇, 𝑃𝐹 , 𝑃 𝐵 ) satisfy the detailed balance conditions in Def. 5.
+(3) If 𝐿 𝑅𝑀 (−; 𝜃) = 0 𝜈 | X -almost surely, then (𝜇, 𝑃𝐹 ) satisfies the reward matching conditions in (10).
+(4) If 𝐿 𝑇𝑛 𝐵 (−; 𝜃) = 0 ((𝜈⊗𝜅 ⊗𝑛+1 ) | {𝑠0 } × S 𝑛 × {⊥} )-almost surely for every 𝑛 ≥ 0, then (𝑍 𝜈({𝑠0 }), 𝑃𝐹 , 𝑃 𝐵 ) satisfy the trajectory
+balance condition in Def. 6.
+
+Proof We will first show the result for the flow-matching loss. Let the function 𝑣 : S̄→R+ be the function, depending on
+the parameter 𝜃, defined by ∀𝑠′ ∈ S̄:
+                                                   ∫
+                                           ′
+                                       𝑣(𝑠 ; 𝜃) :=   𝑢(𝑠; 𝜃) 𝑝 𝐹 (𝑠, 𝑠′ ; 𝜃)𝜅 𝑏 (𝑠′ , 𝑑𝑠).
+                                                            S
+If we assume that 𝐿 𝐹 𝑀 (−; 𝜃) = 0 𝜈-almost surely, then we have equivalently 𝑢(−; 𝜃) = 𝑣(−; 𝜃) 𝜈-almost surely. Let
+ 𝑓 : S̄→R be a bounded measurable function such that 𝑓 (𝑠0 ) = 0, we then have
+                                 ∫                                ∫
+                                      𝑓 (𝑠′ )𝑢(𝑠′ ; 𝜃)𝜈(𝑑𝑠′ ) =        𝑓 (𝑠′ )𝑣(𝑠′ ; 𝜃)𝜈(𝑑𝑠′ )
+                                   S̄                               S̄
+                                         ∫           ∫
+                                                  ′
+                                      =       𝑓 (𝑠 )      𝑢(𝑠; 𝜃) 𝑝 𝐹 (𝑠, 𝑠′ ; 𝜃)𝜅 𝑏 (𝑠′ , 𝑑𝑠)𝜈(𝑑𝑠′ )
+                                           S̄          S
+                                         ∬
+                                      =            𝑓 (𝑠′ )𝑢(𝑠; 𝜃) 𝑝 𝐹 (𝑠, 𝑠′ ; 𝜃)𝜅(𝑠, 𝑑𝑠′ )𝜈(𝑑𝑠),
+                                                 S̄× S
+
+where we used the fact that 𝜈 ⊗ 𝜅 = 𝜈 ⊗ 𝜅 𝑏 (from (4) in Def. 1) in the last equality. Replacing the densities (and reference
+measures) in the equality above with their corresponding measures 𝜇 and 𝑃𝐹 , we get
+                                    ∫                     ∬
+                                         𝑓 (𝑠′ )𝜇(𝑑𝑠′ ) =    𝑓 (𝑠′ )𝜇(𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠′ ).
+                                            S̄                     S× S̄
+Since this equality is valid for any bounded measurable function 𝑓 satisfying 𝑓 (𝑠0 ) = 0, this is the definition of 𝐹 = (𝜇, 𝑃𝐹 )
+satisfying the flow-matching conditions (Def. 3).
+The proof for the detailed balance loss is similar. Let the functions 𝑔 : S̄ × S̄→R+ and ℎ : S̄ × S̄→R+ defined as
+                                                   𝑔(𝑠, 𝑠′ ; 𝜃) := 𝑢(𝑠; 𝜃) 𝑝 𝐹 (𝑠, 𝑠′ ; 𝜃)
+                                                   ℎ(𝑠, 𝑠′ ; 𝜃) := 𝑢(𝑠′ ; 𝜃) 𝑝 𝐵 (𝑠′ , 𝑠; 𝜃).
+If 𝐿 𝐷𝐵 (−; 𝜃) = 0 𝜈 ⊗ 𝜅-almost surely, then we have equivalently 𝑔(−; 𝜃) = ℎ(−, 𝜃). Let 𝑓 : S × S̄→R be a bounded
+measurable function such that 𝑓 (𝑠, 𝑠0 ) = 0 for all 𝑠 ∈ S. We have
+                              ∬
+                                       𝑓 (𝑠, 𝑠′ )𝑔(𝑠, 𝑠′ ; 𝜃) (𝜈 ⊗ 𝜅) (𝑑𝑠, 𝑑𝑠′ )
+                                 S× S̄
+                                          ∬
+                                        =           𝑓 (𝑠, 𝑠′ )𝑢(𝑠; 𝜃) 𝑝 𝐹 (𝑠, 𝑠′ ; 𝜃) (𝜈 ⊗ 𝜅) (𝑑𝑠 𝑑𝑠′ )
+                                              S× S̄
+                                          ∬
+                                        =           𝑓 (𝑠, 𝑠′ )ℎ(𝑠, 𝑠′ ; 𝜃) (𝜈 ⊗ 𝜅) (𝑑𝑠 𝑑𝑠′ )
+                                          ∬S× S̄
+                                        =           𝑓 (𝑠, 𝑠′ )ℎ(𝑠, 𝑠′ ; 𝜃) (𝜈 ⊗ 𝜅 𝑏 ) (𝑑𝑠′ 𝑑𝑠)
+                                              S× S̄
+                                          ∬
+                                        =           𝑓 (𝑠, 𝑠′ )𝑢(𝑠′ ; 𝜃) 𝑝 𝐵 (𝑠′ , 𝑠; 𝜃) (𝜈 ⊗ 𝜅 𝑏 ) (𝑑𝑠′ 𝑑𝑠),
+                                                 S× S̄
+
+where we used 𝜈 ⊗ 𝜅 = 𝜈 ⊗ 𝜅 𝑏 in the 3rd inequality. Note that while the equalities between functions are valid 𝜈 ⊗ 𝜅-almost
+surely over the whole space S̄ × S̄, we only used the equality restricted to S × S̄. Moreover, since 𝑢, 𝑝 𝐹 , and 𝑝 𝐵 are the
+densities of the respective measures 𝜇, 𝑃𝐹 , and 𝑃 𝐵 (wrt. the appropriate reference measures), we know that for 𝐵 ∈ Σ̄ ⊗ Σ̄
+                                                   ∬
+                                  (𝜇 ⊗ 𝑃𝐹 ) (𝐵) =      𝑢(𝑠; 𝜃) 𝑝 𝐹 (𝑠, 𝑑𝑠′ ) (𝜈 ⊗ 𝜅) (𝑑𝑠 𝑑𝑠′ )
+                                                   ∬𝐵
+                                  (𝜇 ⊗ 𝑃 𝐵 ) (𝐵) =     𝑢(𝑠′ ; 𝜃) 𝑝 𝐵 (𝑠′ , 𝑑𝑠) (𝜈 ⊗ 𝜅 𝑏 ) (𝑑𝑠′ 𝑑𝑠).
+                                                            𝐵
+
+
+                                                                      28
+A Theory of Continuous Generative Flow Networks                                                                                               29
+
+Replacing these measures in the equality above, we obtain
+                          ∬                                   ∬
+                                         ′               ′
+                                  𝑓 (𝑠, 𝑠 )𝜇(𝑑𝑠)𝑃𝐹 (𝑠, 𝑑𝑠 ) =                              𝑓 (𝑠, 𝑠′ )𝜇(𝑑𝑠′ )𝑃 𝐵 (𝑠′ , 𝑑𝑠).
+                                     S× S̄                                         S× S̄
+
+Since this equality is valid for any bounded measurable function 𝑓 such that 𝑓 (𝑠, 𝑠0 ) = 0 for all 𝑠 ∈ S, this corresponds to
+(𝜇, 𝑃𝐹 , 𝑃 𝐵 ) satisfying the detailed balance conditions (Def. 5).
+Now, for the trajectory balance loss: for a trajectory (𝑠, 𝑠1 , .., 𝑠 𝑛+1 ) ∈ S 𝑛+2 , we define:
+                                                                                        𝑛
+                                              𝑝 𝐹⊗𝑛+1 (𝑠, −
+                                                          𝑠−1:−𝑛+
+                                                               −→) = 𝑝 (𝑠, 𝑠 , 𝜃)
+                                                                                        Ö
+                                                                 1    𝐹     1                 𝑝 𝐹 (𝑠𝑡 , 𝑠𝑡+1 , 𝜃)
+                                                                                        𝑡=1
+                                                                                        Ö1
+                                                                                        𝑛−
+                                                   𝑝 ⊗𝑛  −−→
+                                                     𝐵 ( 𝑠 𝑛:1 , 𝑠) = 𝑝 𝐵 (𝑠1 , 𝑠, 𝜃)         𝑝 𝐵 (𝑠𝑡+1 , 𝑠𝑡 , 𝜃)
+                                                                                        𝑡=1
+
+For any bounded measurable function 𝑓 : S̄ 𝑛+2 → R, assuming 𝐿 𝑇𝑛 𝐵 = 0 almost surely for every 𝑛 ≥ 0:
+                    ∫
+                           𝑍 (𝜃) 𝑓 (𝑠, −       −→) 1
+                                          𝑠−1:−𝑛+                              ⊗𝑛+1
+                                                                                    (𝑠, −     −→)𝜈 ⊗ 𝜅 ⊗𝑛+1 (𝑑𝑠 −
+                                                                                         𝑠−1:−𝑛+
+                                                                                                                    −−−−→
+                                                                                                                   𝑑𝑠1:𝑛+1 )
+                                                   1     𝑠=𝑠0 ,𝑠𝑛 ≠⊥,𝑠𝑛+1 =⊥ 𝑝 𝐹                 1
+                     S 𝑛+2
+                      ∫
+                    =                               𝑍 (𝜃) 𝑓 (𝑠, −      −→) 𝑝 ⊗𝑛+1 (𝑠, −
+                                                                  𝑠−1:−𝑛+                  −→)𝜈 ⊗ 𝜅 ⊗𝑛+1 (𝑑𝑠 −
+                                                                                      𝑠−1:−𝑛+
+                                                                                                                  −−−−→
+                                                                                                                 𝑑𝑠1:𝑛+1 )
+                                                                         1   𝐹                 1
+                        {𝑠 } × S  𝑛− 1 × X× {⊥}
+                      ∫ 0
+                                                                                                       −−−−−→
+                    =                       𝑓 (𝑠, − 𝑠−1:−𝑛+
+                                                         −→)𝑟 (𝑠 ) 𝑝 ⊗𝑛 ( −
+                                                            1
+                                                                             −→
+                                                                   𝑛 𝐵 𝑠 𝑛:1 , 𝑠)𝜈 ⊗ 𝜅
+                                                                                              ⊗𝑛+1
+                                                                                                   (𝑑𝑠 𝑑𝑠1:𝑛+1 )
+                        {𝑠 } × S × {⊥}
+                                  𝑛
+                      ∫ 0
+                                                                                                             −−−→
+                    =                𝑓 (𝑠, −𝑠−1:
+                                               →, ⊥)𝑟 (𝑠 ) 𝜅(𝑠 , {⊥}) 𝑝 ⊗𝑛 ( −
+                                                 𝑛            𝑛        𝑛
+                                                                                      −→
+                                                                                 𝐵 𝑠 𝑛:1 , 𝑠)𝜈 ⊗ 𝜅
+                                                                                                      ⊗𝑛
+                                                                                                         (𝑑𝑠 𝑑𝑠1:𝑛 )
+                        {𝑠0 } × S 𝑛                              |      {z   }
+                                                                    =1 (see (6))
+                               ∫
+                                                                                  𝑏,⊗𝑛 −−−→
+                           =                 𝑓 (𝑠, −
+                                                   𝑠−1:
+                                                     →, ⊥)𝑟 (𝑠 ) 𝑝 ⊗𝑛 ( −
+                                                        𝑛
+                                                                        −→
+                                                              𝑛 𝐵 𝑠 𝑛:1 , 𝑠)𝜈 ⊗ 𝜅     ( 𝑑𝑠 𝑛:1 𝑑𝑠)
+                                {𝑠 } × S 𝑛
+                               ∫ 0
+                                                →, ⊥) 1                                                     −−−−−−→
+                           =            𝑓 (𝑠, −
+                                              𝑠−1: 𝑛
+                                                                                ⊗𝑛 − −→
+                                                        𝑠=𝑠0 𝑟 (𝑠 𝑛 )𝜈(𝑑𝑠 𝑛 ) 𝑝 𝐵 ( 𝑠 𝑛:1 , 𝑠)𝜅
+                                                                                                𝑏,⊗𝑛
+                                                                                                     (𝑠 𝑛 , 𝑑𝑠 𝑛−1:1 𝑑𝑠)
+                                S 𝑛+1
+
+Replacing the measures in the last equality obtained, we recover the TB condition in Def. 6 with (𝑍 𝜈({𝑠0 }), 𝑃𝐹 , 𝑃 𝐵 ).
+Here, we used 𝜈 ⊗ 𝜅 ⊗𝑛 = 𝜈 ⊗ 𝜅 𝑏,⊗𝑛 , ∀𝑛 ∈ {0, ..𝑁 }. We can show this by simple induction : for 𝑛 = 0, it is trivially satisfied .
+Now suppose it is true for a given 𝑛 ≤ 𝑁 − 1, using (4). We have :
+
+                       −−−−−→                    −−−→                                   −−−→
+        𝜈 ⊗ 𝜅 ⊗𝑛+1 (𝑑𝑠 𝑑𝑠1:𝑛+1 ) = 𝜈 ⊗ 𝜅 ⊗𝑛 (𝑑𝑠 𝑑𝑠1:𝑛 )𝜅(𝑠 𝑛 , 𝑑𝑠 𝑛+1 ) = 𝜈 ⊗ 𝜅 𝑏,⊗𝑛 ( 𝑑𝑠 𝑛:1 𝑑𝑠)𝜅(𝑠 𝑛 , 𝑑𝑠 𝑛+1 )
+                                                                         −−−→                                                    −−−→
+                                 = 𝜈(𝑑𝑠 𝑛 )𝜅(𝑠 𝑛 , 𝑑𝑠 𝑛+1 )𝜅 𝑏,⊗𝑛 (𝑠 𝑛 , 𝑑𝑠 𝑛:1 𝑑𝑠) = 𝜈(𝑑𝑠 𝑛+1 )𝜅 𝑏 (𝑠 𝑛+1 , 𝑑𝑠 𝑛 )𝜅 𝑏,⊗𝑛 (𝑠 𝑛 , 𝑑𝑠 𝑛:1 𝑑𝑠)
+                                                                −−−→                         −−−−−→
+                                 = 𝜈(𝑑𝑠 𝑛+1 )𝜅 𝑏,⊗𝑛+1 (𝑠 𝑛+1 , 𝑑𝑠 𝑛:1 𝑑𝑠) = 𝜈 ⊗ 𝜅 𝑏,⊗𝑛+1 ( 𝑑𝑠 𝑛+1:1 𝑑𝑠)
+
+Which proves the claim above.
+
+
+
+
+F. Proofs of lemmas and propositions in §A
+Lemma 1.
+
+Proof We prove the lemma by induction on 𝑛. The base case (𝑛 = 1) is trivially satisfied. Assuming the property holds for
+some 𝑛 ≥ 0, let 𝑠 ∈ S̄ and 𝐵 ∈ Σ such that 𝜅 𝑛+1 (𝑠, 𝐵) = 0.
+                                                         ∫
+                                          𝑃𝐹𝑛+1 (𝑠, 𝐵) =     𝑃𝐹𝑛 (𝑠, 𝑑𝑠′ )𝑃𝐹 (𝑠′ , 𝐵).
+                                                                        S̄
+
+                                                                             29
+A Theory of Continuous Generative Flow Networks                                                                                                                               30
+
+If 𝑃𝐹𝑛+1 (𝑠, 𝐵) > 0, that would mean there exists an open set 𝐵′ ∈ T such that 𝑃𝐹𝑛 (𝑠, 𝐵′ ) > 0 and 𝑃𝐹 (𝑠′ , 𝐵) > 0 for all
+𝑠′ ∈ 𝐵′ . From the induction hypothesis, it would follow that 𝜅 𝑛 (𝑠, 𝐵′ ) > 0 and 𝜅(𝑠′ , 𝐵) > 0 for all 𝑠′ ∈ 𝐵′ , meaning that:
+                                                           ∫                                              ∫
+                                    𝜅 𝑛+1 (𝑠, 𝐵) =                  𝜅 𝑛 (𝑠, 𝑑𝑠′ )𝜅(𝑠′ , 𝐵) ≥                       𝜅 𝑛 (𝑠, 𝑑𝑠′ )𝜅(𝑠′ , 𝐵) > 0.
+                                                               S̄                                             𝐵′
+
+
+A contradiction ! Hence, 𝑃𝐹𝑛+1 (𝑠, 𝐵) = 0
+
+
+Lemma 2.
+
+Proof Starting from the definition of 𝑃⊤𝑛 :
+              ∫                         ∫                                                 ∫
+                      𝑓 (𝑥)𝑃⊤𝑛 (𝑑𝑥) =            𝑓 (𝑠 𝑛 ) 1 X (𝑠 𝑛 )𝑃⊤𝑛 (𝑑𝑥) =                           1 X (𝑠𝑛 ) 𝑓 (𝑠𝑛 )𝑃𝐹⊗𝑛 (𝑠0 , 𝑑𝑠1 . . . 𝑑𝑠𝑛+1 ) 1𝑠𝑛+1 =⊥
+                  X                      S̄                                                   S̄ 𝑛+1
+
+
+Hence, using the recursive definition of 𝑃𝐹⊗𝑛 in (22):
+                        ∫                            ∫
+                              𝑓 (𝑥)𝑃⊤𝑛 (𝑑𝑥) =                    1 X (𝑠𝑛 ) 𝑓 (𝑠𝑛 )𝑃𝐹⊗𝑛−1 (𝑠0 , 𝑑𝑠1 . . . 𝑑𝑠𝑛 )𝑃𝐹 (𝑠𝑛 , 𝑑𝑠𝑛+1 ) 1𝑠𝑛+1 =⊥
+                          X                           S̄ 𝑛+1
+                                                     ∫
+                                                 =           1 X (𝑠𝑛 ) 𝑓 (𝑠𝑛 )𝑃𝐹 (𝑠𝑛 , {⊥}) 𝑃𝐹⊗𝑛−1 (𝑠0 , 𝑑𝑠1 . . . 𝑑𝑠𝑛 )
+                                                      S̄ 𝑛 |                     {z                           }
+                                                                                𝑔 (𝑠𝑛 )
+                                                     ∫
+                                                 =    𝑔(𝑠 𝑛 )𝑃𝐹⊗𝑛−1 (𝑠0 , 𝑑𝑠1 . . . 𝑑𝑠 𝑛 )
+                                                      S̄ 𝑛
+                                                   ∫                            ∫
+                                                             𝑛− 1
+                                                 =   𝑔(𝑠 𝑛 )𝑃𝐹 (𝑠0 , 𝑑𝑠 𝑛 ) =        𝑓 (𝑥)𝑃𝐹 (𝑥, {⊥}𝑃𝐹𝑛−1 (𝑠0 , 𝑑𝑠 𝑛 ),
+                                                      S̄                                                 X
+
+where we applied Lemma 6 to the bounded and measurable function 𝑔.
+
+
+Lemma 3.
+
+Proof Let 𝑓 : S̄ 2 →R be a bounded measurable function.
+          ∫                                                ∫                                                                ∫ ∫
+                  𝑓 (𝑠, 𝑠′ )𝜈𝜅(𝑑𝑠′ )𝜅 ′ (𝑠′ , 𝑑𝑠) =             𝑓 (𝑠, 𝑠0 ) 𝜈𝜅({𝑠0 }) 𝜅 ′ (𝑠0 , 𝑑𝑠) +                                       𝑓 (𝑠, 𝑠′ )𝜈𝜅(𝑑𝑠′ )𝜅 ′ (𝑠′ , 𝑑𝑠)
+           S̄ 2                                              S̄            | {z }                                           S   S̄\{𝑠0 }
+                                                                                     =0
+                                                               ∫
+                                                           +                  𝑓 (⊥, 𝑠′ )𝜈𝜅(𝑑𝑠′ ) 𝜅 ′ (𝑠′ , {⊥}) + 𝑓 (⊥, ⊥)𝜈𝜅({⊥})𝜅 ′ (⊥, {⊥})
+                                                                    S\{𝑠0 }                      | {z }
+                                                                                                                       =0
+                                                           ∫ ∫                                                                    ∫
+                                                     =                          𝑓 (𝑠, 𝑠 )𝜈𝜅(𝑑𝑠 )𝜅 (𝑠′ , 𝑑𝑠) +
+                                                                                          ′               ′        𝑏
+                                                                                                                                      𝑓 (𝑠, 𝑠0 ) 𝜈𝜅({𝑠0 }) 𝜅 𝑏 (𝑠0 , 𝑑𝑠)
+                                                             S       S̄\{𝑠0 }                                                      S̄            | {z }
+                                                                                                                                                      =0
+                                                           + 𝑓 (⊥, ⊥)𝜈𝜅({⊥})𝜅 𝑏 (⊥, {⊥})                                                                                     (48)
+
+On the other hand, let 𝐵 be the largest open set within Ssuch that ∀𝑠′ ∈ 𝐵, 𝜅 𝑏 (𝑠′ , {⊥}) > 0. Applying the definition of the
+reverse kernel (26) to the function 𝑓 : (𝑠, 𝑠′ ) ↦→ 1𝑠=⊥ 1 𝐵 (𝑠′ ), we get:
+                                        ∫                                                      ∫
+                                                 1 𝐵 (𝑠′ )𝜈({⊥})𝜅(⊥, 𝑠′ ) =                             1 𝐵 (𝑠′ )𝜈𝜅(𝑠′ )𝜅 𝑏 (𝑠′ , {⊥})
+                                            S̄                                                     S̄
+
+
+The LHS of the previous equality is 0, following (2). It follows from the assumption that ∀𝑠′ ∈ 𝐵, 𝜅 𝑏 (𝑠′ , {⊥}) > 0 that
+
+                                                                                              30
+A Theory of Continuous Generative Flow Networks                                                                                                               31
+
+𝜈𝜅(𝐵) = 0. Hence:
+                                      ∫
+                                                       𝑓 (⊥, 𝑠′ )𝜈𝜅(𝑑𝑠′ )𝜅 𝑏 (𝑠′ , {⊥})
+                                          S\{𝑠0 }
+                                                          ∫
+                                                       =            1 S\𝐵 (𝑠′ ) 𝑓 (⊥, 𝑠′ )𝜈𝜅(𝑑𝑠′ )𝜅 𝑏 (𝑠′ , {⊥})
+                                                           S̄\{𝑠0 }
+                                                            ∫
+                                                          +           1 𝐵 (𝑠′ ) 𝑓 (⊥, 𝑠′ )𝜈𝜅(𝑑𝑠′ )𝜅 𝑏 (𝑠′ , {⊥})
+                                                                      S̄\{𝑠0 }
+
+
+The first summand of the RHS of the last equality is zero by the definition of 𝐵. The second summand is zero because
+𝜈𝜅(𝐵) = 0. Going back to (48), we obtain:
+                 ∫                                                    ∫                                                  ∫
+                              ′       ′    ′       ′                                ′             ′         ′
+                         𝑓 (𝑠, 𝑠 )𝜈𝜅(𝑑𝑠 )𝜅 (𝑠 , 𝑑𝑠) =                                                  𝑏
+                                                                               𝑓 (𝑠, 𝑠 )𝜈𝜅(𝑑𝑠 )𝜅 (𝑠 , 𝑑𝑠) =                       𝑓 (𝑠, 𝑠′ )𝜅(𝑑𝑠)𝜅(𝑠, 𝑑𝑠′ )
+                  S̄ 2                                                  S̄ 2                                               S̄ 2
+
+
+
+
+Proposition 3.
+
+Proof First, note that (2) and (7) imply that ∀𝑛 ≥ 𝑁, 𝜅 𝑛 (𝑠0 , −) = 𝛿⊥ . This can be shown by a simple induction on 𝑛, writing
+for any 𝐵 ∈ Σ:
+                                                                                   ∫
+                                                                𝑛+1
+                                                            𝜅         (𝑠0 , 𝐵) =             𝜅 𝑛 (𝑠0 , 𝑑𝑠)𝜅(𝑑𝑠, 𝐵).
+                                                                                        S̄
+
+
+This entails that (1) could be rewritten as:
+
+                                           ∀𝐵 ∈ T \ {∅}, ∃𝑛 ∈ {0, . . . , 𝑁 } : 𝜅 𝑛 (𝑠0 , 𝐵) > 0.
+
+Hence,
+
+                                                                       ∀𝐵 ∈ T \ {∅}, 𝜈(𝐵) > 0.
+
+The measure 𝜈 is thus strictly positive.
+Note that for any 𝐵 in Σ | S such that 𝑠0 ∉ 𝐵.
+
+                                                   ∫
+                                    𝜈𝜅(𝐵) =                 𝜈(𝑑𝑠)𝜅(𝑠, 𝐵)
+                                                       S̄
+                                                      𝑁
+                                                   ∫ ∑︁                                                𝑁 ∫
+                                                                                                      ∑︁
+                                               =                      𝜅 𝑛 (𝑠0 , 𝑑𝑠)𝜅(𝑠, 𝐵) =                       𝜅 𝑛 (𝑠0 , 𝑑𝑠)𝜅(𝑠, 𝐵)
+                                                       S̄ 𝑛=0                                         𝑛=0     S̄
+                                                    𝑁
+                                                   ∑︁                               𝑁
+                                                                                    ∑︁+1
+                                               =            𝜅 𝑛+1 (𝑠0 , 𝐵) =                  𝜅 𝑛 (𝑠0 , 𝐵).
+                                                   𝑛=0                               𝑛=1
+
+
+Because 𝐵 ⊆ S, then 𝜅 𝑁 +1 (𝑠0 , 𝐵) = 𝛿⊥ (𝐵) = 0. And because 𝑠0 ∉ 𝐵, 𝜅 0 (𝑠0 , 𝐵) = 𝛿 𝑠0 (𝐵) = 0. From this it follows that:
+
+                                                                                 𝜈𝜅(𝐵) = 𝜈(𝐵)
+
+                                                                                             31
+A Theory of Continuous Generative Flow Networks                                                                                                   32
+
+Then, let 𝐵 ∈ Σ | S ⊗ Σ | S such that (𝑠0 , 𝑠0 ) ∉ 𝐵. Using the definition of the reverse kernel, we obtain:
+                                                      ∫
+                                          𝑟
+                   𝜈 ⊗ 𝜅(𝐵) = (𝜈𝜅) ⊗ 𝜅 𝜈 (𝐵) =                 1 𝐵 (𝑠, 𝑠′ )𝜈𝜅(𝑑𝑠′ )𝜅𝑟𝜈 (𝑑𝑠′ , 𝑑𝑠)
+                                                        S̄× S̄
+                                ∫                                                        ∫
+                              =                  1 𝐵 (𝑠, 𝑠′ ) 𝜈𝜅(𝑑𝑠′ ) 𝜅𝑟𝜈 (𝑑𝑠′ , 𝑑𝑠) + 1 𝐵 (𝑠, 𝑠0 ) 𝜈𝜅(𝑠0 ) 𝜅𝑟𝜈 (𝑠0 , 𝑑𝑠)
+                                  S× ( S\{𝑠0 } )              | {z }                      S          | {z }
+                                                                      =𝜈 (𝑑𝑠)                                              =0
+                                    ∫
+                                =                    1 𝐵 (𝑠, 𝑠′ )𝜈(𝑑𝑠′ )𝜅𝑟𝜈 (𝑑𝑠′ , 𝑑𝑠)
+                                    S× ( S\{𝑠0 } )
+                                    ∫                                                               ∫
+                                =                    1 𝐵 (𝑠, 𝑠′ )𝜈(𝑑𝑠′ )𝜅𝑟𝜈 (𝑑𝑠′ , 𝑑𝑠) +                       1 𝐵 (𝑠, 𝑠0 )𝜅(𝑠0 ) 𝜅𝑟𝜈 (𝑠0 , 𝑑𝑠)
+                                    S× ( S\{𝑠0 } )                                                   S\{𝑠0 }                      | {z }
+                                                                                                                                       =0
+                                    ∫
+                                =           1         ′       ′  𝑟    ′
+                                                𝐵 (𝑠, 𝑠 )𝜈(𝑑𝑠 )𝜅 𝜈 (𝑑𝑠 , 𝑑𝑠)
+                                   S̄× S̄
+                                = 𝜈 ⊗ 𝜅 𝑟𝜈 (𝐵)
+
+Finally, if 𝐵 ∈ Σ | S :
+                                        ∫                                           ∫
+               𝜈 ⊗ 𝜅(𝐵 × {⊥}) =             1 𝐵 (𝑑𝑠)𝜈(𝑑𝑠)𝜅(𝑠, {⊥}) =                         1 𝐵 (𝑑𝑠)𝜈({⊥})𝜅 𝑏 (⊥, 𝑑𝑠) = 𝜈 ⊗ 𝜅 𝑏 (𝐵 × {⊥})
+                                        S                                                S
+                                                                  ∫
+               𝜈 ⊗ 𝜅({⊥} × 𝐵) = 𝜈({⊥}) 𝜅(⊥, 𝐵) =                       1 𝐵 (𝑠 )𝜈(𝑑𝑠′ ) 𝜅 𝑏 (𝑠′ , {⊥}) = 𝜈 ⊗ 𝜅 𝑏 ({⊥} × 𝐵)
+                                                                                ′
+                                       | {z }                     S                             |   {z     }
+                                                      =0                                             =0
+
+
+
+
+                                                                                    32
+

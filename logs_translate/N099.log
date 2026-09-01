@@ -1,0 +1,86 @@
+Translating batch 1/1: 4 blocks, 877 chars
+Translated 4/4 text blocks
+Translating batch 1/1: 4 blocks, 2224 chars
+Translated 4/4 text blocks
+Translating batch 1/1: 1 blocks, 2038 chars
+Translated 1/1 text blocks
+Translating batch 1/1: 1 blocks, 1010 chars
+Translated 1/1 text blocks
+Translating batch 1/1: 1 blocks, 1027 chars
+Translated 1/1 text blocks
+Translating batch 1/1: 7 blocks, 2380 chars
+Translated 7/7 text blocks
+Translating batch 1/1: 3 blocks, 2075 chars
+Translated 3/3 text blocks
+Translating batch 1/1: 5 blocks, 1399 chars
+Translated 5/5 text blocks
+Translating batch 1/1: 8 blocks, 2271 chars
+Translated 8/8 text blocks
+Translating batch 1/1: 1 blocks, 1234 chars
+Translated 1/1 text blocks
+Translating batch 1/1: 1 blocks, 572 chars
+Translated 1/1 text blocks
+Translating batch 1/1: 3 blocks, 1227 chars
+Translated 3/3 text blocks
+Translating batch 1/1: 8 blocks, 766 chars
+Translated 8/8 text blocks
+Translating batch 1/1: 5 blocks, 2109 chars
+Translated 5/5 text blocks
+Translating batch 1/1: 5 blocks, 1739 chars
+Warning: supplier returned 4 translations for 5 inputs; retrying one by one
+Translated 5/5 text blocks
+Translating batch 1/1: 8 blocks, 2274 chars
+Translated 8/8 text blocks
+Translating batch 1/1: 8 blocks, 2315 chars
+Translated 8/8 text blocks
+Translating batch 1/1: 4 blocks, 1966 chars
+Translated 4/4 text blocks
+Translating batch 1/1: 7 blocks, 2452 chars
+Translated 7/7 text blocks
+Translating batch 1/1: 8 blocks, 690 chars
+Translated 8/8 text blocks
+Translating batch 1/1: 8 blocks, 1525 chars
+Warning: supplier returned 7 translations for 8 inputs; retrying one by one
+Translated 8/8 text blocks
+Translating batch 1/1: 4 blocks, 1588 chars
+Translated 4/4 text blocks
+Translating batch 1/1: 1 blocks, 2442 chars
+Translated 1/1 text blocks
+Translating batch 1/1: 1 blocks, 2442 chars
+Translated 1/1 text blocks
+Translating batch 1/1: 1 blocks, 1252 chars
+Translated 1/1 text blocks
+Translating batch 1/1: 1 blocks, 1189 chars
+Translated 1/1 text blocks
+Translating batch 1/3: 8 blocks, 363 chars
+Translated 8/18 text blocks
+Translating batch 2/3: 8 blocks, 1926 chars
+Translated 16/18 text blocks
+Translating batch 3/3: 2 blocks, 35 chars
+Translated 18/18 text blocks
+Translating batch 1/1: 4 blocks, 2269 chars
+Translated 4/4 text blocks
+Translating batch 1/1: 5 blocks, 1164 chars
+Translated 5/5 text blocks
+Translating batch 1/1: 1 blocks, 62 chars
+Translated 1/1 text blocks
+Translating batch 1/1: 2 blocks, 115 chars
+Translated 2/2 text blocks
+feat NOT subset; don't know how to subset; dropped
+meta NOT subset; don't know how to subset; dropped
+morx NOT subset; don't know how to subset; dropped
+meta NOT subset; don't know how to subset; dropped
+feat NOT subset; don't know how to subset; dropped
+meta NOT subset; don't know how to subset; dropped
+morx NOT subset; don't know how to subset; dropped
+meta NOT subset; don't know how to subset; dropped
+Warning: Detected layout profile: single_column (confidence 0.65, 1 column)
+Warning: Page 4: translated body block still looks like English after retry
+Warning: Page 8: translated body block still looks like English after retry
+Warning: Page 13: translated body block still looks like English after retry
+Warning: Page 3: restored 3 protected region(s) affected by PDF redaction
+Warning: Kept source fonts intact to preserve figure and formula glyph mappings
+Wrote: /Users/liyufeng/Code/awesome_Gflow/pdfs/zh/N099_zh.pdf
+Pages: 15
+Translated text blocks: 98
+Skipped text blocks: 389
