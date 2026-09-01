@@ -16,6 +16,8 @@
 \setCJKmonofont{Heiti SC}
 \XeTeXlinebreaklocale "zh"
 \XeTeXlinebreakskip = 0pt plus 1pt
+% 生成 ActualText，否则字体子集化后 PDF 的中文文本层无法复制
+\XeTeXgenerateactualtext=1
 
 \definecolor{positive}{HTML}{0173B2}
 \definecolor{negative}{HTML}{DE8F05}
@@ -323,7 +325,12 @@
 
 \begin{frame}
   \begin{center}
-    \Large 完整目录、逐篇解读与中英文 PDF 见仓库 \texttt{awesome\_Gflow}
+    \Large 完整目录、逐篇解读与中英文 PDF\\[8pt]
+    \href{https://github.com/asimfish/awesome_Gflow}{\texttt{github.com/asimfish/awesome\_Gflow}}
+    \vspace{14pt}
+
+    \normalsize
+    生成方式与已知局限见仓库 \texttt{DELIVERY.md}
   \end{center}
 \end{frame}
 
