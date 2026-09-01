@@ -40,6 +40,7 @@ SECTION_MAP = [
     ("11.23", "supplement", None),
     ("11.24", "supplement", None),
     ("11.25", "supplement", None),
+    ("11.26", "supplement", None),
 ]
 
 GROUPS = [
@@ -118,7 +119,7 @@ def main():
     out.append("# Awesome GFlowNets [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)\n")
     out.append(
         "精选的 GFlowNet（Generative Flow Networks）论文、代码、课程与深度解读清单。"
-        f"收录论文 **{total}** 篇（主体检索截止 2026-08-25，含 2026-09-01 趋势与失效边界核实补录 7 篇），"
+        f"收录论文 **{total}** 篇（主体检索截止 2026-08-25，含 2026-09-01 趋势、失效边界与应用覆盖审计补录 11 篇），"
         f"其中 **35** 篇核心论文配有中文深度解读"
         f"（已完成 {n_notes} 篇）与保版式中文翻译 PDF（全文 {n_zh_full} 篇"
         + (f" + 章节节选 {n_zh_exc} 篇" if n_zh_exc else "")

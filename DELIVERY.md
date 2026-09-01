@@ -7,7 +7,7 @@
 | 产物 | 位置 | 数量 | 生成方式 |
 |---|---|---|---|
 | 决策入口 | `START_HERE.md` | 1 份 | 手写，把「该不该用 GFlowNet」的判断前置到读论文之前 |
-| 论文分类目录 | `README.md`, `papers/current_papers.tsv` | 213 篇 | 人工调研（检索截止 2026-08-25），README 由 `scripts/build_readme.py` 从目录 markdown 生成 |
+| 论文分类目录 | `README.md`, `papers/current_papers.tsv` | 217 篇 | 人工调研（检索截止 2026-08-25），README 由 `scripts/build_readme.py` 从目录 markdown 生成 |
 | 核心论文清单 | `papers/core_papers.json` | 35 篇 | 从目录中标记为 P0 精读的条目抽取 |
 | 中文深度解读 | `notes/*.md` | 35 篇 | 本地 vLLM（Qwen2.5-32B-AWQ）读 PDF 全文生成初稿，固定 8 节模板 |
 | 英文原文 PDF | `pdfs/en/` | 35 篇 | `scripts/download_core_pdfs.py`（arXiv API 标题检索；T32 从 ICLR proceedings 直取） |
@@ -82,7 +82,7 @@ N061 与 O01 是**页数原因**：单卡 32B 的实测速度约 31 页 / 40 分
 
 ### 2.4 目录本身的覆盖边界
 
-目录主体的检索截止 **2026-08-25**（206 篇）。三份趋势报告在 2026-09-01 的核实中遇到 17 篇论文，逐条比对后确认 11 篇已收录（RapTB=T54、Stable GFlowNets=T51、DTB=T50、alpha-GFN=T46 等——原目录的覆盖比预期完整），余下 6 篇已按 `CONTRIBUTING.md` 流程补录为 N107-N112 并写入目录 §11.24。之后写失效边界专题（`insights/trends_failure_modes.md`）时又补录 N113（IEEE BIBM，不在原检索源内），现共 **213 篇**。
+目录主体的检索截止 **2026-08-25**（206 篇）。三份趋势报告在 2026-09-01 的核实中遇到 17 篇论文，逐条比对后确认 11 篇已收录（RapTB=T54、Stable GFlowNets=T51、DTB=T50、alpha-GFN=T46 等——原目录的覆盖比预期完整），余下 6 篇已按 `CONTRIBUTING.md` 流程补录为 N107-N112 并写入目录 §11.24。之后写失效边界专题（`insights/trends_failure_modes.md`）时又补录 N113（IEEE BIBM，不在原检索源内），之后按 12 个应用方向做覆盖审计，发现芯片/EDA 与 NAS 两个方向为 0 篇，顺缺口补录 N114-N117，现共 **217 篇**。
 
 这 6 篇的漏收根因值得记下来：前 23 节检索都以 GFlowNet 为关键词，而竞品方法（力引导采样、Jacobian 估计）与邻域综述（GRPO）标题不含该词；bioRxiv 与库论文也不在原检索源里。后续增量检索应把「竞品赛道」与「非 arXiv 预印本源」单独走一遍。
 
@@ -115,5 +115,7 @@ vllm serve <path>/Qwen2.5-32B-Instruct-AWQ \
 | `fix_dialogue_section.py` | 检测并重写「与谁对话」节 | 只处理条目多且平均长度短的（抄清单特征） |
 | `build_readme.py` | 目录 markdown → README | 每次全量重建，自动挂上已存在的产物链接 |
 | `audit_notes_facts.py` | 抽取笔记数字断言回原文核对 | 只读，不改文件；加新笔记后应重跑 |
+| `audit_coverage.py` | 按 12 个应用方向统计覆盖，标出薄弱方向 | 只读；0 篇可能是研究机会也可能是检索盲区 |
+| `check_duplicate.py` | 补录前查重（号命中 + 标题模糊相似度） | 只读；精确标题匹配会漏判，务必用它 |
 | `make_excerpts.py` | 超长材料按大纲页码抽章节节选 | 改 JOBS 里的抽页范围后重跑 |
 | `translate_excerpts.py` | 翻译 `pdfs/en_excerpt/` 下的节选 | 已有产物自动跳过 |

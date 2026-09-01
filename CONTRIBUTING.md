@@ -4,6 +4,15 @@
 
 论文目录的 source of truth 是 `surveys/GFLOWNET_RESEARCH_RESOURCE_CATALOG_CN.md`，`README.md` 由脚本从它生成。
 
+**第 0 步：先查重。** 精确标题匹配会漏判——目录里的 A19 题名是《Let the Flows Tell: Solving Graph Combinatorial **Problems**...》，而原论文是《...Combinatorial **Optimization** Problems...》，差一个词就查不到。用脚本查：
+
+```bash
+python3 scripts/check_duplicate.py "论文标题" 2604.23658   # 第二个参数是 arXiv/DOI 号，可省
+python3 scripts/check_duplicate.py --file candidates.txt   # 批量，每行「标题<TAB>号」
+```
+
+判定为 `LIKELY_DUP` 时不要直接补录，先人工确认是同一篇还是同名不同工作。
+
 1. 在目录文档对应的 `###` 小节里追加一行表格：
 
    ```
@@ -44,3 +53,16 @@ python3 scripts/translate_batch.py     # 增量，已有产物自动跳过
 ## 趋势报告
 
 放入 `insights/`。每条论断必须给来源链接与检索日期；检索不到就写「未检索到」，不要凭印象补。
+
+## 维护脚本
+
+| 脚本 | 什么时候跑 |
+|---|---|
+| `check_duplicate.py` | 补录论文前，必跑 |
+| `build_readme.py` | 改了目录文档或加了新产物之后 |
+| `audit_notes_facts.py` | 加了新解读之后，核对数字断言是否都能在原文找到 |
+| `audit_coverage.py` | 定期跑，找覆盖为 0 或偏薄的应用方向 |
+
+`audit_coverage.py` 报出 0 篇的方向要逐个判断是**研究机会**还是**检索盲区**。芯片/EDA 曾是 0 篇，但 `torchgfn` 内置 `chip_design` 环境说明社区在做——查下去发现该方向 SOTA 用的是 flow matching（标题不含 GFlowNet 关键词），属于盲区。
+
+新增目录章节（如 `### 11.27`）后，记得在 `build_readme.py` 的 `SECTION_MAP` 里注册，否则新论文不会出现在 README。

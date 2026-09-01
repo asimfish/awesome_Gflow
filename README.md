@@ -1,6 +1,6 @@
 # Awesome GFlowNets [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
 
-精选的 GFlowNet（Generative Flow Networks）论文、代码、课程与深度解读清单。收录论文 **213** 篇（主体检索截止 2026-08-25，含 2026-09-01 趋势与失效边界核实补录 7 篇），其中 **35** 篇核心论文配有中文深度解读（已完成 35 篇）与保版式中文翻译 PDF（全文 32 篇 + 章节节选 2 篇，由 [SuperTranslate](https://github.com/asimfish/super_translate) + Qwen2.5-32B 生成）。
+精选的 GFlowNet（Generative Flow Networks）论文、代码、课程与深度解读清单。收录论文 **217** 篇（主体检索截止 2026-08-25，含 2026-09-01 趋势、失效边界与应用覆盖审计补录 11 篇），其中 **35** 篇核心论文配有中文深度解读（已完成 35 篇）与保版式中文翻译 PDF（全文 32 篇 + 章节节选 2 篇，由 [SuperTranslate](https://github.com/asimfish/super_translate) + Qwen2.5-32B 生成）。
 
 A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Legend: 📝 深度解读 in-depth note · 🇨🇳 中文PDF Chinese translation · 📄 英文PDF original PDF.
 
@@ -29,7 +29,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   - [其他应用 · Other Applications](#其他应用--other-applications) (3)
 - **生态 Ecosystem**
   - [评测基准与软件 · Benchmarks & Software](#评测基准与软件--benchmarks--software) (2)
-  - [审查流水线补录 · Additional Curated Papers](#审查流水线补录--additional-curated-papers) (32)
+  - [审查流水线补录 · Additional Curated Papers](#审查流水线补录--additional-curated-papers) (36)
 - [趋势洞察 Trends & Insights](#趋势洞察-trends--insights)
 - [课程与教程 Courses & Tutorials](#课程与教程-courses--tutorials)
 - [代码库 Codebases](#代码库-codebases)
@@ -535,6 +535,14 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   JAX 实现的 GFlowNet 库：环境、reward、指标全部 JIT-able，每个环境配 CleanRL 风格单文件基线；声明 CPU 序列生成最高 55 倍、GPU 贝叶斯结构学习最高 80 倍加速，覆盖 8 个环境，明确以 standardize empirical evaluation 为目标。
 - `N113` [Fixing Truncation-Induced Mode Collapse in GFlowNets via Pruning Loss](https://doi.org/10.1109/bibm66473.2025.11356156) · *IEEE BIBM 2025*  
   把 mode collapse 的根因定位到「人为轨迹截断产生的强制终止态」：它们违反流守恒的边界约束，造成流泄漏并把生成偏向最大长度轨迹。
+- `N114` [FlowPlace: Flow Matching for Chip Placement](https://arxiv.org/abs/2604.23658) · *预印本 2026-04*  
+  芯片宏单元布局的 flow matching 生成式布局器：mask 引导的合成数据（注入模块化与边界感知先验）+ 确定性流轨迹 + 硬约束引导采样（把消除重叠的投影算子嵌进生成轨迹）。
+- `N115` [Generative flow induced neural architecture search (FWNO)](https://arxiv.org/abs/2405.06910) · *预印本 2024-05*  
+  把 GFlowNet 的按奖励比例生成用于神经算子架构搜索：串联一组网络逐个采样超参，终端网络是 wavelet neural operator 本体，奖励取负验证损失的指数，用流一致性损失训练。
+- `N116` [BatchGFN: Generative Flow Networks for Batch Active Learning](https://arxiv.org/abs/2306.15058) · *ICML 2023 SPIGM Workshop*  
+  用 GFlowNet 按批次奖励（批次与模型参数的联合互信息 JMI）比例采样数据点集合。
+- `N117` [Why Pool When You Can Flow? Active Learning with GFlowNets](https://ai4d3.github.io/2025/papers/31_Why_Pool_When_You_Can_Flow_.pdf) · *NeurIPS 2025 AI4D3 Workshop*  
+  把主动学习从「在固定池里挑」改成「直接生成」：BALD-GFlowNet 用互信息作奖励、RTB 损失训练，初始池 174 万的分子任务上做 30 轮采集（每轮 100 个），代理为 MoLFormer + MC Dropout。
 
 ## 趋势洞察 Trends & Insights
 

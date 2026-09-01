@@ -759,3 +759,16 @@ P^\star(x)=\frac{R(x)}{Z},
 | **N113** | [Fixing Truncation-Induced Mode Collapse in GFlowNets via Pruning Loss](https://doi.org/10.1109/bibm66473.2025.11356156) · IEEE BIBM 2025 | 把 mode collapse 的根因定位到「人为轨迹截断产生的强制终止态」：它们违反流守恒的边界约束，造成流泄漏并把生成偏向最大长度轨迹。提出 Pruning Loss 要求强制终止处的 sink flow 与总出流都等于奖励，理论上恢复截断空间的流守恒且保证梯度不消失。实验对照极干净：稀疏奖励（kinase 靶点）上大幅超过标准目标，稠密奖励（drug-likeness）上各法相当——精确说明流泄漏只在稀疏奖励下限制性能。 | **优先读**：论断「修正强制终止处的边界约束比改进平衡方程更根本」若成立，则 TB→SubTB→f-TB 这条主线在 mode collapse 上一直在治标；与 T07、T51 连读 <sub>来源 insights/trends_failure_modes.md §2</sub> |
 
 另有一处元数据补全：**T32** 的预印本题名与目录记录的会议题名不同（arXiv:2411.05899 题为 *Analyzing GFlowNets: Limitations, Countermeasures, and Assessment*，ICLR 2025 版题为 *When Do GFlowNets Learn the Right Distribution?*）。按题名检索容易误判为两篇，已在 status 字段标注。该文的 FCS 指标与指标否证结论见 `insights/trends_failure_modes.md` §6。
+
+### 11.26 应用方向覆盖审计补录（2026-09-01，4 篇）
+
+按 12 个应用方向对目录做覆盖统计（脚本化关键词扫描），发现两个方向为 **0 篇**：芯片/EDA 与 NAS/超参搜索。前者尤其可疑——`torchgfn` 内置了 `chip_design` 环境并带 `plc_client.py` 接口，说明社区在做，但目录检索不到论文。顺着这两个缺口补录下列 4 篇。**漏收根因**：原检索以 GFlowNet 为关键词，而 (a) 芯片布局的 SOTA 用的是 flow matching 而非 GFlowNet，标题不含关键词；(b) NAS 与主动学习方向的工作多发在 workshop 与领域会议，不在原检索源内。
+
+| 编号 | 论文与状态 | 简介 | 建议 |
+|---|---|---|---|
+| **N114** | [FlowPlace: Flow Matching for Chip Placement](https://arxiv.org/abs/2604.23658) · 预印本 2026-04 | 芯片宏单元布局的 flow matching 生成式布局器：mask 引导的合成数据（注入模块化与边界感知先验）+ 确定性流轨迹 + 硬约束引导采样（把消除重叠的投影算子嵌进生成轨迹）。在 ICCAD 2015 Contest C 与 OpenROAD 基准上全面超过解析式 DREAMPlace 4.1、RL 式 MaskPlace/EfficientPlace 与扩散式 ChipDiffusion，零样本推理数秒出图。 | 选读：**警示性对照**。芯片布局是「组合空间 + 多样解有价值」的天然 GFlowNet 场景，但 SOTA 由 flow matching 占据。想在 EDA 方向做 GFlowNet 的人应先解释「为什么不用确定性流轨迹」<sub>来源 应用覆盖审计</sub> |
+| **N115** | [Generative flow induced neural architecture search (FWNO)](https://arxiv.org/abs/2405.06910) · 预印本 2024-05 | 把 GFlowNet 的按奖励比例生成用于神经算子架构搜索：串联一组网络逐个采样超参，终端网络是 wavelet neural operator 本体，奖励取负验证损失的指数，用流一致性损失训练。 | 选读：GFlowNet 在 NAS/HPO 方向少见的完整实例，本目录该方向原为空白 <sub>来源 应用覆盖审计</sub> |
+| **N116** | [BatchGFN: Generative Flow Networks for Batch Active Learning](https://arxiv.org/abs/2306.15058) · ICML 2023 SPIGM Workshop | 用 GFlowNet 按批次奖励（批次与模型参数的联合互信息 JMI）比例采样数据点集合。核心卖点是摊销掉批次感知算法的组合复杂度——推理时每点一次前向即可采到近最优效用批次，不需贪心近似。SubTB + forward-looking 参数化 + 集合置换不变架构。 | 选读：思路干净但只在玩具回归上验证，作者自陈需摊销跨轮训练才能上真实任务 <sub>来源 应用覆盖审计</sub> |
+| **N117** | [Why Pool When You Can Flow? Active Learning with GFlowNets](https://ai4d3.github.io/2025/papers/31_Why_Pool_When_You_Can_Flow_.pdf) · NeurIPS 2025 AI4D3 Workshop | 把主动学习从「在固定池里挑」改成「直接生成」：BALD-GFlowNet 用互信息作奖励、RTB 损失训练，初始池 174 万的分子任务上做 30 轮采集（每轮 100 个），代理为 MoLFormer + MC Dropout。 | 选读：与 N116 是同一思路的两代（前者受池约束、后者放弃池化）；附录给全了超参，便于复现 <sub>来源 应用覆盖审计</sub> |
+
+**方法论备注**：本次补录暴露了一个查重陷阱——A19《Let the Flows Tell: Solving Graph Combinatorial **Problems**...》与原论文题名《...Combinatorial **Optimization** Problems...》差一个词，按精确标题查重会误判为漏收。已固化 `scripts/check_duplicate.py`（arXiv/DOI 号命中 + 标题模糊相似度，阈值 0.75），补录前应先跑它。
