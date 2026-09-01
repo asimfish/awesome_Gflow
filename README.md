@@ -1,6 +1,6 @@
 # Awesome GFlowNets [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
 
-精选的 GFlowNet（Generative Flow Networks）论文、代码、课程与深度解读清单。收录论文 **206** 篇（检索截止 2026-08-25），其中 **35** 篇核心论文配有中文深度解读（已完成 11 篇）与保版式中文翻译 PDF（已完成 25 篇，由 [SuperTranslate](https://github.com/asimfish/super_translate) + Qwen2.5-32B 生成）。
+精选的 GFlowNet（Generative Flow Networks）论文、代码、课程与深度解读清单。收录论文 **206** 篇（检索截止 2026-08-25），其中 **35** 篇核心论文配有中文深度解读（已完成 35 篇）与保版式中文翻译 PDF（已完成 28 篇，由 [SuperTranslate](https://github.com/asimfish/super_translate) + Qwen2.5-32B 生成）。
 
 A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Legend: 📝 深度解读 in-depth note · 🇨🇳 中文PDF Chinese translation · 📄 英文PDF original PDF.
 
@@ -63,15 +63,15 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   GFlowNet 的原始论文，用 DAG 上的流匹配把终止对象的采样概率训练成与奖励成比例，并以分子设计和主动学习说明“多样高奖励采样”不同于最大化奖励。
 - `T02` [GFlowNet Foundations](https://jmlr.org/papers/v24/22-0364.html) · *JMLR 2023* [📝 深度解读](notes/T02_gflownet_foundations.md) · [🇨🇳 中文PDF](pdfs/zh/T02_zh.pdf) · [📄 英文PDF](pdfs/en/T02_gflownet_foundations.pdf)  
   建立 Markovian flow、state/edge/trajectory flow、前向与后向策略、reward matching 等统一数学框架，并系统说明 FM、DB 等约束为何导出正确终止分布。
-- `T03` [Trajectory Balance: Improved Credit Assignment in GFlowNets](https://proceedings.neurips.cc/paper_files/paper/2022/hash/27b51baca8377a0cf109f6ecc15a0f70-Abstract.html) · *NeurIPS 2022* [🇨🇳 中文PDF](pdfs/zh/T03_zh.pdf) · [📄 英文PDF](pdfs/en/T03_trajectory_balance_improved_credit_assignment_in_gflownets.pdf)  
+- `T03` [Trajectory Balance: Improved Credit Assignment in GFlowNets](https://proceedings.neurips.cc/paper_files/paper/2022/hash/27b51baca8377a0cf109f6ecc15a0f70-Abstract.html) · *NeurIPS 2022* [📝 深度解读](notes/T03_trajectory_balance_credit_assignment.md) · [🇨🇳 中文PDF](pdfs/zh/T03_zh.pdf) · [📄 英文PDF](pdfs/en/T03_trajectory_balance_improved_credit_assignment_in_gflownets.pdf)  
   提出轨迹级恒等式，将一条完整构造路径上的前向概率、后向概率、配分函数 \(Z\) 和终点奖励联系起来。
 - `T04` [Generative Flow Networks for Discrete Probabilistic Modeling](https://proceedings.mlr.press/v162/zhang22v.html) · *ICML 2022*  
   从离散概率建模角度研究 Markov flow 的参数化和学习，澄清多条生成路径如何共同决定对象概率及其熵结构。
-- `T05` [Learning GFlowNets from Partial Episodes for Improved Convergence and Stability](https://proceedings.mlr.press/v202/madan23a.html) · *ICML 2023* [🇨🇳 中文PDF](pdfs/zh/T05_zh.pdf) · [📄 英文PDF](pdfs/en/T05_learning_gflownets_from_partial_episodes_for_improved_conver.pdf)  
+- `T05` [Learning GFlowNets from Partial Episodes for Improved Convergence and Stability](https://proceedings.mlr.press/v202/madan23a.html) · *ICML 2023* [📝 深度解读](notes/T05_subtrajectory_balance_partial_episodes.md) · [🇨🇳 中文PDF](pdfs/zh/T05_zh.pdf) · [📄 英文PDF](pdfs/en/T05_learning_gflownets_from_partial_episodes_for_improved_conver.pdf)  
   提出 Subtrajectory Balance，用任意子轨迹上的 balance 约束连接一步 DB 与完整 TB，并用 \(\lambda\) 控制信用分配尺度。
 - `T06` [Better Training of GFlowNets with Local Credit and Incomplete Trajectories](https://proceedings.mlr.press/v202/pan23c.html) · *ICML 2023*  
   利用中间状态的局部能量或奖励信息，并允许从不完整轨迹学习，从而缓解只有终点奖励时的稀疏信用问题。
-- `T07` [Towards Understanding and Improving GFlowNet Training](https://proceedings.mlr.press/v202/shen23a.html) · *ICML 2023* [🇨🇳 中文PDF](pdfs/zh/T07_zh.pdf) · [📄 英文PDF](pdfs/en/T07_towards_understanding_and_improving_gflownet_training.pdf)  
+- `T07` [Towards Understanding and Improving GFlowNet Training](https://proceedings.mlr.press/v202/shen23a.html) · *ICML 2023* [📝 深度解读](notes/T07_understanding_improving_gfn_training.md) · [🇨🇳 中文PDF](pdfs/zh/T07_zh.pdf) · [📄 英文PDF](pdfs/en/T07_towards_understanding_and_improving_gflownet_training.pdf)  
   系统研究有限训练下 loss、终止分布误差和内部流之间的鸿沟，指出常用目标可能在欠拟合、稀疏奖励和长轨迹环境中产生误导。
 
 ## VI、RL 与状态空间扩展 · Connections to VI / RL & Extensions
@@ -84,13 +84,13 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   把 GFlowNet 用作组合离散潜变量的摊销后验，并嵌入 EM 式参数学习循环。
 - `T11` [Generative Flow Networks: A Markov Chain Perspective](https://arxiv.org/abs/2307.01422) · *预印本 2023*  
   用 Markov chain 的语言重新表述 GFlowNet，帮助连接平稳分布、路径测度和循环状态空间。
-- `T12` [A Theory of Continuous Generative Flow Networks](https://proceedings.mlr.press/v202/lahlou23a.html) · *ICML 2023* [🇨🇳 中文PDF](pdfs/zh/T12_zh.pdf) · [📄 英文PDF](pdfs/en/T12_a_theory_of_continuous_generative_flow_networks.pdf)  
+- `T12` [A Theory of Continuous Generative Flow Networks](https://proceedings.mlr.press/v202/lahlou23a.html) · *ICML 2023* [📝 深度解读](notes/T12_continuous_gflownets_theory.md) · [🇨🇳 中文PDF](pdfs/zh/T12_zh.pdf) · [📄 英文PDF](pdfs/en/T12_a_theory_of_continuous_generative_flow_networks.pdf)  
   将离散 DAG 上的流守恒推广到一般测度空间，处理连续及混合状态、可测流和密度等问题。
 - `T13` [Stochastic Generative Flow Networks](https://proceedings.mlr.press/v216/pan23a.html) · *UAI 2023*  
   把环境转移本身具有随机性的情况纳入 GFlowNet，而不是假设动作唯一决定下一状态。
-- `T14` [Generative Flow Networks as Entropy-Regularized RL](https://proceedings.mlr.press/v238/tiapkin24a.html) · *AISTATS 2024* [🇨🇳 中文PDF](pdfs/zh/T14_zh.pdf) · [📄 英文PDF](pdfs/en/T14_generative_flow_networks_as_entropy_regularized_rl.pdf)  
+- `T14` [Generative Flow Networks as Entropy-Regularized RL](https://proceedings.mlr.press/v238/tiapkin24a.html) · *AISTATS 2024* [📝 深度解读](notes/T14_gfn_entropy_regularized_rl.md) · [🇨🇳 中文PDF](pdfs/zh/T14_zh.pdf) · [📄 英文PDF](pdfs/en/T14_generative_flow_networks_as_entropy_regularized_rl.pdf)  
   将 GFlowNet 写成特定的最大熵强化学习问题，连接 soft value、policy consistency 和 reward-proportional sampling。
-- `T15` [Discrete Probabilistic Inference as Control in Multi-path Environments](https://proceedings.mlr.press/v244/deleu24a.html) · *UAI 2024* [🇨🇳 中文PDF](pdfs/zh/T15_zh.pdf) · [📄 英文PDF](pdfs/en/T15_discrete_probabilistic_inference_as_control_in_multi_path_en.pdf)  
+- `T15` [Discrete Probabilistic Inference as Control in Multi-path Environments](https://proceedings.mlr.press/v244/deleu24a.html) · *UAI 2024* [📝 深度解读](notes/T15_inference_as_control_multipath.md) · [🇨🇳 中文PDF](pdfs/zh/T15_zh.pdf) · [📄 英文PDF](pdfs/en/T15_discrete_probabilistic_inference_as_control_in_multi_path_en.pdf)  
   从控制角度推导离散概率推断，明确多路径结构中必须怎样校正奖励才能得到目标对象分布。
 - `T16` [GFlowNet Training by Policy Gradients](https://proceedings.mlr.press/v235/niu24c.html) · *ICML 2024*  
   提出用 policy-gradient 形式训练 GFlowNet，并讨论前向与后向策略的联合设计。
@@ -102,9 +102,9 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   建立允许环的一般 GFlowNet 理论，用 expected visit flow 和吸收条件取代 DAG 中的简单路径计数，并揭示循环可能造成的 flow explosion。
 - `T20` [Diffusion Generative Flow Samplers](https://arxiv.org/abs/2310.02679) · *ICLR 2024*  
   将 GFlowNet 的部分轨迹训练信号引入连续迭代式 diffusion sampler，以学习未归一化目标分布。
-- `N018` [Trajectory Balance with Asynchrony (TBA)](https://arxiv.org/abs/2503.18929) · *NeurIPS 2025（已接收，海报 #1115）*  
+- `N018` [Trajectory Balance with Asynchrony (TBA)](https://arxiv.org/abs/2503.18929) · *NeurIPS 2025（已接收，海报 #1115）* [📝 深度解读](notes/N018_trajectory_balance_asynchrony.md) · [🇨🇳 中文PDF](pdfs/zh/N018_zh.pdf) · [📄 英文PDF](pdfs/en/N018_trajectory_balance_with_asynchrony.pdf)  
   把 **off-policy TB 目标**嵌入异步分布式 RL：多个 searcher 并行生成轨迹写入 replay buffer，单个 trainer 按 reward/recency 优先级异步采样更新，解耦"探索"与"学习"。
-- `N019` [FlowRL: Matching Reward Distributions for LLM Reasoning](https://arxiv.org/abs/2509.15207) · *ICLR 2026* [🇨🇳 中文PDF](pdfs/zh/N019_zh.pdf) · [📄 英文PDF](pdfs/en/N019_flowrl_matching_reward_distributions_for_llm_reasoning.pdf)  
+- `N019` [FlowRL: Matching Reward Distributions for LLM Reasoning](https://arxiv.org/abs/2509.15207) · *ICLR 2026* [📝 深度解读](notes/N019_flowrl_reward_distribution_llm.md) · [🇨🇳 中文PDF](pdfs/zh/N019_zh.pdf) · [📄 英文PDF](pdfs/en/N019_flowrl_matching_reward_distributions_for_llm_reasoning.pdf)  
   主张用"匹配完整奖励分布"取代 PPO/GRPO 的奖励最大化：用**可学习配分函数** \(Z_\phi(x)\) 把标量奖励归一化为目标分布，最小化策略与目标的**反向 KL**，并证明其在期望梯度上**等价于 GFlowNet 的 TB 损失**。
 - `N020` [GDPO: Learning to Directly Align Language Models with Diversity Using GFlowNets](https://aclanthology.org/2024.emnlp-main.951/) · *EMNLP 2024 Main，pp. 17120-17139*  
   把**离线**偏好对齐视为贝叶斯推断，用 GFlowNet 直接从离线偏好数据学习"按奖励分布采样"的前向策略，得到多样性寻优的 DPO 变体（GFlowNet-DPO）。
@@ -142,7 +142,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
 
 ## 训练目标与损失设计 · Training Objectives & Loss Design
 
-- `N007` [Distributional GFlowNets with Quantile Flows](https://openreview.net/forum?id=vFSsRYGpjW) · *TMLR 2024 · arXiv:2302.05793* [🇨🇳 中文PDF](pdfs/zh/N007_zh.pdf) · [📄 英文PDF](pdfs/en/N007_distributional_gflownets_with_quantile_flows.pdf)  
+- `N007` [Distributional GFlowNets with Quantile Flows](https://openreview.net/forum?id=vFSsRYGpjW) · *TMLR 2024 · arXiv:2302.05793* [📝 深度解读](notes/N007_distributional_quantile_flows.md) · [🇨🇳 中文PDF](pdfs/zh/N007_zh.pdf) · [📄 英文PDF](pdfs/en/N007_distributional_gflownets_with_quantile_flows.pdf)  
   把每条边的流从标量改为分布并用分位数函数参数化，提出 quantile matching（QM）这一分布式 TD 风格 balance 目标：既能处理随机奖励，又可经失真风险度量得到风险敏感策略；确定性基准上也因更强训练信号优于 FM/DB/TB。
 - `N008` [Order-Preserving GFlowNets](https://openreview.net/forum?id=VXDPXuq4oG) · *ICLR 2024 · arXiv:2310.00386*  
   不再拟合给定标量奖励，而是学习与候选（偏）序一致的奖励并按其采样；理论证明训练过程逐步稀疏化奖励景观，天然实现"先探索后利用"，免去奖励指数 \(\beta\) 调参，并直接适配多目标 Pareto 前沿。
@@ -175,7 +175,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   通过宏动作或动作抽象缩短有效生成深度，减少长轨迹中的信用传播负担。
 - `T31` [Optimizing Backward Policies in GFlowNets via Trajectory Likelihood Maximization](https://proceedings.iclr.cc/paper_files/paper/2025/hash/f3efbcfe76bed022a37c5aeb1daf2326-Abstract-Conference.html) · *ICLR 2025*  
   通过轨迹似然最大化和 entropy-RL 视角显式优化 \(P_B\)，而不是把它固定为均匀分布。
-- `T32` [When Do GFlowNets Learn the Right Distribution?](https://proceedings.iclr.cc/paper_files/paper/2025/hash/a48f8928f78a58399ef0049453c14b02-Abstract-Conference.html) · *ICLR 2025 Spotlight*  
+- `T32` [When Do GFlowNets Learn the Right Distribution?](https://proceedings.iclr.cc/paper_files/paper/2025/hash/a48f8928f78a58399ef0049453c14b02-Abstract-Conference.html) · *ICLR 2025 Spotlight* [📝 深度解读](notes/T32_when_gfn_learn_right_distribution.md) · [📄 英文PDF](pdfs/en/T32_when_do_gflownets_learn_the_right_distribution.pdf)  
   分析局部 balance 误差、函数表示限制与最终对象分布误差之间的关系，并提出比平均 loss 更可靠的 correctness 评价。
 - `T33` [Generalization and Distributed Learning of GFlowNets](https://iclr.cc/virtual/2025/poster/29760) · *ICLR 2025*  
   给出数据依赖的泛化分析，并提出异步分布式 SAL 训练方法。
@@ -183,7 +183,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   系统比较平方误差之外的回归损失，研究尾部惩罚和鲁棒性如何改变探索—利用及梯度行为。
 - `T35` [Towards Improving Exploration through Sibling Augmented GFlowNets](https://iclr.cc/virtual/2025/poster/30233) · *ICLR 2025*  
   用一个探索 sibling 与主 GFN 协作，将发现新模式和保持目标分布的职责部分解耦。
-- `T36` [Revisiting Non-Acyclic GFlowNets in Discrete Environments](https://proceedings.mlr.press/v267/morozov25a.html) · *ICML 2025* [🇨🇳 中文PDF](pdfs/zh/T36_zh.pdf) · [📄 英文PDF](pdfs/en/T36_revisiting_non_acyclic_gflownets_in_discrete_environments.pdf)  
+- `T36` [Revisiting Non-Acyclic GFlowNets in Discrete Environments](https://proceedings.mlr.press/v267/morozov25a.html) · *ICML 2025* [📝 深度解读](notes/T36_revisiting_nonacyclic_gfn.md) · [🇨🇳 中文PDF](pdfs/zh/T36_zh.pdf) · [📄 英文PDF](pdfs/en/T36_revisiting_non_acyclic_gflownets_in_discrete_environments.pdf)  
   在有限离散非无环环境中给出更简洁的存在性、唯一性和稳定性分析，并刻画固定 \(P_B\) 与 minimum flow 的关系。
 - `T37` [Random Policy Evaluation Uncovers Policies of GFlowNets](https://proceedings.mlr.press/v267/he25a.html) · *ICML 2025*  
   把 GFlowNet flow 与普通随机策略的 policy evaluation 联系起来，提供分析策略结构的新工具。
@@ -201,7 +201,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   将边流分解为状态流与动作分配项，以减少直接参数化所有边的成本。
 - `T44` [Relative Trajectory Balance Is Equivalent to Trust-PCL](https://arxiv.org/abs/2509.01632) · *NeurIPS 2025 FPI Workshop*  
   给出 relative TB 与 path-consistency RL 方法 Trust-PCL 的对应关系，进一步收紧 GFN 与最大熵 RL 的理论连接。
-- `N011` [Generative Augmented Flow Networks](https://arxiv.org/abs/2210.03308) · *ICLR 2023（notable top 25%） · arXiv:2210.03308* [🇨🇳 中文PDF](pdfs/zh/N011_zh.pdf) · [📄 英文PDF](pdfs/en/N011_generative_augmented_flow_networks.pdf)  
+- `N011` [Generative Augmented Flow Networks](https://arxiv.org/abs/2210.03308) · *ICLR 2023（notable top 25%） · arXiv:2210.03308* [📝 深度解读](notes/N011_generative_augmented_flow_networks.md) · [🇨🇳 中文PDF](pdfs/zh/N011_zh.pdf) · [📄 英文PDF](pdfs/en/N011_generative_augmented_flow_networks.pdf)  
   GAFlowNet 把 intrinsic motivation（Random Network Distillation）作为中间奖励注入 flow：同时用 edge-based 与 state-based 内在奖励增广，把只有终点奖励的稀疏信号变成沿轨迹的密集反馈，并证明增广目标渐近无偏于原 GFlowNet。
 - `N012` [Thompson Sampling for Improved Exploration in GFlowNets](https://arxiv.org/abs/2306.17693) · *ICML 2023 SPIGM Workshop · arXiv:2306.17693*  
   TS-GFN 把"训练时选哪条轨迹"视作主动学习问题，用贝叶斯/多臂老虎机思想解决：将前向策略网络最后一层参数化为 ensemble，维护对策略的近似后验，每步采一个 ensemble 成员并按其策略采样轨迹，从而优先探索不确定区域。
@@ -212,7 +212,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
 
 ## 连续、非无环与随机扩展 · Continuous, Non-acyclic & Stochastic
 
-- `N015` [CFlowNets: Continuous Control with Generative Flow Networks](https://openreview.net/forum?id=yAYHho4fATa) · *ICLR 2023（正式）* [🇨🇳 中文PDF](pdfs/zh/N015_zh.pdf) · [📄 英文PDF](pdfs/en/N015_cflownets_continuous_control_with_generative_flow_networks.pdf)  
+- `N015` [CFlowNets: Continuous Control with Generative Flow Networks](https://openreview.net/forum?id=yAYHho4fATa) · *ICLR 2023（正式）* [📝 深度解读](notes/N015_cflownets_continuous_control.md) · [🇨🇳 中文PDF](pdfs/zh/N015_zh.pdf) · [📄 英文PDF](pdfs/en/N015_cflownets_continuous_control_with_generative_flow_networks.pdf)  
   首个把 GFlowNet 推向**连续控制/连续动作空间**的方法：用重要性采样近似连续状态的入流与出流，改写 flow-matching 损失，并给出流近似误差界（随采样数增大而衰减）。
 - `N016` [MetaGFN: Exploring Distant Modes with Adapted Metadynamics for Continuous GFlowNets](https://openreview.net/forum?id=dtyNeemB7A) · *TMLR 2025*  
   针对"连续 GFN 的探索几乎无人研究"的空白，提出 Adapted Metadynamics：借 molecular dynamics 的 metadynamics 思想，对任意黑盒奖励在连续域上施加历史偏置势以逃离已访问模式，作为连续 GFN 的 off-policy 探索器，在多个连续/流形（球面、环面）环境上比既有探索策略更快收敛、发现更远模式。
@@ -229,7 +229,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   提出 evaluation balance 和 partial-episode evaluator，在不完整轨迹上估计或诊断策略，并连接 value-based 与 policy-based GFN。
 - `T48` [Loss-Guided Auxiliary Agents for Overcoming Mode Collapse in GFlowNets](https://ojs.aaai.org/index.php/AAAI/article/view/39613) · *AAAI 2026*  
   训练辅助 agent 专门访问主模型高 loss、低覆盖的区域，再把经验回流给主 GFN。
-- `T49` [\(f\)-Trajectory Balance](https://icml.cc/virtual/2026/poster/61247) · *ICML 2026* [🇨🇳 中文PDF](pdfs/zh/T49_zh.pdf) · [📄 英文PDF](pdfs/en/T49_f_trajectory_balance.pdf)  
+- `T49` [\(f\)-Trajectory Balance](https://icml.cc/virtual/2026/poster/61247) · *ICML 2026* [📝 深度解读](notes/T49_f_trajectory_balance.md) · [🇨🇳 中文PDF](pdfs/zh/T49_zh.pdf) · [📄 英文PDF](pdfs/en/T49_f_trajectory_balance.pdf)  
   建立 translation-invariant trajectory loss 与 \(f\)-divergence 的系统对应，使 TB loss 设计从经验试错转向 divergence 选择。
 - `T50` [Avoid What You Know: Divergent Trajectory Balance for GFlowNets](https://icml.cc/virtual/2026/poster/62783) · *ICML 2026 主会*  
   ACE 同时维护 canonical GFN 和 exploration GFN，让后者针对主模型欠覆盖的高奖励区域收集数据。
@@ -247,7 +247,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   用频域（谱）正则稳定随机 GFlowNet，提升噪声环境下的稳定性与稀疏奖励探索。
 - `T57` [Proximal Policy Optimization for Amortized Discrete Sampling](https://arxiv.org/abs/2606.15793) · *ICML 2026 SPIGM Workshop*  
   从最大熵 RL 连接出发，将 PPO 式 clipped policy update 用于摊销离散采样。
-- `O01` [Optimal Transport for Machine Learners](https://arxiv.org/abs/2505.06589) · *课程讲义/预印本 2025* [📄 英文PDF](pdfs/en/O01_optimal_transport_for_machine_learners.pdf)  
+- `O01` [Optimal Transport for Machine Learners](https://arxiv.org/abs/2505.06589) · *课程讲义/预印本 2025* [📝 深度解读](notes/O01_ot_for_machine_learners.md) · [📄 英文PDF](pdfs/en/O01_optimal_transport_for_machine_learners.pdf)  
   面向机器学习读者系统讲解 Monge、Kantorovich、对偶、动态 OT、Wasserstein 几何和梯度流。
 - `O02` [A Framework for Wasserstein-1-Type Metrics](https://arxiv.org/abs/1701.01945) · *J. Convex Anal. 2019*  
   给出 Wasserstein-1 型距离的统一框架，将其推广到不同质量的非负测度之间（非平衡 OT），保持凸性与可计算性并涵盖多种已有度量。
@@ -259,32 +259,32 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   学习可条件化、可摊销的 neural OT map 或 plan，希望一个模型处理一族源—目标分布。
 - `O06` [Computing High-Dimensional Optimal Transport by Flow Neural Networks](https://proceedings.mlr.press/v258/xu25f.html) · *AISTATS 2025*  
   用神经流处理连续高维 OT，重点解决传统离散 coupling 在维度和样本数上的扩展困难。
-- `O07` [Learning Shortest Paths with Generative Flow Networks](https://arxiv.org/abs/2603.01786) · *ICML 2026 SPIGM Workshop* [🇨🇳 中文PDF](pdfs/zh/O07_zh.pdf) · [📄 英文PDF](pdfs/en/O07_learning_shortest_paths_with_generative_flow_networks.pdf)  
+- `O07` [Learning Shortest Paths with Generative Flow Networks](https://arxiv.org/abs/2603.01786) · *ICML 2026 SPIGM Workshop* [📝 深度解读](notes/O07_shortest_paths_gflownets.md) · [🇨🇳 中文PDF](pdfs/zh/O07_zh.pdf) · [📄 英文PDF](pdfs/en/O07_learning_shortest_paths_with_generative_flow_networks.pdf)  
   研究在满足目标终止分布的多个可行内部流中，minimum-flow 准则为何偏向最短生成路径。
-- `O08` [Your GFlowNet Secretly Learns an Optimal Transport Plan](https://arxiv.org/abs/2606.06272) · ***ICML 2026 SPIGM Workshop；非主会*** [🇨🇳 中文PDF](pdfs/zh/O08_zh.pdf) · [📄 英文PDF](pdfs/en/O08_your_gflownet_secretly_learns_an_optimal_transport_plan.pdf)  
+- `O08` [Your GFlowNet Secretly Learns an Optimal Transport Plan](https://arxiv.org/abs/2606.06272) · ***ICML 2026 SPIGM Workshop；非主会*** [📝 深度解读](notes/O08_gfn_secretly_ot_plan.md) · [🇨🇳 中文PDF](pdfs/zh/O08_zh.pdf) · [📄 英文PDF](pdfs/en/O08_your_gflownet_secretly_learns_an_optimal_transport_plan.pdf)  
   论文考虑非无环图、给定源分布与奖励诱导目标分布，并在固定初始流边缘下最小化总流量；在图最短路诱导的 transport cost 下，最优 GFlowNet 边流编码一个 Kantorovich 最优 coupling。
 
 ## GFlowNet × 最优传输 · GFlowNet × Optimal Transport
 
 - `N037` [Discrete Diffusion Schrödinger Bridge Matching for Graph Transformation (DDSBM)](https://arxiv.org/abs/2410.01500) · *ICLR 2025*  
   用连续时间马尔可夫链把 Iterative Markovian Fitting 推广到高维离散/图空间求解 SB 并证明收敛；关键是把"独立修改节点与边"的参考动力学对应到 **以图编辑距离(GED)为 cost 的熵正则 OT(EOT)**，落地于分子优化（最小结构改动达成目标性质）。
-- `N038` [Generalized Schrödinger Bridge on Graphs (GSBoG)](https://arxiv.org/abs/2602.04675) · *预印本 2026-02（v2）*  
+- `N038` [Generalized Schrödinger Bridge on Graphs (GSBoG)](https://arxiv.org/abs/2602.04675) · *预印本 2026-02（v2）* [📝 深度解读](notes/N038_generalized_sb_on_graphs.md) · [🇨🇳 中文PDF](pdfs/zh/N038_zh.pdf) · [📄 英文PDF](pdfs/en/N038_generalized_schrodinger_bridge_on_graphs.pdf)  
   首个**数据驱动**的"图上广义 Schrödinger bridge"：以受控 CTMC + 迭代比例拟合 + TD 目标，学习满足源—目标边缘、并在 state-dependent running cost 下优化中间轨迹的**可执行图传输策略**，避免稠密全局 solver、可扩展到大稀疏图。
 - `N039` [Entering the Era of Discrete Diffusion Models: A Benchmark for Schrödinger Bridges and Entropic Optimal Transport](https://arxiv.org/abs/2509.23348) · *预印本 2025-09（v2）*  
   首个**离散空间 SB/EOT 基准**：用 CP 参数化构造"解析已知 SB 解"的分布对，可严格评测 solver 是否真解 EOT/SB（而非只看 FID/MSE）；副产品给出 DLightSB、DLightSB-M、α-CSBM 三个求解器并在高维离散设置比较。
 - `N040` [Minimal-Action Discrete Schrödinger Bridge Matching for Peptide Sequence Design (MadSBM)](https://arxiv.org/abs/2601.22408) · *预印本 2026-01（v1）*  
   把肽序列生成建模为**氨基酸编辑图上的受控 CTMC**，以预训练蛋白语言模型 logits 作参考过程，学习时间相关控制场以走"最小作用量/低成本"传输路径；并首次给离散 SB 加**分类器引导**。
-- `N041` [Unsupervised Learning for Optimal Transport plan prediction between unbalanced graphs (ULOT)](https://papers.nips.cc/paper_files/paper/2025/hash/873fd89b3e4db1f6242c2333673e104d-Abstract-Conference.html) · *NeurIPS 2025 主会 · arXiv:2506.12025*  
+- `N041` [Unsupervised Learning for Optimal Transport plan prediction between unbalanced graphs (ULOT)](https://papers.nips.cc/paper_files/paper/2025/hash/873fd89b3e4db1f6242c2333673e104d-Abstract-Conference.html) · *NeurIPS 2025 主会 · arXiv:2506.12025* [📝 深度解读](notes/N041_unsupervised_ot_unbalanced_graphs.md) · [🇨🇳 中文PDF](pdfs/zh/N041_zh.pdf) · [📄 英文PDF](pdfs/en/N041_unsupervised_ot_plan_unbalanced_graphs.pdf)  
   用 GNN + cross-attention、并**以 FUGW 权衡超参为条件**，无监督地预测两图之间的（不平衡）OT plan，比经典 solver 快约两个数量级，且预测 plan 可为经典 solver 提供 **warm-start**、对输入与超参可微。
 - `N042` [Modeling Stochastic Conditional Dynamics from Sparse Observations via Kernel-Stabilized Flow Matching (CVFM)](https://arxiv.org/abs/2411.08314) · *TMLR 2026*  
   提出 **Conditional Variable Flow Matching**：在**连续条件密度空间**上摊销学习条件分布之间的流；用条件 Wasserstein 距离 + "条件失配核"抑制稀疏/不配对数据下 mini-batch 条件耦合的方差爆炸，并可扩展逼近**条件 Schrödinger bridge**。
-- `N043` [Diffusion Schrödinger Bridge Matching (DSBM)](https://proceedings.neurips.cc/paper_files/paper/2023/hash/c428adf74782c2092d254329b6b02482-Abstract.html) · *NeurIPS 2023 · arXiv:2303.16852* [📝 深度解读](notes/N043_diffusion_sb_matching.md)  
+- `N043` [Diffusion Schrödinger Bridge Matching (DSBM)](https://proceedings.neurips.cc/paper_files/paper/2023/hash/c428adf74782c2092d254329b6b02482-Abstract.html) · *NeurIPS 2023 · arXiv:2303.16852* [📝 深度解读](notes/N043_diffusion_sb_matching.md) · [📄 英文PDF](pdfs/en/N043_diffusion_schrodinger_bridge_matching.pdf)  
   提出 **Iterative Markovian Fitting (IMF)** 与 DSBM：用一系列"简单回归"迭代逼近 SB，而 **SB 恰恰恢复熵正则版 OT**，避免旧 DSB 的时间离散化与"遗忘"误差累积。
 - `N044` [Generalized Schrödinger Bridge Matching (GSBM)](https://arxiv.org/abs/2310.02233) · *ICLR 2024*  
   广义 SB matching：在固定首末边缘下支持**依赖状态与分布的一般 running cost**，用变分/条件模拟分解逐步求解。
 - `N045` [Light Schrödinger Bridge (LightSB)](https://openreview.net/forum?id=WhZoCLRWYJ) · *ICLR 2024 · arXiv:2310.01174*  
   轻量、**免模拟**的 SB/EOT 求解器：用 sum-exp 二次型参数化 Schrödinger potential + 能量视角，中等维度几分钟即可求 SB；并证明其为 **SB 的通用逼近器**、给出**泛化误差分析**。
-- `N046` [Categorical Schrödinger Bridge Matching (CSBM)](https://proceedings.mlr.press/v267/ksenofontov25a.html) · *ICML 2025 · arXiv:2502.01416* [📝 深度解读](notes/N046_categorical_schrodinger_bridge.md)  
+- `N046` [Categorical Schrödinger Bridge Matching (CSBM)](https://proceedings.mlr.press/v267/ksenofontov25a.html) · *ICML 2025 · arXiv:2502.01416* [📝 深度解读](notes/N046_categorical_schrodinger_bridge.md) · [📄 英文PDF](pdfs/en/N046_categorical_schrodinger_bridge_matching.pdf)  
   为**离散时间/离散空间 SB** 提供理论与算法基座：证明**离散时间 IMF (D-IMF) 在有限空间、一般 Markov 参考过程下收敛到唯一 SB**，据此给出可"少步生成"的 Categorical SB Matching（VQ 图像/合成数据验证）。
 - `N047` [Neural Optimal Transport](https://openreview.net/forum?id=d8CBRlWNkqH) · *ICLR 2023 Spotlight*  
   Korotin 等提出基于鞍点对偶的神经 OT 算法，可同时求强/弱 cost 下的确定性 map 与随机 plan，并证明神经网络是 transport plan 的通用逼近器。
@@ -311,7 +311,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   Blessing、Vargas、Neumann 等建立神经采样器统一基准：标准化任务套件覆盖 SMC、AFT、CRAFT、FAB、GMMVI 及各类 diffusion sampler，系统研究 ELBO/EUBO 等指标何时掩盖 mode collapse，并提出熵模式覆盖等新度量。
 - `N031` [Iterated Denoising Energy Matching for Sampling from Boltzmann Densities](https://proceedings.mlr.press/v235/akhound-sadegh24a.html) · *ICML 2024 poster · arXiv:2402.06121*  
   Mila 团队（含 Bengio、Malkin、Tong）提出 iDEM：只用能量函数及其梯度、不需数据样本的迭代式随机 score matching，内环模拟自由、外环用模型自采样探索，凭 diffusion 的快速模式混合平滑能量面，首次在 LJ-55（165 维）粒子系统上用纯能量训练成功，训练快 2–5 倍。
-- `N032` [Adjoint Matching: Fine-tuning Flow and Diffusion Generative Models with Memoryless Stochastic Optimal Control](https://openreview.net/forum?id=xQBRrtQM8u) · *ICLR 2025 **Spotlight** · arXiv:2409.08861* [📄 英文PDF](pdfs/en/N032_adjoint_matching_fine_tuning_flow_and_diffusion_generative_m.pdf)  
+- `N032` [Adjoint Matching: Fine-tuning Flow and Diffusion Generative Models with Memoryless Stochastic Optimal Control](https://openreview.net/forum?id=xQBRrtQM8u) · *ICLR 2025 **Spotlight** · arXiv:2409.08861* [📝 深度解读](notes/N032_adjoint_matching_soc_finetuning.md) · [📄 英文PDF](pdfs/en/N032_adjoint_matching_fine_tuning_flow_and_diffusion_generative_m.pdf)  
   Domingo-Enrich、Chen（Meta）把 reward 微调严格表述为 SOC 问题：证明必须使用 memoryless 噪声调度才能无偏收敛到 reward-tilted 分布，并把 SOC 化为回归式 Adjoint Matching 目标。
 - `N033` [Adjoint Sampling: Highly Scalable Diffusion Samplers via Adjoint Matching](https://proceedings.mlr.press/v267/havens25a.html) · *ICML 2025 · arXiv:2504.11713*  
   Meta FAIR 将 Adjoint Matching 特化为从未归一化密度采样：Reciprocal Adjoint Matching 加 replay buffer，使梯度更新次数远超能量评估次数，成为首个如此可扩展的 on-policy 方法；支持 SE(3) 对称与周期边界，扩展到神经能量函数上的摊销构象生成并开源基准。
@@ -324,7 +324,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
 
 ## 分子、蛋白与材料 · Molecules, Proteins & Materials
 
-- `A01` [GFlowNets for AI-Driven Scientific Discovery](https://pubs.rsc.org/en/content/articlelanding/2023/dd/d3dd00002h) · *Digital Discovery 2023* [📄 英文PDF](pdfs/en/A01_gflownets_for_ai_driven_scientific_discovery.pdf)  
+- `A01` [GFlowNets for AI-Driven Scientific Discovery](https://pubs.rsc.org/en/content/articlelanding/2023/dd/d3dd00002h) · *Digital Discovery 2023* [📝 深度解读](notes/A01_gfn_scientific_discovery.md) · [📄 英文PDF](pdfs/en/A01_gflownets_for_ai_driven_scientific_discovery.pdf)  
   系统回顾 GFlowNet 在分子、蛋白、材料、因果发现和主动学习中的作用，并解释为什么科学发现往往需要一组多样候选而非单个最优解。
 - `A02` [Biological Sequence Design with GFlowNets](https://proceedings.mlr.press/v162/jain22a.html) · *ICML 2022*  
   将序列逐步构造为 GFN 环境，并与主动学习结合，在昂贵 oracle 下寻找多样高适应度生物序列。
@@ -385,7 +385,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   首个在潜在混杂（不假设因果充分性）下做分布式推断的 GFlowNet 因果发现方法：按 BIC 类得分成比例采样祖先图（AG），用最优实验设计主动向专家或 LLM 提问，再以重要性加权把带噪反馈并入后验而无需重训，并证明反馈足够准确时收敛到真实祖先图。
 - `N060` [Learning Equivalence Classes of Bayesian Network Structures with GFlowNet](https://openreview.net/forum?id=FAcc7oAdaa) · *TMLR 2025*  
   提出 CPDAG-GFN：不在 DAG 空间、而直接在 Markov 等价类（CPDAG）空间上用 GFlowNet 学习后验并抽取高分候选，配合偏稀疏过滤器改进与真图的对齐。
-- `N061` [Generative Flow Networks: Theory and Applications to Structure Learning](https://arxiv.org/abs/2501.05498) · *博士论文 · arXiv:2501.05498* [📄 英文PDF](pdfs/en/N061_generative_flow_networks_theory_and_applications_to_structur.pdf)  
+- `N061` [Generative Flow Networks: Theory and Applications to Structure Learning](https://arxiv.org/abs/2501.05498) · *博士论文 · arXiv:2501.05498* [📝 深度解读](notes/N061_deleu_phd_thesis_gfn.md) · [📄 英文PDF](pdfs/en/N061_generative_flow_networks_theory_and_applications_to_structur.pdf)  
   DAG-GFlowNet（A17）与 JSP-GFN（A18）一作 Deleu 的博士论文：上篇系统建立 GFlowNet 数学基础及其与变分推断、强化学习的联系和连续空间扩展；下篇完整展开贝叶斯结构学习——在观测与干预数据下对 DAG 结构及机制参数做联合后验近似。
 - `N062` [Symmetric Replay Training: Enhancing Sample Efficiency in Deep RL for Combinatorial Optimization (SRT)](https://arxiv.org/abs/2306.01276) · ***ICML 2024 主会***  
   提出对称回放训练：利用 CO 解空间的对称性（多条 (partial) 轨迹通向同一状态，类似 GFN 后向策略 \(P_B\)），周期性用最大似然对**对称轨迹**做直接信用分配，显著提升样本效率。
@@ -469,7 +469,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
 
 ## 审查流水线补录 · Additional Curated Papers
 
-- `N082` [Path-dependent Discrete Amortized Inference](https://arxiv.org/abs/2608.08644) · *ICML 2026 **Oral*** [🇨🇳 中文PDF](pdfs/zh/N082_zh.pdf) · [📄 英文PDF](pdfs/en/N082_path_dependent_discrete_amortized_inference.pdf)  
+- `N082` [Path-dependent Discrete Amortized Inference](https://arxiv.org/abs/2608.08644) · *ICML 2026 **Oral*** [📝 深度解读](notes/N082_path_dependent_amortized_inference.md) · [🇨🇳 中文PDF](pdfs/zh/N082_zh.pdf) · [📄 英文PDF](pdfs/en/N082_path_dependent_discrete_amortized_inference.pdf)  
   证明 GFlowNet 类离散摊销采样器的 Markov 假设会阻碍训练中的信号传播，且因 state aliasing 灾难性地限制可表达的终止分布；提出用可学习潜动力系统提升 MDP，使策略依赖整条历史轨迹（路径依赖），并把现有摊销采样器训练算法可证地扩展到该非 Markov 设定，实验显示更快收敛与更好探索。
 - `N083` [Particle GFlowNets: Rethinking Generative Marginalization Models](https://proceedings.mlr.press/v337/silva26a.html) · *UAI 2026 主会（PMLR 337:6366–6383）*  
   证明生成边缘化模型（MaM，为任意阶自回归离散建模同时学习边缘与条件概率）与 GFlowNet 等价——此前两者被视为不同范式；进而把 MaM 的采样策略推广到非自回归生成过程，用由 Gelman–Rubin 统计量导出的自动准则对持久 Gibbs 采样器做全状态重启（rejuvenation），显著加速大组合空间中的训练收敛。
@@ -511,7 +511,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   直面 template-based GFlowNet 的三个核心难题：最小化合成成本、扩展到大规模 building block 库、有效利用小片段集；提出 Recursive Cost Guidance 后向策略等机制。
 - `N102` [Adversarial Generative Flow Network for Solving Vehicle Routing Problems](https://openreview.net/forum?id=tBom4xOW1H) · *ICLR 2025 主会 · arXiv:2503.01931*  
   针对 VRP 构造式神经求解器普遍用 Transformer、扩展性受限且解多样性不足的问题，提出对抗式 GFlowNet（AGFN）架构。
-- `N103` [Discrete Compositional Generation via General Soft Operators and Robust Reinforcement Learning](https://openreview.net/forum?id=MGWk2tEgLW) · *ICLR 2026 主会 · arXiv:2506.17007* [🇨🇳 中文PDF](pdfs/zh/N103_zh.pdf) · [📄 英文PDF](pdfs/en/N103_discrete_compositional_generation_via_general_soft_operators.pdf)  
+- `N103` [Discrete Compositional Generation via General Soft Operators and Robust Reinforcement Learning](https://openreview.net/forum?id=MGWk2tEgLW) · *ICLR 2026 主会 · arXiv:2506.17007* [📝 深度解读](notes/N103_general_soft_operators_robust_rl.md) · [🇨🇳 中文PDF](pdfs/zh/N103_zh.pdf) · [📄 英文PDF](pdfs/en/N103_discrete_compositional_generation_via_general_soft_operators.pdf)  
   指出各类熵正则方法（含 GFlowNet）在代理奖励下的过度保守问题，提出用**通用 soft operator** 统一并推广离散组合生成，并以鲁棒 RL 视角给出理论刻画。
 - `N104` [On Scalable and Efficient Training of Diffusion Samplers](https://openreview.net/forum?id=Xzabk07lao) · *NeurIPS 2025 主会 · arXiv:2505.19552*  
   针对能量评估昂贵、采样空间高维时 diffusion sampler 难以扩展的问题，提出可扩展且样本高效的训练框架。
@@ -523,6 +523,8 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
 ## 趋势洞察 Trends & Insights
 
 - [trends applications](insights/trends_applications.md)
+- [trends methods](insights/trends_methods.md)
+- [trends neighbors](insights/trends_neighbors.md)
 
 ## 课程与教程 Courses & Tutorials
 

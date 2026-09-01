@@ -1,0 +1,330 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+
+\usepackage{amsmath,amssymb,amsthm,booktabs,mathtools}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,decorations.pathreplacing}
+\usepackage{xeCJK}
+\setCJKmainfont{Songti SC}
+\setCJKsansfont{Heiti SC}
+\setCJKmonofont{Heiti SC}
+\XeTeXlinebreaklocale "zh"
+\XeTeXlinebreakskip = 0pt plus 1pt
+
+\definecolor{positive}{HTML}{0173B2}
+\definecolor{negative}{HTML}{DE8F05}
+\definecolor{emphasis}{HTML}{029E73}
+\definecolor{neutral}{gray}{0.55}
+\definecolor{cbPurple}{HTML}{CC78BC}
+\newcommand{\pos}[1]{\textcolor{positive}{#1}}
+\newcommand{\con}[1]{\textcolor{negative}{#1}}
+\newcommand{\HL}[1]{\textcolor{emphasis}{#1}}
+
+\title[Awesome GFlowNets]{Awesome GFlowNets}
+\subtitle{从流匹配到可认证训练：206 篇文献的结构化盘点}
+\author{awesome\_Gflow 调研流水线}
+\institute{检索截止 2026-08-25}
+\date{2026 年 9 月}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{本次调研的交付物}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+      \begin{block}{四类产物}
+        \begin{itemize}
+          \item \textbf{206} 篇论文分类目录（TSV + markdown）
+          \item \textbf{35} 篇核心论文中文深度解读
+          \item \textbf{35} 篇保版式中文翻译 PDF
+          \item \textbf{3} 份趋势核实报告
+        \end{itemize}
+      \end{block}
+    \column{0.48\textwidth}
+      \begin{block}{证据纪律}
+        \begin{itemize}
+          \item 解读的论断标注论文章节或公式号
+          \item 个人判断显式标注为「我的判断」
+          \item 趋势报告每条给来源链接与日期
+          \item 检索不到写「未检索到」，不猜
+        \end{itemize}
+      \end{block}
+  \end{columns}
+  \vspace{6pt}
+  技术栈：SuperTranslate 保版式引擎 $+$ 自建 vLLM（Qwen2.5-32B-AWQ，A100 80G，16K 上下文）。
+\end{frame}
+
+\begin{frame}{GFlowNet 解决的问题：采样而非最大化}
+  训练前向策略 $P_F$，使终止对象 $x$ 的采样概率满足
+  \[
+    P_\top(x) \;\propto\; R(x),
+  \]
+  其中 $R(x) > 0$ 是终端奖励，$P_\top$ 是策略诱导的终止分布。
+
+  \vspace{8pt}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={draw, rounded corners, minimum width=2.1cm, minimum height=0.75cm,
+                font=\footnotesize, fill=positive!10},
+    arr/.style={-{Stealth}, thick}
+  ]
+    \node[box] (A) {$s_0$ 空对象};
+    \node[box, right=1.1cm of A] (B) {$s_1$ 加片段};
+    \node[box, right=1.1cm of B] (C) {$\cdots$};
+    \node[box, right=1.1cm of C] (D) {$x$，奖励 $R(x)$};
+    \draw[arr] (A) -- node[above=3pt, font=\scriptsize] {$P_F$} (B);
+    \draw[arr] (B) -- (C);
+    \draw[arr] (C) -- (D);
+  \end{tikzpicture}
+  \end{center}
+
+  \vspace{4pt}
+  同一个 $x$ 可由多条轨迹到达（合流 DAG），这是与自回归模型的核心分野：需要流守恒约束才能保证边缘分布正确。
+
+  \vspace{4pt}
+  \pos{为什么重要}：药物发现要的是结构多样的候选池，单个「最优分子」在湿实验里很可能失败。\con{奖励最大化方法天然坍缩到单模态}，这是结构性差异而非调参问题。
+\end{frame}
+
+\begin{frame}{训练目标谱系：信用传播距离与方差的折中}
+  \vspace{4pt}
+  \begin{center}
+  \begin{tabular}{llll}
+    \toprule
+    目标 & 约束粒度 & 解决什么 & 代价 \\
+    \midrule
+    Flow Matching (T01) & 单状态入出流 & 最初的正确性保证 & 长轨迹信用传播慢 \\
+    Detailed Balance (T02) & 单边 & 不需枚举父节点 & 比值梯度方差大 \\
+    \textbf{Trajectory Balance} (T03) & 整条轨迹 & 一步传到起点 & 长轨迹乘积、需估 $Z$ \\
+    SubTB (T05) & 子轨迹（$\lambda$ 加权） & DB 与 TB 间插值 & 终止漂移、有效性退化 \\
+    $f$-TB / 散度族 (T49/T17) & 轨迹级 $f$-散度 & 纳入更大家族 & 散度选择成新超参 \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{8pt}
+  TB 的轨迹级恒等式（$\tau = (s_0 \to \cdots \to s_n = x)$）：
+  \[
+    Z \prod_{t=1}^{n} P_F(s_t \mid s_{t-1}) \;=\; R(x) \prod_{t=1}^{n} P_B(s_{t-1} \mid s_t)
+  \]
+  $Z$ 是可学习的配分函数标量，$P_B$ 是后向策略。两侧取对数作差平方即 TB loss。
+\end{frame}
+
+\begin{frame}{趋势一：从「平衡族」走向「证书族」与「博弈族」}
+  2026 年的新论文不再只提新平衡式，而是附带可验证保证或引入对抗机制。
+
+  \vspace{6pt}
+  \begin{columns}[T]
+    \column{0.31\textwidth}
+      \textbf{\pos{证书族}}：Stable GFlowNets（arXiv 2605.01729）打通 TB loss 与全局 TV 误差，给出 loss 到 TV 的上界与有限样本证书；反例证明小 TV 误差不蕴含有界 loss，后期 loss 尖峰可能良性。
+    \column{0.31\textwidth}
+      \textbf{\pos{博弈族}}：DTB / ACE（arXiv 2602.17827）训练探索策略专攻当前网络低估的区域，与主网络构成双人博弈并刻画均衡，多样高奖励区域发现率超 curiosity 基线。
+    \column{0.31\textwidth}
+      \textbf{\pos{LLM 专用}}：RapTB $+$ SubM（arXiv 2603.00454）针对前缀坍缩与长度偏置，把子轨迹监督锚在根节点、吸收后缀回传奖励，做到 32B 规模。
+  \end{columns}
+
+  \vspace{8pt}
+  \begin{alertblock}{读法}
+    单纯提出新平衡恒等式的窗口正在关闭；增量空间在「目标 $+$ 可验证保证」与「目标 $+$ 探索机制」。
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{趋势二：loss 到分布误差的理论链条已闭合}
+  \vspace{2pt}
+  \begin{center}
+  \begin{tikzpicture}[
+    box/.style={draw, rounded corners, minimum width=2.4cm, minimum height=0.7cm,
+                font=\scriptsize, fill=emphasis!10, align=center},
+    arr/.style={-{Stealth}, thick}
+  ]
+    \node[box] (A) {TB loss $\downarrow$};
+    \node[box, right=0.9cm of A] (B) {KL 上界\\{\tiny N001}};
+    \node[box, right=0.9cm of B] (C) {TV 上界 $+$ 证书\\{\tiny 2605.01729}};
+    \node[box, right=0.9cm of C] (D) {可认证训练};
+    \draw[arr] (A) -- (B); \draw[arr] (B) -- (C); \draw[arr] (C) -- (D);
+  \end{tikzpicture}
+  \end{center}
+
+  \vspace{4pt}
+  \begin{center}
+  \begin{tabular}{lll}
+    \toprule
+    结果 & 内容 & 来源 \\
+    \midrule
+    收敛速率分层 & FM 达 $\mathcal{O}(1/\sqrt{T})$，DB 仅 $\mathcal{O}(1/T^{1/3})$ & arXiv 2505.02035 \\
+    样本复杂度 & $\mathcal{O}\!\left(|S| L \log(|S|/\delta)/\epsilon^2\right)$ & 同上 \\
+    隐式正则 & FM 偏最大熵，DB 偏 KL，TB 偏路径长度效率 & 同上 \\
+    奖励噪声鲁棒性 & 按 $R_{\min}^{-4}$ 缩放 & 同上 \\
+    泛化界 & 轨迹越长、目标越尖则越难 & ICLR 2025 \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{4pt}
+  \con{尚未闭合}：以上速率均依赖 tabular 或可实现性假设，函数逼近下的收敛性未检索到任何结果。
+\end{frame}
+
+\begin{frame}{趋势三：与 GRPO 系的硬对比}
+  Scaffold-conditioned SMILES 优化（数据来自 RapTB 论文 Table 1）：
+  \vspace{4pt}
+  \begin{center}
+  \begin{tabular}{lrrrrr}
+    \toprule
+    方法 & 有效性 & 奖励 & 熵 & 指纹多样性 & 平均长度 \\
+    \midrule
+    PPO   & 1.000 & 0.604 & $\approx 0$ & --- & --- \\
+    GRPO  & 0.997 & 0.661 & 0.98 & --- & 10.0 \\
+    TB    & 0.998 & 0.717 & 2.503 & 0.807 & 3.065 \\
+    SubTB & 0.328 & 0.755 & 2.127 & 0.836 & 8.354 \\
+    \textbf{RapTB + SubM} & 0.988 & \textbf{0.844} & \textbf{2.726} & \textbf{0.898} & 7.435 \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{6pt}
+  肽生成压力测试（bioRxiv 2026-01）：GFlowNet 二肽采样均匀度高 \pos{$5.4\times$}、奖励方差低 \pos{$1.9\times$}、重复序列少 \pos{$3.9\times$}。去掉奖励中的熵门控后，GRPO-D 的 1000 个样本 \con{$100\%$ 含同一三肽模式}，GFlowNet 多样性保持 $0.937$。
+\end{frame}
+
+\begin{frame}{护城河判断}
+  \begin{exampleblock}{核心结论}
+    GFlowNet 的护城河不是峰值奖励，而是\HL{对奖励函数设计缺陷的鲁棒性}。
+  \end{exampleblock}
+
+  \vspace{6pt}
+  \begin{itemize}
+    \item 上表中 RapTB+SubM 的奖励分数（0.844）也高于 GRPO（0.661）——差距不止在多样性。
+    \item GRPO 系需要精调的多样性惩罚与熵门控才不坍缩，而这些超参在真实药物发现流水线里通常调不准。
+    \item GRPO 综述（arXiv 2603.06623）把 diversity preservation 单列为研究方向（DiverseGRPO 用 Vendi Score 提升 13\%--18\%），从反面印证这是结构性弱点而非实现问题。
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{相对位置：不是升降，是性质变化}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+      \textbf{\con{下降的维度}}
+      \begin{itemize}
+        \item 纯采样性能：物理场景 SOTA 已被 iDEM、力引导漂移、FP++ 占据，它们用能量或力的结构，GFN 的离散组合优势用不上。
+        \item 理论独立性：熵正则 RL（T14）、Markov chain、OT（O08）、连续时间路径测度四个视角都能把 GFlowNet 写成特例。
+      \end{itemize}
+    \column{0.48\textwidth}
+      \textbf{\pos{上升的维度}}
+      \begin{itemize}
+        \item 目标采用度：扩散采样器方向把 TB/VarGrad $+$ 回放 $+$ 局部搜索当作标准配置；torchgfn 把 off-policy 训练写进官方指南。
+        \item 应用护城河：抗奖励设计缺陷在分子与肽两个独立实验都有量化证据。
+        \item FlowRL 作为 recipe 合并进 verl（PR \#3924，2025-11-06），首次进入 2 万 star 级生产框架。
+      \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{工具生态的冷静一面（GitHub API 当日实测）}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+      \textbf{\con{停滞信号}}
+      \begin{itemize}
+        \item Recursion/Valence 2025-06-27 开源 synflownet-boltz，此后零提交。
+        \item 主库 recursionpharma/gflownet 一年仅 2 次提交（Dockerfile/tox 杂务）；公司 2025-06 裁员 20\% 后口径转向 foundation model。
+        \item TRL 与 OpenRLHF 对 GFlowNet 的 issue/PR 搜索命中均为 0（对照：GRPO in TRL $=$ 1650）。
+      \end{itemize}
+    \column{0.48\textwidth}
+      \textbf{\pos{健康信号}}
+      \begin{itemize}
+        \item torchgfn 是唯一全指标健康的库：v2.4.1（2026-04-05），2026-04 起提交 $\ge 100$ 次。
+        \item verl 集成 FlowRL 是孤例但确实成立。
+        \item gfnx（JAX，2025-11）提出标准化评测意图，但 PyPI 停在 0.0.1。
+      \end{itemize}
+  \end{columns}
+  \vspace{4pt}
+  FlowRL 自身已被 GFlowRL（arXiv 2607.13394）判定在 MoE 235B 配置下配分函数网络不收敛，改用 in-batch Monte Carlo 估 $\log Z$。
+\end{frame}
+
+\begin{frame}{最值得投入：GFlowNet $\times$ 最优传输}
+  \begin{exampleblock}{已建立的结果（O08）}
+    最小流非无环 GFlowNet 学习问题可等价写成线性规划；固定初始边流分布后，即变为以图上距离为代价的 Kantorovich OT 问题（也等价于图上 Beckmann 问题的离散形式）。最优前向策略采样的正是最优路径，诱导最优耦合。
+  \end{exampleblock}
+
+  \vspace{4pt}
+  对偶方向：DDSBM（ICLR 2025）把 Iterative Markovian Fitting 扩展到离散空间解 Schrödinger 桥，其动力学等价于以\textbf{图编辑距离}为代价的熵正则 OT。两条线在 2026 年是收敛而非替代：SB/OT 给目标与代价结构，GFlowNet 给离散组合空间上的可扩展参数化与 off-policy 训练。
+
+  \vspace{4pt}
+  \textbf{三个具体切口}
+  \begin{itemize}
+    \item 把 O08 的 LP 等价性从「固定初始边流」放宽到一般情形，检验最优耦合是否仍可由 GFlowNet 策略表示。
+    \item 用 GFlowNet 求解精确解不可行规模的图 OT，与 Sinkhorn 类方法做代价-时间曲线对比。
+    \item 把 DDSBM 的「最小图变换」性质引入 GFlowNet 分子优化：保持 $P_\top(x) \propto R(x)$ 的同时约束编辑距离。
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{仓库结构与工程化}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+      \begin{block}{内容组织（按 awesome-ml4co 规范）}
+        \begin{itemize}
+          \item \texttt{papers/}：206 篇 TSV 目录 $+$ 核心清单
+          \item \texttt{notes/}：8 节固定模板的中文解读
+          \item \texttt{pdfs/en}, \texttt{pdfs/zh}：原文与译文对照
+          \item \texttt{insights/}：三份趋势报告
+          \item \texttt{surveys/}：理论指南与 OT 潜力分析
+        \end{itemize}
+      \end{block}
+    \column{0.48\textwidth}
+      \begin{block}{全流程脚本化，可增量重跑}
+        \begin{itemize}
+          \item \texttt{download\_core\_pdfs.py}：arXiv 检索落盘，断点续传
+          \item \texttt{translate\_batch.py}：并行翻译，已完成自动跳过
+          \item \texttt{generate\_notes.py}：PDF 全文经 vLLM 生成初稿
+          \item \texttt{build\_readme.py}：解析目录生成分区 README
+        \end{itemize}
+      \end{block}
+  \end{columns}
+  \vspace{4pt}
+  解读模板固定 8 节：一句话、问题与动机、方法核心、理论结果、实验与证据、局限与批判、与谁对话、对后续研究的启示。
+\end{frame}
+
+\begin{frame}{结论与下一步}
+  \begin{columns}[T]
+    \column{0.31\textwidth}
+      \textbf{判断一}：理论已成熟。loss 到 KL 到 TV 的链条闭合，速率分层与样本复杂度都有结果，新目标要过审必须附带可验证保证。
+    \column{0.31\textwidth}
+      \textbf{判断二}：护城河是鲁棒性而非峰值。应主打奖励函数难以精调的真实流水线场景。
+    \column{0.31\textwidth}
+      \textbf{判断三}：生态薄，工程红利未被吃掉。只有 torchgfn 健康、只有 verl 集成。
+  \end{columns}
+
+  \vspace{10pt}
+  \begin{alertblock}{三个行动项}
+    \begin{enumerate}
+      \item 攻函数逼近下的收敛性——当前唯一明确的理论空位。
+      \item 沿 O08 推进 GFN $\times$ OT：放宽 LP 等价性条件 $+$ 大规模图 OT 求解器对比。
+      \item 补齐生态：面向 LLM 后训练的 GFlowNet 训练库与标准评测套件。
+    \end{enumerate}
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{References}
+  \small
+  \begin{thebibliography}{9}
+    \bibitem{tb} Malkin et al. Trajectory Balance: Improved Credit Assignment in GFlowNets. NeurIPS 2022.
+    \bibitem{found} Bengio et al. GFlowNet Foundations. JMLR 2023.
+    \bibitem{stable} Stable GFlowNets with Probabilistic Guarantees. arXiv:2605.01729, 2026.
+    \bibitem{raptb} Rooted Absorbed Prefix Trajectory Balance with Submodular Replay. arXiv:2603.00454, 2026.
+    \bibitem{secrets} Secrets of GFlowNets' Learning Behavior: A Theoretical Study. arXiv:2505.02035, 2025.
+    \bibitem{ot} Your GFlowNet Secretly Learns an Optimal Transport Plan. ICML 2026 SPIGM Workshop.
+    \bibitem{offpolicy} Sendera et al. Improved off-policy training of diffusion samplers. NeurIPS 2024.
+  \end{thebibliography}
+\end{frame}
+
+\begin{frame}
+  \begin{center}
+    \Large 完整目录、逐篇解读与中英文 PDF 见仓库 \texttt{awesome\_Gflow}
+  \end{center}
+\end{frame}
+
+\end{document}

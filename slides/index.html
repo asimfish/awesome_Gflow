@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Awesome GFlowNets · 调研汇报</title>
+<style>
+:root{
+  --bg:#0b1020; --bg2:#121a33; --fg:#e8ecf7; --dim:#94a3c4;
+  --blue:#4c9ffe; --orange:#f2a65a; --green:#3ecf8e; --purple:#b48ef0;
+  --line:rgba(255,255,255,.10); --card:rgba(255,255,255,.045);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased; overflow:hidden;
+}
+#deck{height:100vh;width:100vw;position:relative}
+.slide{
+  position:absolute; inset:0; display:none;
+  padding:56px 72px 72px; overflow:auto;
+  animation:fade .35s ease;
+}
+.slide.active{display:flex;flex-direction:column}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+h1{font-size:52px;line-height:1.15;font-weight:800;letter-spacing:-.5px}
+h2{font-size:34px;font-weight:700;margin-bottom:6px;letter-spacing:-.3px}
+h2 .num{color:var(--blue);font-variant-numeric:tabular-nums;margin-right:12px;font-weight:800}
+.sub{color:var(--dim);font-size:17px;margin-bottom:26px;line-height:1.55}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:14px;
+  padding:20px 22px; line-height:1.62; font-size:16px;
+}
+.card h3{font-size:18px;margin-bottom:9px;font-weight:700}
+.card p{color:#cbd5ec}
+.card .tag{display:inline-block;font-size:12px;padding:2px 9px;border-radius:99px;background:rgba(76,159,254,.16);color:var(--blue);margin-bottom:9px;font-weight:600}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:8px 0 26px}
+.kpi div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
+.kpi b{display:block;font-size:44px;font-weight:800;line-height:1;color:var(--blue);font-variant-numeric:tabular-nums}
+.kpi span{color:var(--dim);font-size:14px;display:block;margin-top:9px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line)}
+th{color:var(--dim);font-weight:600;font-size:13px;letter-spacing:.4px;text-transform:uppercase}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.best td{background:rgba(62,207,142,.09)}
+tr.bad td{color:#f0a0a0}
+.pos{color:var(--green);font-weight:700}
+.neg{color:var(--orange);font-weight:700}
+.hl{color:var(--purple);font-weight:700}
+ul{list-style:none}
+li{padding-left:22px;position:relative;margin-bottom:11px;line-height:1.6;font-size:16px}
+li:before{content:"";position:absolute;left:4px;top:9px;width:7px;height:7px;border-radius:2px;background:var(--blue)}
+li.o:before{background:var(--orange)}
+li.g:before{background:var(--green)}
+.big{font-size:22px;line-height:1.65}
+.cover{justify-content:center;align-items:flex-start;background:
+  radial-gradient(1100px 520px at 12% -8%,rgba(76,159,254,.22),transparent),
+  radial-gradient(900px 480px at 88% 108%,rgba(180,142,240,.18),transparent)}
+.cover .meta{margin-top:36px;color:var(--dim);font-size:16px;line-height:1.9}
+.cover .badge{display:inline-block;padding:6px 14px;border:1px solid var(--line);border-radius:99px;font-size:13px;color:var(--blue);margin-bottom:22px;background:rgba(76,159,254,.1);font-weight:600}
+.foot{position:absolute;left:72px;right:72px;bottom:24px;display:flex;justify-content:space-between;color:var(--dim);font-size:13px;border-top:1px solid var(--line);padding-top:12px}
+.nav{position:fixed;right:22px;bottom:20px;display:flex;gap:8px;z-index:50}
+.nav button{
+  background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--fg);
+  width:38px;height:38px;border-radius:10px;font-size:16px;cursor:pointer
+}
+.nav button:hover{background:rgba(76,159,254,.22)}
+.bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--purple));z-index:60;transition:width .3s}
+.flow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 20px}
+.flow .node{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px 17px;font-size:15px;font-weight:600}
+.flow .node small{display:block;color:var(--dim);font-weight:400;font-size:12px;margin-top:3px}
+.flow .arw{color:var(--blue);font-size:19px;font-weight:700}
+.note{color:var(--dim);font-size:14px;margin-top:14px;line-height:1.6}
+a{color:var(--blue);text-decoration:none}
+code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:5px;font-size:14px;font-family:ui-monospace,Menlo,monospace}
+</style>
+</head>
+<body>
+<div class="bar" id="bar"></div>
+<div id="deck">
+
+<!-- 1 封面 -->
+<section class="slide active cover">
+  <span class="badge">GFlowNet 系统调研 · 2026-09</span>
+  <h1>Awesome GFlowNets<br><span style="color:var(--dim);font-size:34px;font-weight:600">从流匹配到可认证训练：206 篇文献的结构化盘点</span></h1>
+  <div class="meta">
+    交付物：206 篇分类目录 · 35 篇核心论文中文深度解读 · 35 篇保版式中文翻译 PDF · 3 份趋势报告<br>
+    技术栈：SuperTranslate + 自建 vLLM(Qwen2.5-32B-AWQ) 翻译后端 · 检索截止 2026-08-25<br>
+    仓库：<code>github.com/&lt;user&gt;/awesome_Gflow</code>
+  </div>
+</section>
+
+<!-- 2 一页看懂 -->
+<section class="slide">
+  <h2><span class="num">01</span>一页看懂这次调研</h2>
+  <p class="sub">交付四类产物，每类都有可核验的证据指针。</p>
+  <div class="kpi">
+    <div><b>206</b><span>篇论文入库分类</span></div>
+    <div><b>35</b><span>篇核心论文精读</span></div>
+    <div><b>35</b><span>篇中文翻译 PDF</span></div>
+    <div><b>3</b><span>份趋势洞察报告</span></div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <span class="tag">方法</span>
+      <h3>目录 → 精读 → 翻译 → 趋势</h3>
+      <p>先用既有 206 篇目录定位 35 篇 P0 核心论文，逐篇写固定模板的中文解读；同时用保版式引擎产出中文 PDF；最后独立做三个维度的趋势核实。</p>
+    </div>
+    <div class="card">
+      <span class="tag">纪律</span>
+      <h3>每个数字都有证据指针</h3>
+      <p>解读的论断标注论文章节/公式号，个人判断显式标注；趋势报告的每条给来源链接与日期，检索不到的写「未检索到」而不猜。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3 GFlowNet 是什么 -->
+<section class="slide">
+  <h2><span class="num">02</span>GFlowNet 解决的是什么问题</h2>
+  <p class="sub">不是「找最优解」，而是「按奖励比例采样多个好解」。</p>
+  <div class="grid g2">
+    <div class="card">
+      <span class="tag">目标</span>
+      <h3>采样而非最大化</h3>
+      <p>训练一个前向策略，使终止对象 x 的采样概率满足 <code>P(x) ∝ R(x)</code>。当奖励有多个模态时，概率质量按比例铺开在所有高奖励模态上，而不是全部压到单个最优点。</p>
+    </div>
+    <div class="card">
+      <span class="tag">为什么重要</span>
+      <h3>药物发现要的是候选池</h3>
+      <p>单个「最优分子」在湿实验里很可能失败，需要一批结构多样的高分候选。奖励最大化方法（PPO/GRPO）天然坍缩到单模态，这是结构性差异而非调参问题。</p>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="node">s₀ 空对象<small>起点</small></div><span class="arw">→</span>
+    <div class="node">s₁ 加一个片段<small>动作</small></div><span class="arw">→</span>
+    <div class="node">…<small>轨迹 τ</small></div><span class="arw">→</span>
+    <div class="node">x 完整分子<small>终止态，奖励 R(x)</small></div>
+  </div>
+  <p class="note">同一个 x 可由多条轨迹到达（合流 DAG），这正是 GFlowNet 与自回归模型的核心分野：需要流守恒约束来保证边缘分布正确。</p>
+</section>
+
+<!-- 4 训练目标谱系 -->
+<section class="slide">
+  <h2><span class="num">03</span>训练目标谱系：从局部约束到轨迹级恒等式</h2>
+  <p class="sub">四代目标的核心差异在「信用信号传播多远」与「方差多大」的折中。</p>
+  <table>
+    <tr><th>目标</th><th>约束粒度</th><th>解决什么</th><th>代价</th><th>编号</th></tr>
+    <tr><td><b>Flow Matching (FM)</b></td><td>单状态入流=出流</td><td>最初的正确性保证</td><td>长轨迹信用传播慢</td><td>T01</td></tr>
+    <tr><td><b>Detailed Balance (DB)</b></td><td>单边</td><td>不需枚举父节点</td><td>比值梯度方差大</td><td>T02</td></tr>
+    <tr class="best"><td><b>Trajectory Balance (TB)</b></td><td>整条轨迹</td><td>一步把终端奖励传到起点</td><td>长轨迹乘积、需估 Z</td><td>T03</td></tr>
+    <tr><td><b>SubTB</b></td><td>任意子轨迹（λ 加权）</td><td>在 DB 与 TB 之间连续插值</td><td>终止漂移、有效性退化</td><td>T05</td></tr>
+    <tr><td><b>f-TB / 散度族</b></td><td>轨迹级，一般 f-散度</td><td>把 TB 纳入更大的散度家族</td><td>散度选择成为新超参</td><td>T49 / T17</td></tr>
+  </table>
+  <p class="note">TB 的恒等式：<code>Z·∏P_F(s_t|s_{t-1}) = R(x)·∏P_B(s_{t-1}|s_t)</code>。左右取对数作差平方即为 TB loss，Z 作为可学习标量与策略联合训练。</p>
+</section>
+
+<!-- 5 2026 趋势1 -->
+<section class="slide">
+  <h2><span class="num">04</span>趋势一：目标设计从「平衡族」走向「证书族」与「博弈族」</h2>
+  <p class="sub">2026 年的新论文不再只提新平衡式，而是给出可验证的保证或引入对抗机制。</p>
+  <div class="grid g3">
+    <div class="card">
+      <span class="tag">证书族</span>
+      <h3>Stable GFlowNets</h3>
+      <p>把 TB loss 与全局 TV 误差双向打通：给出 loss→TV 上界与有限样本 TV 证书；同时反例证明「小 TV 误差不蕴含有界 loss」——后期 loss 尖峰可能是良性的。用参考流封顶 loss 比率。</p>
+      <p class="note">arXiv 2605.01729</p>
+    </div>
+    <div class="card">
+      <span class="tag">博弈族</span>
+      <h3>DTB / ACE</h3>
+      <p>训练一个探索策略专门去采样「当前 GFlowNet 低估的区域」，与主网络构成双人博弈并刻画均衡。多样高奖励区域的发现率一致超过 curiosity 驱动基线。</p>
+      <p class="note">arXiv 2602.17827</p>
+    </div>
+    <div class="card">
+      <span class="tag">LLM 专用</span>
+      <h3>RapTB + SubM</h3>
+      <p>针对 LLM-GFlowNet 的两个可复现失败模式（前缀坍缩、长度偏置），把子轨迹监督锚定在根节点、用吸收后缀回传奖励；子模回放兼顾奖励与多样性。做到 32B 规模。</p>
+      <p class="note">arXiv 2603.00454</p>
+    </div>
+  </div>
+  <p class="note">读法：单纯提出新平衡恒等式的窗口正在关闭，增量空间在「目标 + 可验证保证」与「目标 + 探索机制」。</p>
+</section>
+
+<!-- 6 收敛性链条 -->
+<section class="slide">
+  <h2><span class="num">05</span>趋势二：loss → 分布误差的理论链条已基本闭合</h2>
+  <p class="sub">「TB loss 降了到底代表什么」这个悬置多年的问题，各环都有了结果。</p>
+  <div class="flow">
+    <div class="node">TB loss ↓<small>可观测量</small></div><span class="arw">→</span>
+    <div class="node">KL 上界<small>N001, NeurIPS 2025 WS</small></div><span class="arw">→</span>
+    <div class="node">TV 上界 + 有限样本证书<small>Stable GFlowNets, 2026</small></div><span class="arw">→</span>
+    <div class="node">可认证训练<small>把 loss 监控变成保真度检验</small></div>
+  </div>
+  <table>
+    <tr><th>结果</th><th>内容</th><th>来源</th></tr>
+    <tr><td>收敛速率分层</td><td>FM 达 <code>O(1/√T)</code>，DB 因比值梯度方差只有 <code>O(1/T^{1/3})</code></td><td>arXiv 2505.02035</td></tr>
+    <tr><td>样本复杂度</td><td><code>O(|S|·L·log(|S|/δ)/ε²)</code>，状态空间大小与轨迹长度同时进入</td><td>同上</td></tr>
+    <tr><td>隐式正则差异</td><td>FM 偏最大熵 · DB 偏前后向 KL 最小化 · TB 偏路径长度效率</td><td>同上</td></tr>
+    <tr><td>奖励噪声鲁棒性</td><td>按 <code>R_min^{-4}</code> 缩放 → 最小奖励阈值是关键工程参数</td><td>同上</td></tr>
+    <tr><td>泛化界</td><td>轨迹越长、目标分布越尖，泛化越难；分布式训练可缓解</td><td>ICLR 2025</td></tr>
+  </table>
+  <p class="note">尚未闭合的一环：以上速率均依赖 tabular / 可实现性假设，<span class="neg">函数逼近下的收敛性未检索到任何结果</span>——这是理论方向仍可占的坑。</p>
+</section>
+
+<!-- 7 竞品对比核心证据 -->
+<section class="slide">
+  <h2><span class="num">06</span>趋势三：与 GRPO 系的硬对比，护城河在鲁棒性</h2>
+  <p class="sub">Scaffold-conditioned SMILES 优化（RapTB Table 1）：奖励最大化与比例采样的差距不止多样性。</p>
+  <table>
+    <tr><th>方法</th><th class="num">有效性 Acc</th><th class="num">奖励 Score</th><th class="num">熵 Entropy</th><th class="num">指纹多样性</th><th class="num">平均长度</th></tr>
+    <tr class="bad"><td>PPO</td><td class="num">1.000</td><td class="num">0.604</td><td class="num">≈0</td><td class="num">—</td><td class="num">—</td></tr>
+    <tr class="bad"><td>GRPO</td><td class="num">0.997</td><td class="num">0.661</td><td class="num">0.98</td><td class="num">—</td><td class="num">10.0</td></tr>
+    <tr><td>TB</td><td class="num">0.998</td><td class="num">0.717</td><td class="num">2.503</td><td class="num">0.807</td><td class="num">3.065</td></tr>
+    <tr><td>SubTB</td><td class="num">0.328</td><td class="num">0.755</td><td class="num">2.127</td><td class="num">0.836</td><td class="num">8.354</td></tr>
+    <tr class="best"><td><b>RapTB + SubM</b></td><td class="num">0.988</td><td class="num"><b>0.844</b></td><td class="num"><b>2.726</b></td><td class="num"><b>0.898</b></td><td class="num">7.435</td></tr>
+  </table>
+  <div class="grid g2" style="margin-top:20px">
+    <div class="card">
+      <span class="tag">压力测试</span>
+      <h3>去掉熵门控后 GRPO 完全坍缩</h3>
+      <p>治疗性肽生成实验：GFlowNet 的二肽采样均匀度高 <span class="pos">5.4×</span>、奖励方差低 <span class="pos">1.9×</span>、重复序列少 <span class="pos">3.9×</span>。去掉奖励里的熵门控后，GRPO-D 的 1000 个样本 <span class="neg">100% 含同一三肽模式</span>，而 GFlowNet 多样性保持 0.937。</p>
+    </div>
+    <div class="card">
+      <span class="tag">判断</span>
+      <h3>护城河不是峰值奖励，是抗奖励设计缺陷</h3>
+      <p>GRPO 系要靠精调的多样性惩罚与熵门控才不坍缩，而这些超参在真实药物发现流水线里通常调不准。GRPO 综述把 diversity preservation 单列为研究方向，从反面印证这是结构性弱点。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 8 相对位置 -->
+<section class="slide">
+  <h2><span class="num">07</span>GFlowNet 的相对位置：不是升降，是性质变化</h2>
+  <p class="sub">作为「独立方法品牌」在下降，作为「off-policy 训练目标」在上升。</p>
+  <div class="grid g2">
+    <div class="card">
+      <span class="tag">下降的维度</span>
+      <h3 class="neg">纯采样性能与理论独立性</h3>
+      <ul>
+        <li class="o">物理场景 SOTA 已被 iDEM、力引导漂移、FP++ 占据——它们用能量/力/Jacobian 结构，GFN 的离散组合优势用不上</li>
+        <li class="o">熵正则 RL（T14）、Markov chain、OT（O08）、连续时间路径测度四个视角都能把 GFlowNet 写成特例，纯框架新颖性不再是卖点</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag">上升的维度</span>
+      <h3 class="pos">目标采用度与应用护城河</h3>
+      <ul>
+        <li class="g">扩散采样器方向把 TB/VarGrad + 回放 + 局部搜索当作标准配置；torchgfn 把 off-policy 训练写进官方指南，工程已固化</li>
+        <li class="g">「奖励设计不完美仍保多样性」在分子与肽两个独立实验都有量化证据，是 GRPO/PPO 拿不出的</li>
+        <li class="g">FlowRL 作为 recipe 合并进 verl（PR #3924，2025-11-06），首次进入 2 万 star 级生产训练框架</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">给新入场者：不要做「GFlowNet vs X 谁更强」的对比论文（结论已明确且依场景而定），要把鲁棒性优势落到具体流水线，或做 GFN×OT 这类结构性连接。</p>
+</section>
+
+<!-- 9 生态现实 -->
+<section class="slide">
+  <h2><span class="num">08</span>工具生态的冷静一面（GitHub API 实测）</h2>
+  <p class="sub">论文热度与工程落地之间存在明显落差，这一节的数字全部当日直读 API。</p>
+  <div class="grid g2">
+    <div class="card">
+      <span class="tag">停滞信号</span>
+      <h3 class="neg">工业界只发生过一次可验证动作</h3>
+      <ul>
+        <li class="o">Recursion/Valence 2025-06-27 开源 <code>synflownet-boltz</code>，此后<b>零提交</b></li>
+        <li class="o">主库 <code>recursionpharma/gflownet</code> 一年内仅 2 次提交，均为 Dockerfile/tox 杂务；公司 2025-06 裁员 20% 后财报口径转向 foundation model</li>
+        <li class="o">TRL 与 OpenRLHF 对 GFlowNet / trajectory balance 的 issue/PR 全文搜索命中均为 <b>0</b>（对照：GRPO in TRL = 1650 命中）</li>
+        <li class="o">社区索引 <code>Awesome-GFlowNets</code> 停更近两年；Mila GFlowNet Workshop 仅办过 2023 一届</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag">健康信号</span>
+      <h3 class="pos">torchgfn 是唯一全指标健康的库</h3>
+      <ul>
+        <li class="g">v2.4.1（2026-04-05），2026-04 起提交数 ≥100，环境持续扩张，教学 notebook 随库交付</li>
+        <li class="g">verl 集成 FlowRL 是 GFlowNet 目标进入生产框架的孤例，但确实成立</li>
+        <li class="g"><code>gfnx</code>（JAX，2025-11 首发）提出标准化评测意图，但 PyPI 停在 0.0.1，尚不可依赖</li>
+      </ul>
+      <p class="note">FlowRL 自身已被 GFlowRL（arXiv 2607.13394）判定为在 MoE 235B 配置下配分函数网络不收敛，改用 in-batch MC 估 logZ。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 10 GFN x OT -->
+<section class="slide">
+  <h2><span class="num">09</span>最值得投入的方向：GFlowNet × 最优传输</h2>
+  <p class="sub">这是本次调研中唯一「理论干净、抓手明确、竞争未饱和」的交叉方向。</p>
+  <div class="grid g2">
+    <div class="card">
+      <span class="tag">已建立的结果</span>
+      <h3>GFlowNet 隐式在解图上 OT</h3>
+      <p>最小流非无环 GFlowNet 学习问题可等价写成线性规划；固定初始边流分布后，就变成以图上距离为代价的 <b>Kantorovich OT</b> 问题（也等价于图上 Beckmann 问题的离散形式）。最优前向策略采样的正是最优路径，诱导最优耦合。</p>
+      <p class="note">O08 · Your GFlowNet Secretly Learns an Optimal Transport Plan</p>
+    </div>
+    <div class="card">
+      <span class="tag">对偶方向</span>
+      <h3>SB/OT 提供代价结构，GFN 提供可扩展参数化</h3>
+      <p>DDSBM 把 Iterative Markovian Fitting 扩展到离散空间解 Schrödinger 桥，其动力学等价于以<b>图编辑距离</b>为代价的熵正则 OT。两条线在 2026 年不是替代而是收敛：SB/OT 给目标与代价，GFN 给离散组合空间的 off-policy 训练。</p>
+      <p class="note">N043 / DDSBM · ICLR 2025</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <span class="tag">可操作抓手</span>
+    <h3>三个具体切口</h3>
+    <ul>
+      <li>把 O08 的 LP 等价性从「固定初始边流」放宽到一般情形，看最优耦合是否仍可由 GFlowNet 策略表示</li>
+      <li>用 GFlowNet 求解大规模图 OT（精确解不可行的组合规模），与 Sinkhorn 类方法在同一图上做代价-时间曲线对比</li>
+      <li>把 DDSBM 的「最小图变换」性质引入 GFlowNet 的分子优化：在保持 P(x)∝R(x) 的同时约束编辑距离</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 11 仓库结构 -->
+<section class="slide">
+  <h2><span class="num">10</span>交付物与仓库结构</h2>
+  <p class="sub">按 awesome-ml4co 规范组织，README 由脚本从目录自动生成，可重复运行。</p>
+  <div class="grid g2">
+    <div class="card">
+      <span class="tag">内容</span>
+      <h3>四类产物各自可独立使用</h3>
+      <ul>
+        <li><code>papers/</code> — 206 篇 TSV 机器可读目录 + 35 篇核心清单</li>
+        <li><code>notes/</code> — 中文深度解读，固定 8 节模板（问题动机/方法核心/理论结果/实验证据/局限批判/与谁对话/后续启示）</li>
+        <li><code>pdfs/en</code> + <code>pdfs/zh</code> — 英文原文与保版式中文翻译对照</li>
+        <li><code>insights/</code> — 方法学趋势、邻域竞品、应用生态三份报告</li>
+        <li><code>surveys/</code> — 既有的理论指南与 OT 潜力分析</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag">工程</span>
+      <h3>全流程脚本化，可增量重跑</h3>
+      <ul>
+        <li class="g"><code>download_core_pdfs.py</code> — arXiv 标题检索 → 落盘，断点续传</li>
+        <li class="g"><code>translate_batch.py</code> — 并行调 SuperTranslate，已完成的自动跳过</li>
+        <li class="g"><code>generate_notes.py</code> — PDF 全文 → vLLM 32B → 解读初稿</li>
+        <li class="g"><code>build_readme.py</code> — 解析目录 markdown → 生成分区 README，自动挂上已有产物链接</li>
+      </ul>
+      <p class="note">翻译后端为自建 vLLM + Qwen2.5-32B-AWQ（A100 80G，AWQ 量化，16K 上下文），保版式引擎冻结公式与图表后按原坐标回填。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 12 下一步 -->
+<section class="slide">
+  <h2><span class="num">11</span>结论与下一步</h2>
+  <p class="sub">三条判断，三个动作。</p>
+  <div class="grid g3">
+    <div class="card">
+      <span class="tag">判断一</span>
+      <h3>理论已成熟，别再刷目标</h3>
+      <p>loss→KL→TV 链条闭合、速率分层与样本复杂度都有结果。新目标要过审必须附带可验证保证或解决被命名的失败模式。</p>
+    </div>
+    <div class="card">
+      <span class="tag">判断二</span>
+      <h3>护城河是鲁棒性，不是峰值</h3>
+      <p>与 GRPO 系的对比证据一致指向「抗奖励设计缺陷」。这决定了应该主打的场景是奖励函数难以精调的真实流水线。</p>
+    </div>
+    <div class="card">
+      <span class="tag">判断三</span>
+      <h3>生态薄，工程红利未被吃掉</h3>
+      <p>只有 torchgfn 全指标健康、只有 verl 一个生产框架集成。做好用的工具与标准化基准，回报可能高于再发一篇方法论文。</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <span class="tag">行动项</span>
+    <h3>下一步做什么</h3>
+    <ul>
+      <li>攻函数逼近下的收敛性（当前唯一明确的理论空位）</li>
+      <li>沿 O08 推进 GFN×OT：放宽 LP 等价性条件 + 大规模图 OT 求解器对比</li>
+      <li>补齐生态：面向 LLM 后训练场景的 GFlowNet 训练库与标准评测套件</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 13 参考 -->
+<section class="slide">
+  <h2><span class="num">12</span>关键引用</h2>
+  <p class="sub">本汇报引用的目录外新论文（目录内论文用 T/O/A/N 编号，详见仓库 README）。</p>
+  <table>
+    <tr><th>论文</th><th>来源</th><th>日期</th></tr>
+    <tr><td>Stable GFlowNets with Probabilistic Guarantees</td><td>arXiv 2605.01729</td><td>2026</td></tr>
+    <tr><td>Avoid What You Know: Divergent Trajectory Balance (DTB/ACE)</td><td>arXiv 2602.17827</td><td>2026-02</td></tr>
+    <tr><td>Rooted Absorbed Prefix Trajectory Balance (RapTB)</td><td>arXiv 2603.00454</td><td>2026-03</td></tr>
+    <tr><td>Controlling Exploration-Exploitation via Markov Chain (α-GFN)</td><td>arXiv 2602.01749</td><td>2026-02</td></tr>
+    <tr><td>Secrets of GFlowNets' Learning Behavior</td><td>arXiv 2505.02035</td><td>2025-05</td></tr>
+    <tr><td>Generalization and Distributed Learning of GFlowNets</td><td>ICLR 2025</td><td>2025</td></tr>
+    <tr><td>Iterated Denoising Energy Matching (iDEM)</td><td>arXiv 2402.06121</td><td>2024-02</td></tr>
+    <tr><td>Discrete Diffusion Schrödinger Bridge Matching (DDSBM)</td><td>ICLR 2025 / arXiv 2410.01500</td><td>2024-10</td></tr>
+    <tr><td>Generating Structurally Diverse Therapeutic Peptides with GFlowNet</td><td>bioRxiv</td><td>2026-01</td></tr>
+    <tr><td>Advances in GRPO for Generation Models: A Survey</td><td>arXiv 2603.06623</td><td>2026-03</td></tr>
+  </table>
+  <p class="note">完整的 206 篇分类目录见仓库 <code>README.md</code> 与 <code>surveys/GFLOWNET_RESEARCH_RESOURCE_CATALOG_CN.md</code>；每篇核心论文的解读见 <code>notes/</code>。</p>
+</section>
+
+</div>
+
+<div class="nav">
+  <button onclick="go(-1)" title="上一页 (←)">‹</button>
+  <button onclick="go(1)" title="下一页 (→)">›</button>
+</div>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+let cur=0;
+slides.forEach((s,i)=>{
+  const f=document.createElement('div');
+  f.className='foot';
+  f.innerHTML='<span>Awesome GFlowNets · 调研汇报 2026-09</span><span>'+(i+1)+' / '+slides.length+'</span>';
+  s.appendChild(f);
+});
+function show(i){
+  slides[cur].classList.remove('active');
+  cur=(i+slides.length)%slides.length;
+  slides[cur].classList.add('active');
+  slides[cur].scrollTop=0;
+  document.getElementById('bar').style.width=((cur+1)/slides.length*100)+'%';
+  location.hash='p'+(cur+1);
+}
+function go(d){show(cur+d)}
+document.addEventListener('keydown',e=>{
+  if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(1)}
+  if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(-1)}
+  if(e.key==='Home')show(0);
+  if(e.key==='End')show(slides.length-1);
+});
+const m=location.hash.match(/^#p(\d+)$/);
+show(m?parseInt(m[1])-1:0);
+</script>
+</body>
+</html>

@@ -78,7 +78,7 @@ def pdf_text(pdf: Path) -> str:
     full = "\n".join(pages)
     if len(full) <= 26000:
         return full
-    return full[:28000] + "\n...[中间省略]...\n" + full[-6000:]
+    return full[:21000] + "\n...[中间省略]...\n" + full[-5000:]
 
 
 def gen(pid, title, url, venue, text):

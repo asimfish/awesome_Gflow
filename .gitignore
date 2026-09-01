@@ -1,0 +1,27 @@
+# 翻译块级缓存（可由脚本重建，体积大）
+pdfs/zh/*.cache.jsonl
+pdfs/zh/*.translation-cache.jsonl
+
+# 运行日志
+logs_*.log
+logs_translate/
+logs_download.log
+
+# QA 报告中间产物
+pdfs/zh/*.qa.json
+
+# LaTeX 中间文件
+slides/*.aux
+slides/*.log
+slides/*.nav
+slides/*.out
+slides/*.snm
+slides/*.toc
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# macOS
+.DS_Store
