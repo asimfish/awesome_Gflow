@@ -126,6 +126,9 @@ def main():
     out.append(
         "A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. "
         "Legend: 📝 深度解读 in-depth note · 🇨🇳 中文PDF Chinese translation · 📄 英文PDF original PDF.\n")
+    out.append("> **第一次来？先读 [START_HERE.md](START_HERE.md)** —— 五分钟判断你的任务该不该用 GFlowNet："
+               "三个前置问题（要多样候选还是单个最优？奖励地形多尖？有力场可用吗）、三个必避的坑"
+               "（评测指标失效、loss 尖峰误判、轨迹截断致 mode collapse）、以及按情形选训练目标的对照表。\n")
 
     # 目录
     out.append("## 目录 Contents\n")

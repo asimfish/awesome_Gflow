@@ -6,14 +6,15 @@
 
 | 产物 | 位置 | 数量 | 生成方式 |
 |---|---|---|---|
+| 决策入口 | `START_HERE.md` | 1 份 | 手写，把「该不该用 GFlowNet」的判断前置到读论文之前 |
 | 论文分类目录 | `README.md`, `papers/current_papers.tsv` | 213 篇 | 人工调研（检索截止 2026-08-25），README 由 `scripts/build_readme.py` 从目录 markdown 生成 |
 | 核心论文清单 | `papers/core_papers.json` | 35 篇 | 从目录中标记为 P0 精读的条目抽取 |
 | 中文深度解读 | `notes/*.md` | 35 篇 | 本地 vLLM（Qwen2.5-32B-AWQ）读 PDF 全文生成初稿，固定 8 节模板 |
 | 英文原文 PDF | `pdfs/en/` | 35 篇 | `scripts/download_core_pdfs.py`（arXiv API 标题检索；T32 从 ICLR proceedings 直取） |
 | 中文翻译 PDF | `pdfs/zh/` | 见 README 计数 | SuperTranslate 保版式引擎 + 同一 vLLM 后端 |
 | 趋势与失效边界报告 | `insights/` | 4 份 | web 检索 + GitHub/PyPI API 实测，每条附来源链接与日期 |
-| HTML 汇报 | `slides/index.html` | 14 页 | 手写，键盘 ←/→ 翻页 |
-| Beamer PDF 汇报 | `slides/awesome_gflownets_report.pdf` | 17 页 | XeLaTeX，源码 `slides/awesome_gflownets_report.tex` |
+| HTML 汇报 | `slides/index.html` | 15 页 | 手写，键盘 ←/→ 翻页 |
+| Beamer PDF 汇报 | `slides/awesome_gflownets_report.pdf` | 18 页 | XeLaTeX，源码 `slides/awesome_gflownets_report.tex` |
 
 ## 2. 已知局限（重要）
 
@@ -25,7 +26,21 @@
 - 「与谁对话」一节曾出现模型把编号清单原样抄回的问题，已用 `scripts/fix_dialogue_section.py` 对 11 篇单独重生成，改为只列 3-5 篇并说明关系。
 - 三篇超长文档（T12 论文附录长、O01 讲义 200+ 页、N061 博士论文）超出 16K 上下文，改用 `scripts/generate_notes_long.py` 按页采样抽取，O01 与 N061 写成「文献地图」而非逐节解读。
 
-**使用建议**：把笔记当作「快速定位与判断是否值得读原文」的索引，涉及具体定理条件与实验数字时回查 `pdfs/en/` 原文。T12 的笔记明显短于其他篇（约 40 行），是抽取受限所致。
+**使用建议**：把笔记当作「快速定位与判断是否值得读原文」的索引。T12 的笔记明显短于其他篇（约 40 行），是抽取受限所致。
+
+#### 事实准确性审计（2026-09-01）
+
+为了给「未人工校对」一个可量化的可信度，写了 `scripts/audit_notes_facts.py` 做机械核对：抽出每篇「实验与证据」节里的数字 token（0.844、5.4×、97.5% 这类），回原文 PDF 检查该数字是否出现。
+
+结果：**13 篇含数字断言的笔记、217 个数字断言，全部在原文中找到（命中率 100%）**。
+
+这个审计能证明和不能证明的：
+
+- **能证明**：没有凭空编造的数字。数字幻觉是机器解读最典型的错误类型，这一类已排除。
+- **不能证明**：数字的*用法*正确。同一个数字可能被安到错误的方法或指标上。为此我另外人工核对了 T01（原始 GFlowNet 论文）解读里最容易搞错的组合断言——`10^5` 样本时 top-10/100/1000 奖励 `8.36±0.01 / 8.21±0.03 / 7.98±0.04`、top-1000 平均两两 Tanimoto 相似度 GFlowNet `0.44±0.01` 对 PPO `0.62±0.03` 对 MARS `0.59±0.02`、随机 agent `0.231`、Figure 16 回归斜率 `a=0.58`——逐项与原文附录 A.7 一致，方法归属也对。
+- **仍未验证**：定性论断（「方法核心」的推导、「局限与批判」的判断）没有系统核对手段，这部分请当作有依据的初稿而非定论。
+
+复现审计：`python3 scripts/audit_notes_facts.py`（需要 pymupdf）。加新笔记后应重跑；出现未命中项要逐条回原文确认，脚本已排除笔记自身小节编号造成的假阳性。
 
 ### 2.2 翻译 PDF 的保真边界
 
@@ -99,3 +114,6 @@ vllm serve <path>/Qwen2.5-32B-Instruct-AWQ \
 | `generate_notes_long.py` | 超长文档的按页采样版本 | 同上 |
 | `fix_dialogue_section.py` | 检测并重写「与谁对话」节 | 只处理条目多且平均长度短的（抄清单特征） |
 | `build_readme.py` | 目录 markdown → README | 每次全量重建，自动挂上已存在的产物链接 |
+| `audit_notes_facts.py` | 抽取笔记数字断言回原文核对 | 只读，不改文件；加新笔记后应重跑 |
+| `make_excerpts.py` | 超长材料按大纲页码抽章节节选 | 改 JOBS 里的抽页范围后重跑 |
+| `translate_excerpts.py` | 翻译 `pdfs/en_excerpt/` 下的节选 | 已有产物自动跳过 |

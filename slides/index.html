@@ -366,9 +366,30 @@ code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:5px;font-siz
   </div>
 </section>
 
-<!-- 12 下一步 -->
+<!-- 决策 -->
 <section class="slide">
-  <h2><span class="num">12</span>结论与下一步</h2>
+  <h2><span class="num">12</span>把结论变成决策：该不该用 GFlowNet</h2>
+  <p class="sub">仓库的 <code>START_HERE.md</code> 就是这一页的展开版——五分钟判断，不用读 213 篇。</p>
+  <div class="card" style="margin-bottom:18px;border-color:rgba(62,207,142,.35)">
+    <span class="tag" style="background:rgba(62,207,142,.16);color:var(--green)">值得用的四个条件</span>
+    <h3 class="pos">离散组合空间 + 需要多样高分候选 + 奖励函数难以精调 + 奖励地形不是尖峰</h3>
+    <p>四个都满足时护城河很清晰；<b>缺一个就该认真考虑替代方案</b>。</p>
+  </div>
+  <table>
+    <tr><th>你的情形</th><th>建议</th><th>依据</th></tr>
+    <tr class="bad"><td>奖励近 Dirac、维度不高</td><td>用 MCMC（快 500×，模态还多）</td><td>N081</td></tr>
+    <tr class="bad"><td>有力场 / 能量结构可用</td><td>用 iDEM、力引导漂移</td><td>N031, N107</td></tr>
+    <tr class="bad"><td>只要单个最优解</td><td>用 PPO/GRPO，更省算力</td><td>—</td></tr>
+    <tr class="bad"><td>稠密奖励且只担心 mode collapse</td><td>不必换 Pruning Loss，收益为零</td><td>N113</td></tr>
+    <tr class="best"><td><b>需多样候选 + 奖励难精调</b></td><td><span class="pos">用 GFlowNet</span>，护城河所在</td><td>N109, T54</td></tr>
+    <tr class="best"><td><b>需离散空间 off-policy + Z 估计</b></td><td><span class="pos">用 GFlowNet</span>，RL 工具箱无对应物</td><td>—</td></tr>
+  </table>
+  <p class="note">选训练目标别照搬理论速率：T40 给出 FM <code>O(1/√T)</code> 优于 DB <code>O(1/T^{1/3})</code>，但 N081 在高维稀疏离散图上实测 <span class="neg">FM 多数情况不收敛、DB 一致最优</span>——排序相反。短轨迹要熵覆盖选 FM，长轨迹要快收敛选 TB + 稳定器，高维稀疏图选 DB。</p>
+</section>
+
+<!-- 13 下一步 -->
+<section class="slide">
+  <h2><span class="num">13</span>结论与下一步</h2>
   <p class="sub">三条判断，三个动作。</p>
   <div class="grid g3">
     <div class="card">
@@ -400,7 +421,7 @@ code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:5px;font-siz
 
 <!-- 13 参考 -->
 <section class="slide">
-  <h2><span class="num">13</span>关键引用</h2>
+  <h2><span class="num">14</span>关键引用</h2>
   <p class="sub">本汇报引用的目录外新论文（目录内论文用 T/O/A/N 编号，详见仓库 README）。</p>
   <table>
     <tr><th>论文</th><th>来源</th><th>日期</th></tr>

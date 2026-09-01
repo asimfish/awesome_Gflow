@@ -322,6 +322,29 @@
   解读模板固定 8 节：一句话、问题与动机、方法核心、理论结果、实验与证据、局限与批判、与谁对话、对后续研究的启示。
 \end{frame}
 
+\begin{frame}{把结论变成决策：该不该用 GFlowNet}
+  \begin{exampleblock}{值得用的四个条件（缺一个就该考虑替代方案）}
+    离散组合空间 $+$ 需要多样高分候选 $+$ 奖励函数难以精调 $+$ 奖励地形不是尖峰
+  \end{exampleblock}
+  \vspace{2pt}
+  \begin{center}
+  \begin{tabular}{p{5.3cm}p{4.4cm}l}
+    \toprule
+    你的情形 & 建议 & 依据 \\
+    \midrule
+    奖励近 Dirac、维度不高 & 用 MCMC & N081 \\
+    有力场/能量结构可用 & 用 iDEM、力引导漂移 & N031, N107 \\
+    只要单个最优解 & 用 PPO/GRPO，更省算力 & --- \\
+    稠密奖励且只担心 mode collapse & 不必换 Pruning Loss，收益为零 & N113 \\
+    需多样候选 $+$ 奖励难精调 & \pos{用 GFlowNet}，护城河所在 & N109, T54 \\
+    需离散空间 off-policy $+$ $Z$ 估计 & \pos{用 GFlowNet}，RL 无对应物 & --- \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{2pt}
+  选目标别照搬理论速率：T40 给 FM $\mathcal{O}(1/\sqrt{T})$ 优于 DB，但 N081 在高维稀疏图上实测 \con{FM 多数不收敛、DB 最优}。
+\end{frame}
+
 \begin{frame}{结论与下一步}
   \begin{columns}[T]
     \column{0.31\textwidth}
