@@ -77,6 +77,11 @@ def artifact_links(pid: str) -> str:
     zh = REPO / "pdfs/zh" / f"{pid}_zh.pdf"
     if zh.exists():
         parts.append(f"[🇨🇳 中文PDF](pdfs/zh/{zh.name})")
+    else:
+        # 超长参考材料只译核心章节，见 DELIVERY.md §2.2.1
+        exc = sorted((REPO / "pdfs/zh").glob(f"{pid}_excerpt_*_zh.pdf"))
+        if exc:
+            parts.append(f"[🇨🇳 中文PDF（章节节选）](pdfs/zh/{exc[0].name})")
     en = list((REPO / "pdfs/en").glob(f"{pid}_*.pdf"))
     if en:
         parts.append(f"[📄 英文PDF](pdfs/en/{en[0].name})")
@@ -103,15 +108,18 @@ def main():
 
     total = sum(len(p) for _, _, p in readme_secs)
     n_notes = len(list((REPO / "notes").glob("*.md")))
-    n_zh = len(list((REPO / "pdfs/zh").glob("*_zh.pdf")))
+    n_zh_full = len([p for p in (REPO / "pdfs/zh").glob("*_zh.pdf") if "_excerpt_" not in p.name])
+    n_zh_exc = len(list((REPO / "pdfs/zh").glob("*_excerpt_*_zh.pdf")))
+    n_zh = n_zh_full + n_zh_exc
 
     out = []
     out.append("# Awesome GFlowNets [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)\n")
     out.append(
         "精选的 GFlowNet（Generative Flow Networks）论文、代码、课程与深度解读清单。"
         f"收录论文 **{total}** 篇（检索截止 2026-08-25），其中 **35** 篇核心论文配有中文深度解读"
-        f"（已完成 {n_notes} 篇）与保版式中文翻译 PDF（已完成 {n_zh} 篇，由 "
-        "[SuperTranslate](https://github.com/asimfish/super_translate) + Qwen2.5-32B 生成）。\n")
+        f"（已完成 {n_notes} 篇）与保版式中文翻译 PDF（全文 {n_zh_full} 篇"
+        + (f" + 章节节选 {n_zh_exc} 篇" if n_zh_exc else "")
+        + "，由 [SuperTranslate](https://github.com/asimfish/super_translate) + Qwen2.5-32B 生成）。\n")
     out.append(
         "A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. "
         "Legend: 📝 深度解读 in-depth note · 🇨🇳 中文PDF Chinese translation · 📄 英文PDF original PDF.\n")

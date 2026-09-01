@@ -37,6 +37,19 @@ SuperTranslate 冻结公式、表格、算法伪代码与引用标记后按原�
 
 翻译由本地 32B 模型完成，专业术语准确度低于人工；**引用论文观点时以英文原文为准**。
 
+### 2.2.1 两篇超长参考材料只做章节节选
+
+35 篇核心清单里有两篇不是方法论文而是参考材料，页数远超其余论文：
+
+| 编号 | 材料 | 页数 | 处理 |
+|---|---|---|---|
+| N061 | Deleu 博士论文《Generative Flow Networks: Theory and Applications to Structure Learning》 | 259 | 节选 39 页：Introduction + Chapter 1 Background + Part I 开篇 |
+| O01 | 《Optimal Transport for Machine Learners》讲义 | 480 | 节选 49 页：Kantorovich Relaxation（O08 的 OT 等价性所依赖的形式）+ Dynamic Optimal Transport（Benamou-Brenier） |
+
+理由：单卡 32B 的实测速度约 31 页 / 40 分钟，全译这两篇需 5-10 小时 GPU 时间，而它们的作用是「查阅特定概念」而非「通读」——解读笔记也相应写成「文献地图」而非逐节解读。
+
+节选 PDF 的位置与命名：英文节选在 `pdfs/en_excerpt/`，中文译文在 `pdfs/zh/` 且文件名带 `_excerpt_` 标记，例如 `O01_excerpt_kantorovich_and_dynamic_ot_zh.pdf`。抽页范围写在 `scripts/make_excerpts.py` 的 `JOBS` 里，改范围后重跑该脚本即可。两篇的**英文全文仍在 `pdfs/en/`**，需要其他章节时直接查原文或调整抽页范围重译。
+
 ### 2.3 趋势报告的时效性
 
 三份报告都是 **2026-09-01 单日快照**：
