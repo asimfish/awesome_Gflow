@@ -6,14 +6,14 @@
 
 | 产物 | 位置 | 数量 | 生成方式 |
 |---|---|---|---|
-| 论文分类目录 | `README.md`, `papers/current_papers.tsv` | 212 篇 | 人工调研（检索截止 2026-08-25），README 由 `scripts/build_readme.py` 从目录 markdown 生成 |
+| 论文分类目录 | `README.md`, `papers/current_papers.tsv` | 213 篇 | 人工调研（检索截止 2026-08-25），README 由 `scripts/build_readme.py` 从目录 markdown 生成 |
 | 核心论文清单 | `papers/core_papers.json` | 35 篇 | 从目录中标记为 P0 精读的条目抽取 |
 | 中文深度解读 | `notes/*.md` | 35 篇 | 本地 vLLM（Qwen2.5-32B-AWQ）读 PDF 全文生成初稿，固定 8 节模板 |
 | 英文原文 PDF | `pdfs/en/` | 35 篇 | `scripts/download_core_pdfs.py`（arXiv API 标题检索；T32 从 ICLR proceedings 直取） |
 | 中文翻译 PDF | `pdfs/zh/` | 见 README 计数 | SuperTranslate 保版式引擎 + 同一 vLLM 后端 |
-| 趋势报告 | `insights/` | 3 份 | web 检索 + GitHub/PyPI API 实测，每条附来源链接与日期 |
-| HTML 汇报 | `slides/index.html` | 13 页 | 手写，键盘 ←/→ 翻页 |
-| Beamer PDF 汇报 | `slides/awesome_gflownets_report.pdf` | 15 页 | XeLaTeX，源码 `slides/awesome_gflownets_report.tex` |
+| 趋势与失效边界报告 | `insights/` | 4 份 | web 检索 + GitHub/PyPI API 实测，每条附来源链接与日期 |
+| HTML 汇报 | `slides/index.html` | 14 页 | 手写，键盘 ←/→ 翻页 |
+| Beamer PDF 汇报 | `slides/awesome_gflownets_report.pdf` | 17 页 | XeLaTeX，源码 `slides/awesome_gflownets_report.tex` |
 
 ## 2. 已知局限（重要）
 
@@ -67,7 +67,7 @@ N061 与 O01 是**页数原因**：单卡 32B 的实测速度约 31 页 / 40 分
 
 ### 2.4 目录本身的覆盖边界
 
-目录主体的检索截止 **2026-08-25**（206 篇）。三份趋势报告在 2026-09-01 的核实中遇到 17 篇论文，逐条比对后确认 11 篇已收录（RapTB=T54、Stable GFlowNets=T51、DTB=T50、alpha-GFN=T46 等——原目录的覆盖比预期完整），余下 6 篇已按 `CONTRIBUTING.md` 流程补录为 N107-N112 并写入目录 §11.24，现共 **212 篇**。
+目录主体的检索截止 **2026-08-25**（206 篇）。三份趋势报告在 2026-09-01 的核实中遇到 17 篇论文，逐条比对后确认 11 篇已收录（RapTB=T54、Stable GFlowNets=T51、DTB=T50、alpha-GFN=T46 等——原目录的覆盖比预期完整），余下 6 篇已按 `CONTRIBUTING.md` 流程补录为 N107-N112 并写入目录 §11.24。之后写失效边界专题（`insights/trends_failure_modes.md`）时又补录 N113（IEEE BIBM，不在原检索源内），现共 **213 篇**。
 
 这 6 篇的漏收根因值得记下来：前 23 节检索都以 GFlowNet 为关键词，而竞品方法（力引导采样、Jacobian 估计）与邻域综述（GRPO）标题不含该词；bioRxiv 与库论文也不在原检索源里。后续增量检索应把「竞品赛道」与「非 arXiv 预印本源」单独走一遍。
 

@@ -29,7 +29,7 @@
 \newcommand{\HL}[1]{\textcolor{emphasis}{#1}}
 
 \title[Awesome GFlowNets]{Awesome GFlowNets}
-\subtitle{从流匹配到可认证训练：212 篇文献的结构化盘点}
+\subtitle{从流匹配到可认证训练：213 篇文献的结构化盘点}
 \author{awesome\_Gflow 调研流水线}
 \institute{检索截止 2026-08-25}
 \date{2026 年 9 月}
@@ -45,10 +45,10 @@
     \column{0.48\textwidth}
       \begin{block}{四类产物}
         \begin{itemize}
-          \item \textbf{212} 篇论文分类目录（TSV + markdown）
+          \item \textbf{213} 篇论文分类目录（TSV + markdown）
           \item \textbf{35} 篇核心论文中文深度解读
           \item \textbf{34} 篇保版式中文翻译 PDF（32 全文 + 2 篇长材料章节节选）
-          \item \textbf{3} 份趋势核实报告
+          \item \textbf{4} 份趋势与失效边界报告
         \end{itemize}
       \end{block}
     \column{0.48\textwidth}
@@ -226,6 +226,38 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{失效边界：什么时候 GFlowNet 不 work}
+  213 篇论文里只有 1 篇的简介提到失效——证据被埋在实验章节与 limitations 里。
+  \vspace{4pt}
+  \begin{center}
+  \begin{tabular}{llp{5.4cm}l}
+    \toprule
+    失效模式 & 触发条件 & 定量表现 & 依据 \\
+    \midrule
+    奖励峰值过尖 & $\sigma \le 0.5$ & 只找 1--2 个模态，MCMC 找 11--16 个，成本还高 $500\times$ & N081 \\
+    截断致流泄漏 & 稀疏奖励 & 强制终止态违反流守恒，偏向最长轨迹；稠密奖励下无影响 & N113 \\
+    系统性欠拟合 & 高熵初始化 & $\log p$ 对 $\log R$ 回归斜率仅 0.58（理想 1.0） & T07 \\
+    LLM 前缀坍缩 & 终端奖励 $+$ 回放偏置 & 早期 token 熵骤降，长度系统性偏离 & T54 \\
+    loss 与误差脱钩 & 任意 & 小 TV 误差不蕴含有界 loss & T51 \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{元失效：四个流行评测指标都不测分布正确性}
+  \begin{alertblock}{被否证的指标（T32）}
+    Spearman 相关（$\log p_\theta = c\log\tilde\pi$ 时恒为 1.0，但只有 $c=1$ 才匹配目标）、平均未归一化目标、Shen's accuracy、发现模态数与 top-$k$ 奖励——全都会给「在模态上堆积过多质量」的错误分布高分。
+  \end{alertblock}
+  \vspace{2pt}
+  唯一被验证可用的是 \textbf{FCS}（Flow Consistency in Sub-graphs）：与 TV 距离的 Spearman 相关 \pos{0.99}（集合生成）/ \pos{0.90}（序列生成），计算量少约 \pos{3 个数量级}，并有 PAC 界。
+
+  \vspace{4pt}
+  用 FCS 复检的负面结果：LED- 与 FL-GFlowNets 在「发现高价值状态」上显著优于标准 TB，但 \con{采样分布是错的}——用模态数评测会把它们判为优胜。
+
+  \vspace{4pt}
+  \textbf{操作规则}：声称「分布匹配更好」的实验，不报 FCS（或可枚举时的精确 TV）就没有说服力。
+\end{frame}
+
 \begin{frame}{工具生态的冷静一面（GitHub API 当日实测）}
   \begin{columns}[T]
     \column{0.48\textwidth}
@@ -269,10 +301,10 @@
     \column{0.48\textwidth}
       \begin{block}{内容组织（按 awesome-ml4co 规范）}
         \begin{itemize}
-          \item \texttt{papers/}：212 篇 TSV 目录 $+$ 核心清单
+          \item \texttt{papers/}：213 篇 TSV 目录 $+$ 核心清单
           \item \texttt{notes/}：8 节固定模板的中文解读
           \item \texttt{pdfs/en}, \texttt{pdfs/zh}：原文与译文对照
-          \item \texttt{insights/}：三份趋势报告
+          \item \texttt{insights/}：四份趋势与失效边界报告
           \item \texttt{surveys/}：理论指南与 OT 潜力分析
         \end{itemize}
       \end{block}

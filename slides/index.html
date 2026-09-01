@@ -260,9 +260,28 @@ code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:5px;font-siz
   <p class="note">给新入场者：不要做「GFlowNet vs X 谁更强」的对比论文（结论已明确且依场景而定），要把鲁棒性优势落到具体流水线，或做 GFN×OT 这类结构性连接。</p>
 </section>
 
+<!-- 失效边界 -->
+<section class="slide">
+  <h2><span class="num">08</span>失效边界：什么时候 GFlowNet 不work</h2>
+  <p class="sub">213 篇论文里只有 1 篇的简介提到失效——证据被埋在实验章节与 limitations 里，这页把它们抽出来。</p>
+  <table>
+    <tr><th>失效模式</th><th>触发条件</th><th>定量表现</th><th>依据</th></tr>
+    <tr class="bad"><td><b>奖励峰值过尖</b></td><td>σ ≤ 0.5（近 Dirac）</td><td>GFlowNet 只找 <b>1-2</b> 个模态，MCMC 找 <b>11-16</b> 个；成本还高 500×</td><td>N081</td></tr>
+    <tr><td><b>轨迹截断致流泄漏</b></td><td>稀疏奖励 + 人为长度上限</td><td>强制终止态违反流守恒，生成偏向最长轨迹 → mode collapse；稠密奖励下无影响</td><td>N113</td></tr>
+    <tr><td><b>系统性欠拟合</b></td><td>随机初始化 + 高熵起点</td><td>log p 对 log R 回归斜率仅 <b>0.58</b>（理想 1.0），数万轮后仍达不到目标均值</td><td>T07</td></tr>
+    <tr><td><b>LLM 前缀坍缩</b></td><td>只有终端奖励 + 回放偏置</td><td>早期 token 熵骤降、不同终止态共享前缀；长度系统性偏短或偏长</td><td>T54</td></tr>
+    <tr><td><b>loss 与分布误差脱钩</b></td><td>任意（可解析反例）</td><td>小 TV 误差<b>不蕴含</b>有界 loss；loss 尖峰可与近优策略共存</td><td>T51</td></tr>
+  </table>
+  <div class="card" style="margin-top:18px">
+    <span class="tag">元失效</span>
+    <h3 class="neg">四个流行评测指标都不测分布正确性</h3>
+    <p>Spearman 相关（<code>log p = c·log R</code> 时恒为 1.0，但只有 c=1 才匹配）、平均未归一化目标、Shen's accuracy、模态数/top-k 奖励——全部会给「在模态上堆积过多质量」的错误分布高分。唯一验证可用的是 <b>FCS</b>（与 TV 的 Spearman 相关 0.99/0.90，计算量少 3 个数量级，有 PAC 界）。用 FCS 复检发现 LED- 与 FL-GFlowNets <span class="neg">根本学不到目标分布</span>，但用模态数评测会判它们优胜。<b>操作规则：不报 FCS 的「分布匹配更好」没有说服力。</b></p>
+  </div>
+</section>
+
 <!-- 9 生态现实 -->
 <section class="slide">
-  <h2><span class="num">08</span>工具生态的冷静一面（GitHub API 实测）</h2>
+  <h2><span class="num">09</span>工具生态的冷静一面（GitHub API 实测）</h2>
   <p class="sub">论文热度与工程落地之间存在明显落差，这一节的数字全部当日直读 API。</p>
   <div class="grid g2">
     <div class="card">
@@ -290,7 +309,7 @@ code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:5px;font-siz
 
 <!-- 10 GFN x OT -->
 <section class="slide">
-  <h2><span class="num">09</span>最值得投入的方向：GFlowNet × 最优传输</h2>
+  <h2><span class="num">10</span>最值得投入的方向：GFlowNet × 最优传输</h2>
   <p class="sub">这是本次调研中唯一「理论干净、抓手明确、竞争未饱和」的交叉方向。</p>
   <div class="grid g2">
     <div class="card">
@@ -319,7 +338,7 @@ code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:5px;font-siz
 
 <!-- 11 仓库结构 -->
 <section class="slide">
-  <h2><span class="num">10</span>交付物与仓库结构</h2>
+  <h2><span class="num">11</span>交付物与仓库结构</h2>
   <p class="sub">按 awesome-ml4co 规范组织，README 由脚本从目录自动生成，可重复运行。</p>
   <div class="grid g2">
     <div class="card">
@@ -349,7 +368,7 @@ code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:5px;font-siz
 
 <!-- 12 下一步 -->
 <section class="slide">
-  <h2><span class="num">11</span>结论与下一步</h2>
+  <h2><span class="num">12</span>结论与下一步</h2>
   <p class="sub">三条判断，三个动作。</p>
   <div class="grid g3">
     <div class="card">
@@ -381,7 +400,7 @@ code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:5px;font-siz
 
 <!-- 13 参考 -->
 <section class="slide">
-  <h2><span class="num">12</span>关键引用</h2>
+  <h2><span class="num">13</span>关键引用</h2>
   <p class="sub">本汇报引用的目录外新论文（目录内论文用 T/O/A/N 编号，详见仓库 README）。</p>
   <table>
     <tr><th>论文</th><th>来源</th><th>日期</th></tr>

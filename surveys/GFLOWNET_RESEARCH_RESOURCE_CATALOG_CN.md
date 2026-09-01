@@ -749,3 +749,13 @@ P^\star(x)=\frac{R(x)}{Z},
 | **N110** | [Advances in GRPO for Generation Models: A Survey](https://arxiv.org/abs/2603.06623) · 预印本 2026-03 | GRPO 及其后续发展的综述，把 diversity preservation 单列为一个研究方向（DiverseGRPO 用 Vendi Score 提升 13%–18%、OSCAR 做训练无关的隐空间多样性增强）。 | 选读：从反面确认「模式坍缩是 GRPO 的结构性弱点而非实现问题」，写 related work 时有用 <sub>来源 insights/trends_neighbors.md</sub> |
 | **N111** | [AbFlowNet: Optimizing Antibody-Antigen Binding Energy via Diffusion-GFlowNet Fusion](https://arxiv.org/abs/2505.12358) · 预印本 2025-05 | 把扩散去噪步当作 GFlowNet 的状态转移来做抗体设计，用结合自由能作奖励。 | 选读：「扩散骨架 + GFlowNet 目标」在生物大分子上的实例，原分子应用全景文档缺此条 <sub>来源 insights/trends_applications.md</sub> |
 | **N112** | [gfnx: Fast and Scalable Library for Generative Flow Networks in JAX](https://arxiv.org/abs/2511.16592) · 预印本 2025-11 | JAX 实现的 GFlowNet 库：环境、reward、指标全部 JIT-able，每个环境配 CleanRL 风格单文件基线；声明 CPU 序列生成最高 55 倍、GPU 贝叶斯结构学习最高 80 倍加速，覆盖 8 个环境，明确以 standardize empirical evaluation 为目标。 | 选读：做大批量性能实验时值得试，但**工程成熟度需保留意见**——PyPI 停在 0.0.1（2025-11-16 后未发新版）、仅 2 个 fork，目前是作者自用加论文配套 <sub>来源 insights/trends_applications.md §5.3</sub> |
+
+### 11.25 失效边界专题补录（2026-09-01，1 篇）
+
+写 `insights/trends_failure_modes.md`（GFlowNet 失效边界专题）时，用「失效/崩溃/欠拟合/反例」等词扫描本目录 212 篇简介只命中 1 篇（T07），说明这类证据在原目录里被系统性埋没在各篇的实验章节与 limitations 里。该专题把散落证据按失效机制归类，并补录下列漏收论文。**漏收根因**：IEEE 会议（BIBM）不在原检索源内。
+
+| 编号 | 论文与状态 | 简介 | 建议 |
+|---|---|---|---|
+| **N113** | [Fixing Truncation-Induced Mode Collapse in GFlowNets via Pruning Loss](https://doi.org/10.1109/bibm66473.2025.11356156) · IEEE BIBM 2025 | 把 mode collapse 的根因定位到「人为轨迹截断产生的强制终止态」：它们违反流守恒的边界约束，造成流泄漏并把生成偏向最大长度轨迹。提出 Pruning Loss 要求强制终止处的 sink flow 与总出流都等于奖励，理论上恢复截断空间的流守恒且保证梯度不消失。实验对照极干净：稀疏奖励（kinase 靶点）上大幅超过标准目标，稠密奖励（drug-likeness）上各法相当——精确说明流泄漏只在稀疏奖励下限制性能。 | **优先读**：论断「修正强制终止处的边界约束比改进平衡方程更根本」若成立，则 TB→SubTB→f-TB 这条主线在 mode collapse 上一直在治标；与 T07、T51 连读 <sub>来源 insights/trends_failure_modes.md §2</sub> |
+
+另有一处元数据补全：**T32** 的预印本题名与目录记录的会议题名不同（arXiv:2411.05899 题为 *Analyzing GFlowNets: Limitations, Countermeasures, and Assessment*，ICLR 2025 版题为 *When Do GFlowNets Learn the Right Distribution?*）。按题名检索容易误判为两篇，已在 status 字段标注。该文的 FCS 指标与指标否证结论见 `insights/trends_failure_modes.md` §6。

@@ -1,6 +1,6 @@
 # Awesome GFlowNets [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
 
-精选的 GFlowNet（Generative Flow Networks）论文、代码、课程与深度解读清单。收录论文 **212** 篇（主体检索截止 2026-08-25，含 2026-09-01 趋势核实补录 6 篇），其中 **35** 篇核心论文配有中文深度解读（已完成 35 篇）与保版式中文翻译 PDF（全文 32 篇 + 章节节选 2 篇，由 [SuperTranslate](https://github.com/asimfish/super_translate) + Qwen2.5-32B 生成）。
+精选的 GFlowNet（Generative Flow Networks）论文、代码、课程与深度解读清单。收录论文 **213** 篇（主体检索截止 2026-08-25，含 2026-09-01 趋势与失效边界核实补录 7 篇），其中 **35** 篇核心论文配有中文深度解读（已完成 35 篇）与保版式中文翻译 PDF（全文 32 篇 + 章节节选 2 篇，由 [SuperTranslate](https://github.com/asimfish/super_translate) + Qwen2.5-32B 生成）。
 
 A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Legend: 📝 深度解读 in-depth note · 🇨🇳 中文PDF Chinese translation · 📄 英文PDF original PDF.
 
@@ -27,7 +27,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   - [其他应用 · Other Applications](#其他应用--other-applications) (3)
 - **生态 Ecosystem**
   - [评测基准与软件 · Benchmarks & Software](#评测基准与软件--benchmarks--software) (2)
-  - [审查流水线补录 · Additional Curated Papers](#审查流水线补录--additional-curated-papers) (31)
+  - [审查流水线补录 · Additional Curated Papers](#审查流水线补录--additional-curated-papers) (32)
 - [趋势洞察 Trends & Insights](#趋势洞察-trends--insights)
 - [课程与教程 Courses & Tutorials](#课程与教程-courses--tutorials)
 - [代码库 Codebases](#代码库-codebases)
@@ -531,10 +531,13 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   把扩散去噪步当作 GFlowNet 的状态转移来做抗体设计，用结合自由能作奖励。
 - `N112` [gfnx: Fast and Scalable Library for Generative Flow Networks in JAX](https://arxiv.org/abs/2511.16592) · *预印本 2025-11*  
   JAX 实现的 GFlowNet 库：环境、reward、指标全部 JIT-able，每个环境配 CleanRL 风格单文件基线；声明 CPU 序列生成最高 55 倍、GPU 贝叶斯结构学习最高 80 倍加速，覆盖 8 个环境，明确以 standardize empirical evaluation 为目标。
+- `N113` [Fixing Truncation-Induced Mode Collapse in GFlowNets via Pruning Loss](https://doi.org/10.1109/bibm66473.2025.11356156) · *IEEE BIBM 2025*  
+  把 mode collapse 的根因定位到「人为轨迹截断产生的强制终止态」：它们违反流守恒的边界约束，造成流泄漏并把生成偏向最大长度轨迹。
 
 ## 趋势洞察 Trends & Insights
 
 - [trends applications](insights/trends_applications.md)
+- [trends failure modes](insights/trends_failure_modes.md)
 - [trends methods](insights/trends_methods.md)
 - [trends neighbors](insights/trends_neighbors.md)
 
