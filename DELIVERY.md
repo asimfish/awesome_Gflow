@@ -6,7 +6,7 @@
 
 | 产物 | 位置 | 数量 | 生成方式 |
 |---|---|---|---|
-| 论文分类目录 | `README.md`, `papers/current_papers.tsv` | 206 篇 | 人工调研（检索截止 2026-08-25），README 由 `scripts/build_readme.py` 从目录 markdown 生成 |
+| 论文分类目录 | `README.md`, `papers/current_papers.tsv` | 212 篇 | 人工调研（检索截止 2026-08-25），README 由 `scripts/build_readme.py` 从目录 markdown 生成 |
 | 核心论文清单 | `papers/core_papers.json` | 35 篇 | 从目录中标记为 P0 精读的条目抽取 |
 | 中文深度解读 | `notes/*.md` | 35 篇 | 本地 vLLM（Qwen2.5-32B-AWQ）读 PDF 全文生成初稿，固定 8 节模板 |
 | 英文原文 PDF | `pdfs/en/` | 35 篇 | `scripts/download_core_pdfs.py`（arXiv API 标题检索；T32 从 ICLR proceedings 直取） |
@@ -67,7 +67,11 @@ N061 与 O01 是**页数原因**：单卡 32B 的实测速度约 31 页 / 40 分
 
 ### 2.4 目录本身的覆盖边界
 
-206 篇的检索截止 **2026-08-25**，之后的论文不在目录内。趋势报告里引用的目录外新论文（RapTB、Stable GFlowNets、DTB、alpha-GFN 等）尚未并入 `papers/current_papers.tsv`，需要按 `CONTRIBUTING.md` 的流程补录。
+目录主体的检索截止 **2026-08-25**（206 篇）。三份趋势报告在 2026-09-01 的核实中遇到 17 篇论文，逐条比对后确认 11 篇已收录（RapTB=T54、Stable GFlowNets=T51、DTB=T50、alpha-GFN=T46 等——原目录的覆盖比预期完整），余下 6 篇已按 `CONTRIBUTING.md` 流程补录为 N107-N112 并写入目录 §11.24，现共 **212 篇**。
+
+这 6 篇的漏收根因值得记下来：前 23 节检索都以 GFlowNet 为关键词，而竞品方法（力引导采样、Jacobian 估计）与邻域综述（GRPO）标题不含该词；bioRxiv 与库论文也不在原检索源里。后续增量检索应把「竞品赛道」与「非 arXiv 预印本源」单独走一遍。
+
+2026-09-01 之后的论文仍不在目录内。
 
 ## 3. 复现环境
 

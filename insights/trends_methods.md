@@ -57,14 +57,18 @@ TB（T03）→ SubTB（T05）→ f-TB（T49）→ 散度族（T17）这条主线
 4. 评测协议已收敛，别自造基准：采样器方向用 N010 的库与指标（logZ MC 估计 K=2000、ELBO/EUBO），分子方向用 fragment-based + QM9；自造基准的论文会被要求补标准基准。
 5. 连续控制方向不建议新入：CFlowNets 后无有力跟进，社区资源已流向扩散采样器；除非有机器人等真实场景背书，否则该方向难有下文。
 
-## 附：本报告引用的目录外新论文清单
+## 附：本报告引用的论文与其在本目录中的编号
 
-| 论文 | 来源 | 日期 |
-|---|---|---|
-| Stable GFlowNets with Probabilistic Guarantees | [arXiv 2605.01729](https://arxiv.org/abs/2605.01729) | 2026 |
-| Avoid What You Know: Divergent Trajectory Balance | [arXiv 2602.17827](https://arxiv.org/abs/2602.17827) | 2026-02 |
-| Rooted Absorbed Prefix Trajectory Balance (RapTB) | [arXiv 2603.00454](https://arxiv.org/abs/2603.00454) | 2026-03 |
-| Controlling Exploration-Exploitation via Markov Chain Perspectives (alpha-GFN) | [arXiv 2602.01749](https://arxiv.org/abs/2602.01749) | 2026-02 |
-| Secrets of GFlowNets' Learning Behavior | [arXiv 2505.02035](https://arxiv.org/abs/2505.02035) | 2025-05 |
-| Generalization and Distributed Learning of GFlowNets | [ICLR 2025](https://proceedings.iclr.cc/paper_files/paper/2025/file/000eba875068854d5ff003b1fa534cd6-Paper-Conference.pdf) | 2025 |
-| A Theory of Non-acyclic Generative Flow Networks | [AAAI 2024](https://ojs.aaai.org/index.php/AAAI/article/view/28989) | 2024 |
+本节纠正一个检索疏漏：起初以为下列论文多数在 206 篇目录之外，逐条核对后发现 7 篇已收录（本目录的覆盖比预期完整）。已收录的给出编号，便于回查目录里的简介与优先级。
+
+| 论文 | 目录编号 | 来源 | 日期 |
+|---|---|---|---|
+| Stable GFlowNets with Probabilistic Guarantees | **T51** | [arXiv 2605.01729](https://arxiv.org/abs/2605.01729) | 预印本 2026 |
+| Avoid What You Know: Divergent Trajectory Balance | **T50** | [arXiv 2602.17827](https://arxiv.org/abs/2602.17827) | ICML 2026 主会 |
+| Rooted Absorbed Prefix Trajectory Balance (RapTB) | **T54** | [arXiv 2603.00454](https://arxiv.org/abs/2603.00454) | ICML 2026 |
+| Controlling Exploration-Exploitation via Markov Chain (alpha-GFN) | **T46** | [arXiv 2602.01749](https://arxiv.org/abs/2602.01749) | 预印本 2026 |
+| Secrets of GFlowNets' Learning Behavior | **T40** | [arXiv 2505.02035](https://arxiv.org/abs/2505.02035) | 预印本 2025 |
+| Generalization and Distributed Learning of GFlowNets | **T33** | [ICLR 2025](https://proceedings.iclr.cc/paper_files/paper/2025/file/000eba875068854d5ff003b1fa534cd6-Paper-Conference.pdf) | ICLR 2025 |
+| A Theory of Non-acyclic Generative Flow Networks | **T19** | [AAAI 2024](https://ojs.aaai.org/index.php/AAAI/article/view/28989) | AAAI 2024 |
+
+也就是说，本报告的价值不在于「发现了目录没有的论文」，而在于**把这些已收录条目串成趋势链条并给出取舍判断**——目录提供的是逐篇简介，这里回答的是「该往哪走、哪条路已经走满」。

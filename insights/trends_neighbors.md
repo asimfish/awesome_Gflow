@@ -70,15 +70,19 @@ PPO 熵接近 0（坍缩到单一模态）、GRPO 熵不超过 0.98，而 TB 系
 4. **应用护城河**：上升且清晰。「奖励设计不完美时仍保多样性」这条在分子与肽两个独立实验里都有量化证据，是 GRPO/PPO 系拿不出的。
 5. **对新入场者的建议**：不要做「GFlowNet vs X 谁更强」的对比论文（结论已明确且依场景而定），要做的是把 GFN 的鲁棒性优势落到具体流水线（药物发现、LLM 后训练的覆盖率问题），或者做 GFN×OT 这类结构性连接（O08、N041 是抓手）。
 
-## 附：本报告引用的目录外论文清单
+## 附：本报告引用的论文与其在本目录中的编号
 
-| 论文 | 来源 | 日期 |
-|---|---|---|
-| Iterated Denoising Energy Matching (iDEM) | [arXiv 2402.06121](https://arxiv.org/abs/2402.06121) | 2024-02 |
-| Drifting to Boltzmann: Force-Guided Drifting | [arXiv 2603.05527](https://arxiv.org/abs/2603.05527) | 2026-03 |
-| Flow Perturbation++ | [arXiv 2601.21177](https://arxiv.org/abs/2601.21177) | 2026-01 |
-| On scalable and efficient training of diffusion samplers | [NeurIPS 2025](https://proceedings.neurips.cc/paper_files/paper/2025/file/255a98afe2f5fe28c518eef9f7905da3-Paper-Conference.pdf) | 2025 |
-| Discrete Diffusion Schrödinger Bridge Matching (DDSBM) | [arXiv 2410.01500](https://arxiv.org/abs/2410.01500) | ICLR 2025 |
-| Rooted Absorbed Prefix Trajectory Balance (RapTB) | [arXiv 2603.00454](https://arxiv.org/abs/2603.00454) | 2026-03 |
-| Generating Structurally Diverse Therapeutic Peptides with GFlowNet | [bioRxiv](https://www.biorxiv.org/content/10.64898/2026.01.05.697258v3) | 2026-01 |
-| Advances in GRPO for Generation Models: A Survey | [arXiv 2603.06623](https://arxiv.org/pdf/2603.06623) | 2026-03 |
+逐条核对 206 篇目录后的结果：3 篇已收录（给出编号），5 篇确为目录外（已按 CONTRIBUTING 流程补录，见新编号）。
+
+| 论文 | 目录编号 | 来源 | 日期 |
+|---|---|---|---|
+| Iterated Denoising Energy Matching (iDEM) | **N031** | [arXiv 2402.06121](https://arxiv.org/abs/2402.06121) | ICML 2024 poster |
+| On scalable and efficient training of diffusion samplers | **N104** | [NeurIPS 2025](https://proceedings.neurips.cc/paper_files/paper/2025/file/255a98afe2f5fe28c518eef9f7905da3-Paper-Conference.pdf) | NeurIPS 2025 主会 |
+| Rooted Absorbed Prefix Trajectory Balance (RapTB) | **T54** | [arXiv 2603.00454](https://arxiv.org/abs/2603.00454) | ICML 2026 |
+| Discrete Diffusion Schrödinger Bridge Matching (DDSBM) | 已收录（见目录 SB 分区） | [arXiv 2410.01500](https://arxiv.org/abs/2410.01500) | ICLR 2025 |
+| Drifting to Boltzmann: Force-Guided Drifting | **N107**（本次补录） | [arXiv 2603.05527](https://arxiv.org/abs/2603.05527) | 预印本 2026-03 |
+| Flow Perturbation++ | **N108**（本次补录） | [arXiv 2601.21177](https://arxiv.org/abs/2601.21177) | 预印本 2026-01 |
+| Generating Structurally Diverse Therapeutic Peptides with GFlowNet | **N109**（本次补录） | [bioRxiv 2026.01.05.697258](https://www.biorxiv.org/content/10.64898/2026.01.05.697258v3) | bioRxiv 2026-01 |
+| Advances in GRPO for Generation Models: A Survey | **N110**（本次补录） | [arXiv 2603.06623](https://arxiv.org/abs/2603.06623) | 预印本 2026-03 |
+| AbFlowNet | **N111**（本次补录） | [arXiv 2505.12358](https://arxiv.org/abs/2505.12358) | 预印本 2025-05 |
+| gfnx（JAX 库与基准） | **N112**（本次补录） | [arXiv 2511.16592](https://arxiv.org/abs/2511.16592) | 预印本 2025-11 |

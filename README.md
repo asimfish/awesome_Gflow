@@ -1,6 +1,6 @@
 # Awesome GFlowNets [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
 
-精选的 GFlowNet（Generative Flow Networks）论文、代码、课程与深度解读清单。收录论文 **206** 篇（检索截止 2026-08-25），其中 **35** 篇核心论文配有中文深度解读（已完成 35 篇）与保版式中文翻译 PDF（全文 32 篇 + 章节节选 2 篇，由 [SuperTranslate](https://github.com/asimfish/super_translate) + Qwen2.5-32B 生成）。
+精选的 GFlowNet（Generative Flow Networks）论文、代码、课程与深度解读清单。收录论文 **212** 篇（主体检索截止 2026-08-25，含 2026-09-01 趋势核实补录 6 篇），其中 **35** 篇核心论文配有中文深度解读（已完成 35 篇）与保版式中文翻译 PDF（全文 32 篇 + 章节节选 2 篇，由 [SuperTranslate](https://github.com/asimfish/super_translate) + Qwen2.5-32B 生成）。
 
 A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Legend: 📝 深度解读 in-depth note · 🇨🇳 中文PDF Chinese translation · 📄 英文PDF original PDF.
 
@@ -27,7 +27,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   - [其他应用 · Other Applications](#其他应用--other-applications) (3)
 - **生态 Ecosystem**
   - [评测基准与软件 · Benchmarks & Software](#评测基准与软件--benchmarks--software) (2)
-  - [审查流水线补录 · Additional Curated Papers](#审查流水线补录--additional-curated-papers) (25)
+  - [审查流水线补录 · Additional Curated Papers](#审查流水线补录--additional-curated-papers) (31)
 - [趋势洞察 Trends & Insights](#趋势洞察-trends--insights)
 - [课程与教程 Courses & Tutorials](#课程与教程-courses--tutorials)
 - [代码库 Codebases](#代码库-codebases)
@@ -519,6 +519,18 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   建立 SMC 与最大熵 RL 训练的神经序列采样器之间的联系——学到的策略与值函数正好给出 SMC 的 proposal kernel 与 twist function，从而把摊销方法与粒子方法结合。
 - `N106` [Improved Off-policy Reinforcement Learning in Biological Sequence Design](https://openreview.net/forum?id=0TY5lhhdZm) · *ICML 2025 主会 · arXiv:2410.04461*  
   提出 \(\delta\)-Conservative Search：把 off-policy 搜索限制在可信区域内，缓解代理模型在分布外输入上的 misspecification，覆盖 DNA/RNA/蛋白/肽。
+- `N107` [Drifting to Boltzmann: Million-Fold Acceleration in Boltzmann Sampling with Force-Guided Drifting](https://arxiv.org/abs/2603.05527) · *预印本 2026-03*  
+  把力场信息引入采样位移（Force-Interpolated Drifting）与邻居重加权（Force-Aligned Kernel）。
+- `N108` [Flow Perturbation++: Multi-Step Unbiased Jacobian Estimation for High-Dimensional Boltzmann Sampling](https://arxiv.org/abs/2601.21177) · *预印本 2026-01*  
+  为 SMC 流水线提供无偏多步 Jacobian 估计。
+- `N109` [Generating Structurally Diverse Therapeutic Peptides with GFlowNet](https://www.biorxiv.org/content/10.64898/2026.01.05.697258v3) · *bioRxiv 2026-01*  
+  与带显式多样性惩罚的 GRPO-D（λ=0.15）正面对比：GFlowNet 二肽采样均匀度高 5.4 倍、奖励方差低 1.9 倍、重复序列少 3.9 倍。
+- `N110` [Advances in GRPO for Generation Models: A Survey](https://arxiv.org/abs/2603.06623) · *预印本 2026-03*  
+  GRPO 及其后续发展的综述，把 diversity preservation 单列为一个研究方向（DiverseGRPO 用 Vendi Score 提升 13%–18%、OSCAR 做训练无关的隐空间多样性增强）。
+- `N111` [AbFlowNet: Optimizing Antibody-Antigen Binding Energy via Diffusion-GFlowNet Fusion](https://arxiv.org/abs/2505.12358) · *预印本 2025-05*  
+  把扩散去噪步当作 GFlowNet 的状态转移来做抗体设计，用结合自由能作奖励。
+- `N112` [gfnx: Fast and Scalable Library for Generative Flow Networks in JAX](https://arxiv.org/abs/2511.16592) · *预印本 2025-11*  
+  JAX 实现的 GFlowNet 库：环境、reward、指标全部 JIT-able，每个环境配 CleanRL 风格单文件基线；声明 CPU 序列生成最高 55 倍、GPU 贝叶斯结构学习最高 80 倍加速，覆盖 8 个环境，明确以 standardize empirical evaluation 为目标。
 
 ## 趋势洞察 Trends & Insights
 
