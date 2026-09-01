@@ -544,6 +544,10 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
 - [HTML 汇报（PPT 风格）](slides/index.html)
 - [Beamer PDF 报告](slides/awesome_gflownets_report.pdf)
 
+## 交付说明与已知局限 Delivery Notes
+
+解读笔记与翻译 PDF 由本地 32B 模型生成、未逐篇人工校对；趋势报告是 2026-09-01 单日快照。生成方式、保真边界、复现环境与脚本用途见 [DELIVERY.md](DELIVERY.md)——**引用具体定理条件或实验数字前请回查 `pdfs/en/` 原文**。
+
 ## 贡献 Contributing
 
 欢迎 PR：新论文按 `编号 | 标题链接 | venue | 一句话简介` 追加到对应分区；深度解读放入 `notes/`，命名 `<ID>_<slug>.md`。
