@@ -344,8 +344,16 @@ P^\star(x)=\frac{R(x)}{Z},
 | **P1** | [gfnx](https://github.com/d-tiapkin/gfnx) · [文档](https://gfnx.readthedocs.io/en/latest/) | JAX、可扩展 benchmark、单文件基线 | 可扩展 **benchmark 套件**（不只是基线集合），适合性能实验和大批量比较 |
 | **P1** | [gfn-diffusion](https://github.com/GFNOrg/gfn-diffusion) | 连续 GFN / diffusion sampler 训练与统一评测 | 配套 N010（NeurIPS 2024 统一基准），做连续采样器选型时的对照实现；原清单缺此条 |
 | **P0** | [Mila Workshop notebooks](https://github.com/josephdviviano/gflownet-tutorials) | Colab 实操和基础习题 | 与 Workshop 课程配套（仓库已改名，旧名 `torchgfn-tutorials` 靠 GitHub 转发） |
-| **P1** | [Awesome-GFlowNets](https://github.com/zdhNarsil/Awesome-GFlowNets) | 继续发现论文与代码 | 社区索引；发表状态必须回原始来源核验 |
+| **P1** | [Awesome-GFlowNets](https://github.com/zdhNarsil/Awesome-GFlowNets) | 继续发现论文与代码 | 社区索引；发表状态必须回原始来源核验。**已停更于 2024-10-01**（2026-09-01 核实），不可作为 2025-2026 的文献来源 |
 | **P2** | [ARIS](https://github.com/wanshuiyin/auto-claude-code-research-in-sleep) | 周期性检索、下载、去重和生成候选报告 | 适合自动更新清单，不代替人工审阅定理与会议状态 |
+
+#### 代码资源勘误（2026-09-01 经 GitHub API 核实，详见 `insights/trends_applications.md`）
+
+- `milaforscience/gflownet` 是 0 star / 0 提交的**空镜像**，勿引用；面向科学发现的 Mila 库正确地址是 [alexhernandezgarcia/gflownet](https://github.com/alexhernandezgarcia/gflownet)（344 star，最近提交 2026-08-29，Crystal-GFN 出处）。
+- [GFNOrg/gflownet](https://github.com/GFNOrg/gflownet)（686 star）停更于 2023-02-28，是 2021 原始实现的**历史归档**，不是活跃实现。
+- [recursionpharma/gflownet](https://github.com/recursionpharma/gflownet) 近一年仅 2 次提交且均为 Dockerfile/tox 杂务，处于**停滞**状态；上表 P1 评级仅针对其代码完备度，不代表当前维护活跃度。
+- `torchgfn` 的 GitHub license 字段为 `NOASSERTION`，商用集成前需人工确认授权。
+- `gfnx` 的 PyPI 只有 0.0.1（2025-11-16 上传后未发新版），当前是「作者自用 + 论文配套」，尚未形成社区，不建议作为唯一依赖。
 
 ### 第一份复现实验
 
