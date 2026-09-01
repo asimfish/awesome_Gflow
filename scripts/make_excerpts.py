@@ -23,6 +23,12 @@ JOBS = {
         (50, 71, "Kantorovich Relaxation（O08 的 OT 等价性所依赖的形式）"),
         (316, 342, "Dynamic Optimal Transport（Benamou-Brenier 动态形式）"),
     ]),
+    # N032 的 p23-30 是扩散生成图像密集的 Additional Figures，MuPDF 在该区间的对象树
+    # 遍历会陷入长时间 CPU 密集（实测 20 分钟无进展），跳过后正文与数学附录可正常翻译。
+    "N032": ("N032_excerpt_main_and_soc_appendix", [
+        (1, 22, "正文全部（方法、memoryless schedule、Adjoint Matching）"),
+        (37, 44, "附录 C/D：随机最优控制等价于连续时间最大熵 RL + memoryless 证明"),
+    ]),
 }
 
 

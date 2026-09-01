@@ -37,16 +37,17 @@ SuperTranslate 冻结公式、表格、算法伪代码与引用标记后按原�
 
 翻译由本地 32B 模型完成，专业术语准确度低于人工；**引用论文观点时以英文原文为准**。
 
-### 2.2.1 两篇超长参考材料只做章节节选
+### 2.2.1 三篇只做章节节选
 
-35 篇核心清单里有两篇不是方法论文而是参考材料，页数远超其余论文：
+| 编号 | 材料 | 页数 | 节选内容 | 原因 |
+|---|---|---|---|---|
+| N061 | Deleu 博士论文《Generative Flow Networks: Theory and Applications to Structure Learning》 | 259 | 39 页：Introduction + Chapter 1 Background + Part I 开篇 | 页数 |
+| O01 | 《Optimal Transport for Machine Learners》讲义 | 480 | 49 页：Kantorovich Relaxation（O08 的 OT 等价性所依赖的形式）+ Dynamic Optimal Transport（Benamou-Brenier） | 页数 |
+| N032 | Adjoint Matching（ICLR 2025 Spotlight） | 55 | 30 页：正文 p1-22 + 附录 C/D（随机最优控制等价于连续时间最大熵 RL、memoryless schedule 证明） | PDF 结构 |
 
-| 编号 | 材料 | 页数 | 处理 |
-|---|---|---|---|
-| N061 | Deleu 博士论文《Generative Flow Networks: Theory and Applications to Structure Learning》 | 259 | 节选 39 页：Introduction + Chapter 1 Background + Part I 开篇 |
-| O01 | 《Optimal Transport for Machine Learners》讲义 | 480 | 节选 49 页：Kantorovich Relaxation（O08 的 OT 等价性所依赖的形式）+ Dynamic Optimal Transport（Benamou-Brenier） |
+前两篇是**页数原因**：单卡 32B 的实测速度约 31 页 / 40 分钟，全译需 5-10 小时 GPU 时间，而它们的作用是「查阅特定概念」而非「通读」——解读笔记也相应写成「文献地图」而非逐节解读。
 
-理由：单卡 32B 的实测速度约 31 页 / 40 分钟，全译这两篇需 5-10 小时 GPU 时间，而它们的作用是「查阅特定概念」而非「通读」——解读笔记也相应写成「文献地图」而非逐节解读。
+N032 是**PDF 结构原因**：该文件 p23-30 是扩散模型生成图像密集的 Additional Figures，MuPDF 在这段的对象树遍历会陷入长时间纯 CPU 密集（实测单进程占满一核 20 分钟仍无输出，`sample` 采样显示栈全在 `fz_push_try` / `pdf_name_eq` / `fz_free` 的 malloc-free 循环里）。用 pymupdf 重存清理对象树（2837 → 2634 个 xref 对象）只减轻不根治。跳过这 8 页图表后，正文与数学附录可正常翻译；被跳过的内容是实验样例图，不含论断。
 
 节选 PDF 的位置与命名：英文节选在 `pdfs/en_excerpt/`，中文译文在 `pdfs/zh/` 且文件名带 `_excerpt_` 标记，例如 `O01_excerpt_kantorovich_and_dynamic_ot_zh.pdf`。抽页范围写在 `scripts/make_excerpts.py` 的 `JOBS` 里，改范围后重跑该脚本即可。两篇的**英文全文仍在 `pdfs/en/`**，需要其他章节时直接查原文或调整抽页范围重译。
 
