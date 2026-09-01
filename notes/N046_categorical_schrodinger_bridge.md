@@ -7,7 +7,7 @@
 
 CSBM 证明了离散时间迭代马尔可夫拟合（D-IMF）在有限离散空间 $\mathbb{S}^D$ 上收敛到薛定谔桥（Schrödinger Bridge, SB），并给出用 D3PM 式变分目标实现 Markovian 投影的实用算法，把 SB 的无配对翻译能力带进 VQ 码本、文本 token 等范畴型数据。
 
-## 1. 要解决的问题
+## 问题与动机
 
 SB 问题：给定两个边缘分布 $p_0, p_1$ 与参考分布 $q^{\text{ref}}$，在所有传输方案（transport plans）$\Pi(p_0,p_1)$ 中找 KL 意义下最接近参考的耦合（原文式 (1)）：
 
@@ -19,7 +19,7 @@ $$q^*(x_0,x_1)=\mathop{\mathrm{argmin}}_{q\in\Pi(p_0,p_1)}\text{KL}(q(x_0,x_1)\,
 
 注意与"离散 EOT"（Sinkhorn 一系）的区别：那些方法把经验分布本身当作离散分布求双随机矩阵，不支持生成式设定的样本外估计；本文的"离散"指状态空间 $\mathcal{X}=\mathbb{S}^D$ 是范畴型的。
 
-## 2. 核心方法
+## 方法核心
 
 ### 2.1 动态 SB 与 D-IMF 框架（背景，§2.4–2.5）
 
@@ -65,7 +65,7 @@ $$L(m)=\mathbb{E}_{q(x_0,x_1)}\Big[\sum_{n=1}^{N}\mathbb{E}_{q^{\text{ref}}(x_{t
 
 双向训练（单向 IMF 会引入误差，De Bortoli et al., 2024, Appendix I）：外层 $L$ 轮，每轮先固定后向模型 $q_\eta$ 生成 $(x_0,x_1)$ 耦合训练前向模型 $q_\theta$（最小化 $L_\theta$，原文式 (21)），再对称地训练后向模型（$L_\eta$，式 (22)）。中间点从参考桥采样。
 
-## 3. 理论结果
+## 理论结果
 
 **Theorem 3.1（离散空间上动态 SB 解的刻画）**：设 $\mathcal{X}$ 有限离散，$p_0,p_1$ 全支撑，$q^{\text{ref}}\in\mathcal{M}(\mathcal{X}^{N+2})$ 为全支撑 Markov 参考过程。若 $q^*$ 满足 ① 端点边缘为 $p_0,p_1$；② 既是 Markov 又是 reciprocal，则 $q^*$ 是动态 SB (3) 的唯一解。
 
@@ -73,7 +73,7 @@ $$L(m)=\mathbb{E}_{q(x_0,x_1)}\Big[\sum_{n=1}^{N}\mathbb{E}_{q^{\text{ref}}(x_{t
 
 两点值得强调：(i) 定理只要求参考过程是一般 Markov 链——不需要 Wiener 过程结构，比 Gushchin et al. (2024b, Theorem 3.6)（$\mathbb{R}^D$ + 二次代价）条件更弱；作者在脚注 1 指出证明论证适用于任意 $\mathcal{X}$，顺带把 ASBM 推广到一般 Markov 参考。(ii) 理论上 $N=1$ 就够——与 DDSBM 需要大 $N$ 逼近连续时间形成对照。证明在 Appendix B。
 
-## 4. 实验与证据
+## 实验与证据
 
 - **D-IMF 解析收敛（§4.1）**：$S=50, D=1$ 时转移矩阵可显式计算，与 Sinkhorn 算出的真值 $q^*$ 比较，$\text{KL}(q^l\|q^*)$ 收敛曲线（Figure 1）显示对不同 $N$、$\alpha$、参考过程均快速收敛。
 - **2D 高斯→Swiss Roll（§4.2）**：$S=50$，$|\mathcal{X}|=2500$，$N=10$。$q^{\text{gauss}}$ 的跳转集中于邻近类别，$q^{\text{unif}}$ 全类别跳转，$\alpha$ 越大跳越多（Figure 2），与构造一致。KL 损失换 MSE 结果相当（Appendix C.1）。
@@ -81,7 +81,7 @@ $$L(m)=\mathbb{E}_{q(x_0,x_1)}\Big[\sum_{n=1}^{N}\mathbb{E}_{q^{\text{ref}}(x_{t
 - **CelebA 128×128 男→女（§4.4）**：VQ-GAN 潜空间 $S=1024, D=256$，$q^{\text{unif}}$，$N=100$。对比像素空间的 ASBM 与 DSBM（原文 Table 2）：低随机度下 FID 10.60 vs 16.86（ASBM）/24.06（DSBM）；高随机度下 14.68 vs 17.44/92.15；CMMD 与 LPIPS 同样全面占优，且背景保持明显更好。注意口径：CSBM 用 $N=100$，ASBM 只用 $N=3$。
 - **文本情感迁移**（Amazon Reviews，Appendix C.4）：展示 token 空间可行性。
 
-## 5. 在 GFlowNet 版图中的位置
+## 与谁对话
 
 本仓库收录它的理由不是 GFlowNet 方法本身，而是它补齐了**离散空间上概率路径测度匹配**的一块理论版图，与 GFlowNet 社区三处交汇：
 
@@ -91,7 +91,7 @@ $$L(m)=\mathbb{E}_{q(x_0,x_1)}\Big[\sum_{n=1}^{N}\mathbb{E}_{q^{\text{ref}}(x_{t
 
 谱系：IMF（Peluchetti, 2023; Shi et al., 2023 DSBM）→ D-IMF/ASBM（Gushchin et al., 2024b）→ 本文（离散空间 + 离散时间收敛理论）；平行分支 DDSBM（离散空间 + 连续时间，无离散化理论）被本文覆盖。
 
-## 6. 局限与批判
+## 局限与批判
 
 - 因子化假设 $\widetilde{q}_\theta(\widetilde{x}_1|x_{t_{n-1}})\approx\prod_d\widetilde{q}_\theta(\widetilde{x}_1^d|\cdot)$ 忽略维度间耦合，是 MNIST 像素化伪影的直接来源（作者在 Appendix A 承认）；小 $N$ 时该近似的误差没有理论量化。
 - 收敛定理是渐近的：没有收敛速率，也没有"神经网络近似投影 + 有限训练步"下的误差累积分析；实验里"大 $N$ 欠拟合"现象恰说明实践收敛对计算预算敏感。
@@ -99,7 +99,7 @@ $$L(m)=\mathbb{E}_{q(x_0,x_1)}\Big[\sum_{n=1}^{N}\mathbb{E}_{q^{\text{ref}}(x_{t
 - 全支撑假设（$p_0,p_1$ 与 $q^{\text{ref}}$ 均全支撑）在定理中不可去，但 VQ 码本上的真实分布高度稀疏，理论与实践的支撑条件有落差。
 - 参考过程仅测试了 uniform/Gaussian 两种手工构造；SB 对 $q^{\text{ref}}$ 的选择本质敏感（它定义了传输代价），如何为特定域学习或设计参考链未触及。
 
-## 7. 对后续研究的启示
+## 对后续研究的启示
 
 - "一般 Markov 参考即可"的刻画为**结构化参考过程**打开空间：在分子图上用化学合理的编辑链、在文本上用掩码语言模型链作 $q^{\text{ref}}$，SB 解将继承相应归纳偏置。
 - $N=1$ 理论可行提示做**少步离散翻译器**：训练一个单步端点预测器反复精化，与一致性模型（consistency models）的离散版对接。

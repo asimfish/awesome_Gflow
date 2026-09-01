@@ -6,7 +6,7 @@
 ## 一句话
 把 GFlowNet 从「DAG 上的流匹配技巧」重建为「pointed DAG 上轨迹测度（trajectory measure）的理论」，给出 Markovian flow 的三种等价参数化、detailed balance 这一新的局部目标，以及条件流（conditional flow）用于自由能、熵、互信息估计的完整机器。
 
-## 1. 要解决的问题
+## 问题与动机
 
 T01 只证明了「流守恒 ⟹ 正比采样」和一个 flow matching 损失。留下的问题包括：
 
@@ -16,7 +16,7 @@ T01 只证明了「流守恒 ⟹ 正比采样」和一个 flow matching 损失�
 - 流除了采样，还能算什么？$F(s_0) = Z$ 是配分函数，那内部状态的 $F(s)$ 是不是「从 $s$ 可达的终止奖励之和」？（答案是否）
 - 如何把 GFlowNet 用于条件分布、边缘化、熵/互信息估计、多目标 Pareto 采样、随机环境、连续动作？
 
-## 2. 核心方法
+## 方法核心
 
 ### 2.1 从图论到轨迹测度
 
@@ -97,7 +97,7 @@ $$H[S] = \frac{F'(s_0)}{F(s_0)} + \log F(s_0)$$
 
 条件化后得条件熵 $H[S \mid x] = F'(s_0|x)/F(s_0|x) + \log F(s_0|x)$，两者相减得互信息 $\mathrm{MI}(S; X)$（Proposition 36，Eq. 57）。
 
-## 3. 理论结果
+## 理论结果
 
 - **Proposition 8 / 10 / 14**：状态流与边流的分解、$F(s_0) = F(s_f) = Z$、$P_T$ 是良定分布。条件：pointed DAG、有限状态。
 - **Proposition 16 / 18**：Markovian flow 的等价刻画与三种唯一参数化。这把「学一个流」从指数级参数降到边数级参数。
@@ -109,7 +109,7 @@ $$H[S] = \frac{F'(s_0)}{F(s_0)} + \log F(s_0)$$
 - **Proposition 62（附录 F，事后指定奖励）**：outcome-conditioned GFlowNet 按结果 $y = f(s)$ 条件化训练完成后，对任意事后给定的 $R(s) = r(f(s))$，无需重训即可得 $F_{r \circ f}(A) = \sum_y r(y) F(A \mid y)$，策略为 $\pi_{r \circ f}(a|s) = \sum_y r(y) F((s,a)|y) \big/ \sum_y r(y) F(s|y)$。代价是运行时要对结果空间求和（可 Monte-Carlo 近似），存在计算量与精度的权衡。Definition 63/64 给出 Pareto 加性奖励 $R_\omega(s) = \sum_i \omega_i f_i(s)$ 与乘性奖励 $R_\omega(s) = e^{-\sum_i \omega_i e_i(s)}$，训练以凸权重 $\omega$ 为条件的 GFlowNet 后，先采 $\omega$ 再采轨迹即可从 Pareto 前沿取样。
 - **§7.2 与 MaxEnt RL 的定量分歧**：MaxEnt RL 学到 $P_T(s) \propto n(s) R(s)$（$n(s)$ 为到 $s$ 的路径数），仅当 DAG 去掉 $s_f$ 后是以 $s_0$ 为根的树时两者一致。论文另给一个等价表述：训练 $P_T(s) \propto R(s)$ 等价于最大化 $r(s,a) = \log R(s,a) - \log d^\pi(s,a)$，但 $d^\pi$（状态占用度）一般不可计算。
 
-## 4. 实验与证据
+## 实验与证据
 
 **这是一篇纯理论论文，没有自己的实验。** 全部实证支撑来自引用：T01 的分子与 hypergrid 实验、Deleu et al. 2022（A17，DAG-GFlowNet 逼近贝叶斯网络结构后验）、Jain et al. 2022/2023（A02/A03）、Zhang et al. 2022（联合训练 EBM 与 GFlowNet）、Malik et al. 2023（用集合 GFlowNet 做主动学习批量选择，并验证互信息奖励可用神经网络近似）、Hu et al. 2023（T10，GFlowNet-EM）、Pan et al. 2023（T06，Forward-Looking GFlowNet 利用能量模块化，报告比常规损失更好的分布近似）。
 
@@ -117,7 +117,7 @@ $$H[S] = \frac{F'(s_0)}{F(s_0)} + \log F(s_0)$$
 
 版本差异值得注意：arXiv v5（2026-01）比 JMLR 2023 版增补了 Appendix B 对条件 GFlowNet 的形式化（Definition 42–43、Remark 44）与 Example 9，其中 Remark 44 明确指出「摊销参数化下各条件之间的优化是耦合的，有限容量时 $L = 0$ 一般不可达，实际最优是各条件间的折中」。这是对条件 GFlowNet 一个诚实的限定，早期版本没有。
 
-## 5. 在 GFlowNet 版图中的位置
+## 与谁对话
 
 - **直接建立在 T01 之上**，把 T01 的 Proposition 2/3 重述为测度论结果，把 T01 附录里「内部流无穷多解」的一句话展开为流等价类（Proposition 23）+ $P_B$ 自由度（§2.6）两个正式结果。
 - **detailed balance 成为第二条主线**：T03 的 TB 在本文里被收进 Example 6；T05（SubTB）用「任意子轨迹上的 balance」把 DB 与 TB 连成一族；T47（evaluation balance）继续沿用这套 balance 语言。
@@ -127,7 +127,7 @@ $$H[S] = \frac{F'(s_0)}{F(s_0)} + \log F(s_0)$$
 - **被扩展/被修正**：T12（Lahlou et al. 2023）把理论推广到一般测度空间（本文 §6.2 已加注引用）；T13/T18 处理随机环境（本文附录 C 的 Proposition 49 只给出「任意策略都能产生 Markovian flow，但可能无法完美达到目标终止流」这一负面结论）；T19/T36 处理非无环情形（本文 §3.3.1 只提供了加时间戳这一朴素办法）；T08/T09 建立与变分推断的联系（本文 §1.3 已引用 Malkin et al. 2023）；T82 挑战 Markovian flow 这个核心假设本身。
 - **与 RL 的接口**：附录 A 的 policy-gradient 式估计 → T16；附录 D 的 $V_{P_T}$ 与贪心策略 → T26（QGFN 用动作价值调节 greediness）、T37；§7.2 的 $n(s)$ 分歧 → T14/T15/N003 的精确等价研究。
 
-## 6. 局限与批判
+## 局限与批判
 
 - **零损失理论，不涉及有限训练**。全篇的结论形式都是「$L(o) = 0 \iff$ 流正确」。损失小但不为零时终止分布偏多少，本文完全没有讨论。T07、T32、N001、T51 都是补这个洞。
 - **随机环境的结论是负面的且被搁置**。Proposition 49 说明在随机环境中「任意策略都可产生 Markovian flow，且可能无法精确匹配目标终止流」，然后只写「有足够训练时间和容量时前后向转移可以变得相容」。真正的处理留给 T13/T18。
@@ -137,7 +137,7 @@ $$H[S] = \frac{F'(s_0)}{F(s_0)} + \log F(s_0)$$
 - **模块化能量分解（§5.4）与 GFlowNets-in-GFlowNets（§6.2）纯属构想**。前者把因子图作为 GFlowNet 的生成对象、能量按因子求和，后者用内层 GFlowNet 表示外层的一条边流。两节都没有算法细节、复杂度分析或实验，且与注意力机制的类比停留在修辞层面。
 - **一个概念负担**：论文对同一个符号 $F$ 反复重载（轨迹流、测度、状态流、边流、条件流 $F_s$），并把 Proposition 编号与 Theorem 交替引用（正文里出现 "Theorem 18" 指向 Proposition 18）。这在阅读长证明时容易出错。
 
-## 7. 对后续研究的启示
+## 对后续研究的启示
 
 - **「流 = 轨迹测度」这个视角比「流 = 守恒量」更能生长**。一旦把 $F(s)$ 定义为事件概率，条件流、自由能、熵、互信息都是同一台机器的不同读数；非无环推广（用 expected visit flow）和连续推广（换成一般测度空间）也都在这个视角下自然。
 - **约束的选择就是信用分配尺度的选择**。FM（状态级）、DB（边级）、TB（轨迹级）零点相同但优化行为不同，这一观察直接催生了 T05 的 $\lambda$ 插值、T34 的损失函数设计、T49 的 $f$-divergence 对应。本文提供了统一的语言（decomposability），但没有比较它们的有限样本性质。

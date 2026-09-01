@@ -6,7 +6,7 @@
 ## 一句话
 把「按序列动作构造对象」的生成过程看成 DAG 上的流网络（flow network），用局部流守恒（flow matching）作为训练目标，证明全局最优解对应 $\pi(x) \propto R(x)$ 的采样策略，从而在同一对象有多条构造路径时也能得到正确的终止分布。
 
-## 1. 要解决的问题
+## 问题与动机
 
 目标是学一个策略 $\pi$，使采样某个终止对象 $x$ 的概率满足
 
@@ -28,7 +28,7 @@ $$\pi(x) = \frac{n(x) R(x)}{\sum_{x'} n(x') R(x')}$$
 
 也就是说，把 DAG 当树处理会引入路径计数因子 $n(x)$。论文指出这在组合空间里随轨迹长度指数恶化：更大的分子仅因为有指数级更多的构造顺序就被指数级更常采到。Buesing et al. (2019) 的方法、MaxEnt RL、自回归方法都落在这个陷阱里；Soft Q-Learning 的问题被明确点出——它在 in-flow 里只算轨迹中包含的那一个父节点，导出的是 $P(\tau) \propto R(\tau)$ 而不是 $P(x) \propto R(x)$。
 
-## 2. 核心方法
+## 方法核心
 
 **流网络构造。** 单一源点是初始状态 $s_0$，入流为 $Z$；每个终止状态 $x$ 是一个汇点，出流固定为 $R(x) > 0$。记 $T(s,a) = s'$ 表示在 $s$ 执行 $a$ 到达 $s'$（环境确定性），$F(s,a)$ 是边 $(s \to s')$ 上的流，$F(s)$ 是穿过 $s$ 的总流。因为 $C$ 非单射，一个节点可以有多个父节点 $|\{(s,a) : T(s,a) = s'\}| \geq 1$（根节点除外）。
 
@@ -58,7 +58,7 @@ $$\mathcal{L}_{\theta,\epsilon}(\tau) = \sum_{s' \in \tau \neq s_0} \left( \log 
 
 **Proposition 3（off-policy / offline）。** 若训练轨迹来自任意与最优 $\pi$ 同支撑（same support）的探索策略 $P$，且模型族足够丰富（$\exists\theta: F_\theta = F^*$），则期望损失的全局最优满足 $F_{\theta^*} = F^*$、$\mathcal{L}_{\theta^*}(\tau) = 0$，进而 $\pi_{\theta^*}(x) = R(x)/Z$。预测的流不依赖采样策略，只要样本覆盖足够；论文把这类比为异步动态规划（asynchronous DP）。
 
-## 3. 理论结果
+## 理论结果
 
 - **Proposition 1**：树式伪值方法在非单射环境下产生 $\pi(x) \propto n(x) R(x)$ 的系统偏差。条件：确定性环境、$\tilde{V}$ 定义为后代奖励之和。证明手法是把 DAG 展开成以动作序列为状态的树，同一个 $x$ 在树里重复 $n(x)$ 次。
 - **Proposition 2**：流守恒 $\Rightarrow$ 正比采样。条件：DAG（无确定性环）、有限轨迹长度、$R(x) > 0$、$F(s,a) > 0$、策略按出边流归一化。
@@ -66,7 +66,7 @@ $$\mathcal{L}_{\theta,\epsilon}(\tau) = \sum_{s' \in \tau \neq s_0} \left( \log 
 - **内部流不唯一（Appendix A.1 末段）**：论文自己给了显式例子——两条轨迹 $s_0 \to s_A \to s_T$ 与 $s_0 \to s_B \to s_T$ 都到 $s_T$（奖励 $r$），则 $F(s_A) = u$、$F(s_B) = r - u$、$u \in [0, r]$ 是一族解。终止分布唯一，内部流有无穷多解。这一句话是后续 T02 内部流刻画、O07/O08 的 minimum-flow 与 OT 选择原则的直接起点。
 - **Proposition 4（附录 A.2）**：双射情形下，令 $\mu$ 为均匀策略 $\mu(a|s) = 1/|\mathcal{A}(s)|$、$f(x) = \prod_{t=0}^{n} |\mathcal{A}(s_t)|$、$\hat{R}(x) = R(x) f(s_{n-1})$，则 $Q^\mu(s,a;\hat{R}) = F(s,a;R) f(s)$。即树 MDP 下流等于均匀策略的动作值函数。非单射情形因为流不唯一，论文只给出一个猜想（conjecture）：存在依赖 $n(s)$、$\mathcal{A}(s)$、父节点数 $n_p(s)$ 的 $f$ 使等价关系成立。这条线索被 T37（random policy evaluation）和 T14 系列继续追。
 
-## 4. 实验与证据
+## 实验与证据
 
 **Hypergrid（可精确计算 $Z$）。** $n$ 维、边长 $H$ 的超立方格，动作是把某一维坐标加一，另有 stop 动作；多条动作序列到同一坐标，因此是 DAG。奖励
 
@@ -87,7 +87,7 @@ $$R(x) = R_0 + R_1 \prod_i \mathbb{I}(0.25 < |x_i/H - 0.5|) + R_2 \prod_i \mathb
 
 **证据强弱的诚实之处。** 论文承认在大规模域无法直接验证 $\pi_\theta(x) \propto R(x)$——计算真实 $p_\theta(x)$ 需要对所有到 $x$ 的轨迹求和（many-paths problem），只能给间接证据。Figure 16 把叶节点入流与目标分数做 log-log 回归，斜率 $a = 0.58$、$r = 0.69$：斜率小于 1 说明模型系统性低估高奖励（高奖励样本稀有、访问少）。Figure 18 显示分子任务的 loss 始终不收敛到 0（hypergrid 上会收敛），类似深度 RL 里价值损失不归零。这些是「分布拟合仅近似」的自证，也正是 T07 与 T32 后来系统追问的地方。
 
-## 5. 在 GFlowNet 版图中的位置
+## 与谁对话
 
 - **上游**：Buesing et al. (2019)（MCTS + 值函数做离散近似推断）是被 Proposition 1 直接反驳的对象；Soft Q-Learning / MaxEnt RL（Haarnoja et al., 2017）被指出只匹配 $P(\tau) \propto R(\tau)$；MCMC 方法（MARS、GWG）与 JT-VAE+BO 是实验基线。
 - **直接后继**：T02（GFlowNet Foundations）把这里的 flow matching 提升为 Markovian flow 的一般理论，补上后向策略 $P_B$、detailed balance、reward matching 等约束族，并系统处理 T01 附录里那句「内部流有无穷多解」。T03（TB）针对 Eq. 12 的局部性与 bootstrapping 缺陷，改用轨迹级恒等式做信用分配；T05（SubTB）在两者之间插值；T07 则回头诊断这套目标在有限训练下的失效模式。
@@ -95,7 +95,7 @@ $$R(x) = R_0 + R_1 \prod_i \mathbb{I}(0.25 < |x_i/H - 0.5|) + R_2 \prod_i \mathb
 - **内部流选择这条线**：T01 附录的非唯一性例子 → T02 的内部流刻画 → T25/T31 优化 $P_B$ → T36/O07/O08 的 minimum-flow 与最优传输解释。
 - **应用谱系起点**：分子片段环境（72 blocks、sEH proxy）成为此后一大批工作的默认基准，A02、A03、A09、N055、N056 等都沿这条线走；multi-round 主动学习框架被 A02、A04 继承。
 
-## 6. 局限与批判
+## 局限与批判
 
 - **bootstrapping 带来的优化困难**：论文自己列为主要局限。Eq. 12 是局部目标，靠自举把终点奖励逐步向上游传，长轨迹上信号衰减严重，这正是 T03 提出 TB 的动机。
 - **奖励必须严格为正**、流必须严格为正，零流边只能靠动作掩码排除。这限制了对「无效终止」的建模，A14（LeakGFN）后来专门处理化学环境里大量无效终止状态造成的流泄漏。
@@ -105,7 +105,7 @@ $$R(x) = R_0 + R_1 \prod_i \mathbb{I}(0.25 < |x_i/H - 0.5|) + R_2 \prod_i \mathb
 - **多样性指标是启发式的**：Tanimoto 相似度阈值 0.7、Bemis-Murcko scaffold 计数都是化学惯例而非分布距离，无法排除「找到很多高奖励分子但分布仍偏」的情形。N080 后来专门研究该用什么指标。
 - **超参依赖**：分子实验用了 $\lambda_T = 10$（终止转移损失加权）、reward $\beta = 10$、$T = 8$、$R_{\min} = 0.01$ 等一串技巧，论文承认 $\lambda_T > 1$ 只是「实验发现有帮助」，机制解释停留在「优先修正端点，再由自举向上传播」。
 
-## 7. 对后续研究的启示
+## 对后续研究的启示
 
 - **「按奖励成比例采样」是独立于「最大化奖励」的问题设定**，这一框定本身是论文最持久的贡献。它让 diversity 从事后正则变成目标函数的一部分。
 - **多路径结构必须显式处理**。Proposition 1 的 $n(x)$ 因子是一个可复用的检验：任何声称做离散分布匹配的方法，都应该被问「在同一对象有多条构造路径时你的边缘分布是什么」。T15、T38（对称性）、N083 都可看作这条检验的延伸。

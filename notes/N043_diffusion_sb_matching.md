@@ -7,7 +7,7 @@
 
 提出迭代马尔可夫拟合（Iterative Markovian Fitting, IMF）——在马尔可夫测度类与 reciprocal class 之间交替投影来解 Schrödinger bridge（SB），每步只需一次 Bridge Matching 回归；对应算法 DSBM 消除了 IPF 系 DSB 方法的时间离散误差与跨迭代误差累积，并把 Bridge/Flow Matching、Rectified Flow、OT-CFM 全部收编为特例或极限。
 
-## 1. 要解决的问题
+## 问题与动机
 
 SB 问题：给定参考路径测度 \(Q\)（由 SDE \(dX_t = f_t(X_t)dt + \sigma_t dB_t\) 定义），求
 
@@ -17,7 +17,7 @@ P^{\mathrm{SB}} = \arg\min_{P} \{\mathrm{KL}(P|Q) : P_0 = \pi_0,\ P_T = \pi_T\},
 
 即在两端边缘约束下离参考扩散最近的路径测度；其静态版 \(\Pi^{\mathrm{SB}}_{0,T}\) 是熵正则最优传输（entropy-regularized OT, EOT）的解。经典数值方法（Sinkhorn 的连续版 Iterative Proportional Fitting, IPF）驱动了 DSB（De Bortoli et al. 2021）等扩散式求解器，但有三个实际问题：(i) 每轮 IPF 要学上一轮过程的时间反转，需要缓存**整条轨迹**，时间离散误差进入训练目标；(ii) 迭代中参考桥被逐渐"遗忘"（Fernandes et al. 2021），误差跨迭代累积；(iii) IPF 迭代不保持两端边缘（只在极限满足）。另一头，Bridge Matching / Flow Matching 训练简单但**不解 OT/SB**——学到的传输图不保证接近最优。本文要同时拿到两边的好处。
 
-## 2. 核心方法
+## 方法核心
 
 **两个投影。** 设 \(\mathcal{M}\) 为马尔可夫扩散测度类，\(\mathcal{R}(Q)\) 为 \(Q\) 的 reciprocal class（与 \(Q\) 有相同桥 \(Q_{|0,T}\) 的测度：\(\Pi = \Pi_{0,T}Q_{|0,T}\)，Definition 3）。
 
@@ -62,7 +62,7 @@ P^{2n+1} = \mathrm{proj}_{\mathcal{M}}(P^{2n}),\qquad P^{2n+2} = \mathrm{proj}_{
 
 **统一图景（Figure 1 / Appendix A.2）。** 初始化耦合决定身份：独立耦合 \(\Pi^0_{0,T}=\pi_0\otimes\pi_T\) 为 DSBM-IMF；参考过程耦合 \(\Pi^0_{0,T}=Q_{0,T}\) 时最优迭代逐点等于 IPF 迭代（Proposition 10），得 DSBM-IPF；minibatch-EOT 耦合初始化得 DSBM-IMF+。第一轮迭代即 Bridge Matching；\(\sigma\to 0\) 且只做前向投影即 Rectified Flow；给定真 SB 静态耦合则一轮收敛（Somnath et al. 2023 的 aligned SB）。收敛后概率流 ODE 为 \(dZ^\star_t = \{f_t + \frac{1}{2}[v_{\theta^\star} - v_{\phi^\star}]\}dt\)。
 
-## 3. 理论结果
+## 理论结果
 
 - **Proposition 5**（SB 唯一刻画）：马尔可夫 + reciprocal + 两端边缘 ⟹ 唯一且等于 \(P^{\mathrm{SB}}\)。这是 IMF 的不动点依据。
 - **Lemma 6**（勾股定理）：\(\mathrm{KL}(\Pi|M) = \mathrm{KL}(\Pi|\mathrm{proj}_{\mathcal{M}}(\Pi)) + \mathrm{KL}(\mathrm{proj}_{\mathcal{M}}(\Pi)|M)\)，reciprocal 投影有对称版本。
@@ -72,7 +72,7 @@ P^{2n+1} = \mathrm{proj}_{\mathcal{M}}(P^{2n}),\qquad P^{2n+2} = \mathrm{proj}_{
 - 定性区分 Rectified Flow：Proposition 5 只在 \(\sigma_t > 0\) 时成立，RF（\(\sigma=0\)）不保证收敛到动态 OT（Liu 2022 有反例），且 RF 只做前向投影导致 \(P^n_T\) 偏差随迭代恶化——SDE 化 + 双向投影正是修复此缺陷的理论解释（Appendix A.3）。
 - 附录补充：Appendix D 给出 Gaussian 情形 IMF 的解析迭代（可对照 Bunne et al. 2023 的闭式 SB）；Appendix E 推导离散时间马尔可夫投影；Appendix G 提出前向/反向过程联合学习 + 一致性损失（强制 \(v_\phi(t,x) = -v_\theta(t,x) + \sigma_t^2\nabla\log P_t(x)\) 的两侧互为时间反转），作为交替式训练的替代。
 
-## 4. 实验与证据
+## 实验与证据
 
 - **2D 传输**（Table 2，5 seeds，Euler 20 步）：moons/scurve/8gaussians/moons-8gaussians 上比 2-Wasserstein 和路径能量 \(\mathbb{E}[\int_0^T\|v(t,Z_t)\|^2 dt]\)。2-Wasserstein 上 DSBM 全面优于 DSB（moons：0.140±0.006 vs 0.190±0.049；moons-8gaussians：0.812±0.092 vs 0.987±0.324）；不用 OT solver 时优于 FM（0.212±0.025）/CFM（0.215±0.028）；用 minibatch solver 的 OT-CFM 在低维最强（moons-8gaussians 0.716±0.187），DSBM-IMF+ 次之（0.802±0.172）；RF 在 moons-8gaussians 上崩坏（1.522±0.304）。路径能量上 CFM 最差（moons-8gaussians 116.5±2.633），DSBM 三变体聚在 41–42，OT-CFM 30.50±0.626 最短——用 OT solver 换直路径在低维划算，高维见下。
 - **高维 Gaussian**（\(d=50\)，真 SB 有闭式解）：DSB 与 IMF-b（只做反向投影的消融）的协方差估计随迭代漂移，DSBM 不漂移；Table 3 的 \(\mathrm{KL}(P_t|P^{\mathrm{SB}}_t)\times 10^{-3}\)：\(d=50\) 时 DSB 32.8±1.28、SB-CFM 49.4±3.91、DSBM-IPF **8.75±0.87**。
@@ -82,7 +82,7 @@ P^{2n+1} = \mathrm{proj}_{\mathcal{M}}(P^{2n}),\qquad P^{2n+2} = \mathrm{proj}_{
 
 作者自报：CIFAR-10 生成任务上相对 Bridge/Flow Matching 只有轻微改进（Appendix I.6）——DSBM 的价值在一般传输而非纯生成。
 
-## 5. 与 GFlowNet 生态位的关系
+## 与谁对话
 
 **问题设定正交，方法论威胁真实存在。**
 
@@ -92,7 +92,7 @@ P^{2n+1} = \mathrm{proj}_{\mathcal{M}}(P^{2n}),\qquad P^{2n+2} = \mathrm{proj}_{
 - **GFlowNet 的独特能力**：(i) 不需要目标样本、只要 reward——DSBM 完全做不了这个设定；(ii) 天然的组合状态空间与共享子结构 credit assignment；(iii) \(Z\) 估计。反之 GFlowNet 的劣势：没有 IMF 这种"每步保两端边缘 + KL 单调下降"的干净投影几何，TB 残差与最终误差的关系仍是开放问题。
 - **人员交叉**：SB-CFM/OT-CFM 的 Tong et al. (2023) 作者列表含 Malkin 与 Bengio（GFlowNet 核心圈），两个社区在 simulation-free 训练这条线上早已互相渗透。
 
-## 6. 局限与批判
+## 局限与批判
 
 - **误差累积并未根除，只是换了位置**：马尔可夫投影的回归误差仍会让 \(M^{n+1}_T \ne \pi_T\)（作者用前向/反向交替缓解而非消除）；Theorem 8 是理想投影下的收敛，有限容量网络 + 有限样本下没有误差界。
 - 缓存步仍需模拟学到的 SDE 采 \((X_0,X_T)\)，不是完全 simulation-free；\(\sigma\) 小时 EOT 数值上更难（作者自认），因此"逼近确定性 OT"这个卖点在 \(\sigma\to 0\) 极限恰恰失效。
@@ -100,7 +100,7 @@ P^{2n+1} = \mathrm{proj}_{\mathcal{M}}(P^{2n}),\qquad P^{2n+2} = \mathrm{proj}_{
 - 收敛速度没有速率刻画：\(\mathrm{KL}(P^n|P^{n+1})\to 0\) 不给出迭代次数与精度的定量关系；实验里 20 轮外循环是经验选择。
 - 与 Peluchetti (2023) 的 IDBM 撞车（作者已注明并发），单从 IMF 理论看本文的独立增量是 IPF 对偶视角、前向/反向交替与大规模实验。
 
-## 7. 对后续研究的启示
+## 对后续研究的启示
 
 - IMF 已成为 SB 数值的新默认范式：离散版（DDSBM 的 CTMC-IMF）、图版（GSBoG）、benchmark（离散 SB/EOT 测评）全部沿此线展开。任何想在这个生态位做 GFlowNet 变体的工作，DSBM 是必须对比的基线，且要在 IMF 不擅长的维度上找差异化——unbalanced 边缘、未知 \(Z\)、reward-only 设定、组合动作空间。
 - "每步保持什么、逼近什么"的投影对偶（IPF vs IMF）是可移植的设计透镜：GFlowNet 的 DB/TB/SubTB 目标也可以问同样的问题——哪些量在训练全程被硬保持、哪些只在收敛时成立？设计"每步保 reward 边缘"的 GFlowNet 更新是一个直接可试的类比。

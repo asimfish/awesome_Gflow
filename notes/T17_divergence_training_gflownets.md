@@ -7,7 +7,7 @@
 
 把 forward/reverse KL、Renyi-α、Tsallis-α 四类散度重新拉回 GFlowNet 训练目标的候选清单：此前「散度训练不如 TB」的结论（Malkin et al., ICLR 2023，即 T08）源于 REINFORCE 梯度估计的高方差与偏差，配上恰当的控制变量（control variates, CV）后，散度最小化经常比 Trajectory Balance（TB）收敛更快。
 
-## 1. 要解决的问题
+## 问题与动机
 
 GFlowNet 与层次变分推断（hierarchical variational inference, HVI）在离散分布上等价（T08），照理说可以直接最小化 \(D(P_F \| P_B)\) 之类的散度来训练。但 T08 的实验结论是：直接最小化 reverse/forward KL 不如最小化 log-squared 差的 TB loss，尤其在稀疏奖励下。这留下两个悬而未决的问题：
 
@@ -16,7 +16,7 @@ GFlowNet 与层次变分推断（hierarchical variational inference, HVI）在�
 
 本文对两个问题都给出回答：失败根源是梯度方差（以及 T08 使用的带偏 baseline 和 importance-weighted 聚合引入的偏差）；等价性可以推广到任意可测拓扑空间。
 
-## 2. 核心方法
+## 方法核心
 
 **背景符号。** 沿用 Lahlou et al.（T12）的 measurable pointed DAG 框架：状态空间 \((\mathcal{S}, \mathcal{T})\) 为拓扑空间，配前向/后向转移核 \(\kappa_f, \kappa_b\)、初始态 \(s_o\)、终结态 \(s_f\)、参考测度 \(\nu\)。\(p_{F_\theta}\) 是前向策略 \(P_F\) 相对 \(\kappa_f\) 的密度（神经网络参数 \(\theta\)），\(p_B\) 是后向策略密度（通常固定），\(r = dR/d\mu\) 是目标奖励密度，\(Z\) 是配分函数。轨迹 \(\tau = (s_o, s_1, \dots, s_n, s_f)\)，其终态记 \(x\)。目标分布在轨迹空间上定义为 \(\bar p_B(\tau) = \frac{r(x)}{Z}\, p_B(\tau \mid x)\)。
 
@@ -42,7 +42,7 @@ GFlowNet 与层次变分推断（hierarchical variational inference, HVI）在�
 
 **与 T08 做法的差别。** Malkin et al. 用批均值 baseline 加 importance-weighted 聚合修正 off-policy 采样，这两步都引入偏差、放弃了优化保证；本文认为这正是「TB 优于散度」这一结论的来源。
 
-## 3. 理论结果
+## 理论结果
 
 **Proposition 1（TB–KL 梯度等价，任意拓扑空间）。** 设 \(\mathcal{L}_{TB}(\tau;\theta) = \left(\log \frac{Z\, p_{F_\theta}(\tau|s_o)}{r(x)\, p_B(\tau|x)}\right)^2\)，则
 
@@ -56,7 +56,7 @@ GFlowNet 与层次变分推断（hierarchical variational inference, HVI）在�
 
 论文未给出散度训练的收敛速率或有限样本保证；「provably correct」指的是全局最优点与目标分布一致（散度为零当且仅当 \(P_F = P_B\)），不是优化过程的收敛定理。
 
-## 4. 实验与证据
+## 实验与证据
 
 五个基准：set generation（|D|=32, N=16）、自回归序列生成（|D|=8, N=6）、Bayesian phylogenetic inference（BPI，7 物种、JC69 突变模型）、9 分量高斯混合（连续）、banana 分布（连续，HMC 采样作 ground truth）。离散任务用 \(L_1\) 距离评估，连续任务用 Jensen-Shannon 散度。3 个随机种子。
 
@@ -68,7 +68,7 @@ GFlowNet 与层次变分推断（hierarchical variational inference, HVI）在�
 
 证据边界：任务规模都偏小（最大动作空间 32），没有分子生成、LLM 等大规模任务；off-policy 场景未测试（散度的 REINFORCE 估计天然要求 on-policy 或重要性加权）。
 
-## 5. 在 GFlowNet 版图中的位置
+## 与谁对话
 
 - **直接对话 T08（GFlowNets and Variational Inference）**：T08 建立离散等价性但实验否定散度训练；本文把等价性推广到任意拓扑空间（依托 T12 的连续理论），并用 CV 翻案实验结论。T09（variational perspective, Zimmermann et al.）是另一条被本文引用与扩展的 VI 路线。
 - **与 T03（TB）的关系**：不推翻 TB，而是指出 on-policy TB ≈ reverse KL（Proposition 1），因此 TB 的低方差优势（不含 score function 项，见论文 Figure 6）与 KL 的免 \(Z\) 优势各有适用面。
@@ -77,7 +77,7 @@ GFlowNet 与层次变分推断（hierarchical variational inference, HVI）在�
 - **方差削减谱系**：与 VarGrad（Richter et al. 2020，GFlowNet 中广泛用作免 \(Z\) 的 TB 变体）、N029（log-variance loss）同属一条「低方差梯度估计」线；本文的 RLOO 技术后来也出现在 LLM RLHF 的 GFlowNet 式微调中。
 - **仓库内上下文**：`surveys/GFLOWNET_GRADIENT_VARIANCE_CN.md` 把本文作为方差问题的关键证据链一环。
 
-## 6. 局限与批判
+## 局限与批判
 
 1. **α 只测了 0.5**：论文自己承认不同任务可能有更优 α，但没有给出选择准则；mode-seeking/mass-covering 旋钮的实用价值停留在示意图层面（Figure 1）。
 2. **on-policy 局限**：所有散度梯度都在 \(P_F\) 下取期望，与 GFlowNet 社区赖以对抗 mode collapse 的 off-policy 训练（replay buffer、local search、tempering）不兼容；forward KL 的重要性加权在提议分布与目标差距大时方差爆炸（论文 Figure 7 自证）。这是 T49 后来主攻的缺口。
@@ -85,7 +85,7 @@ GFlowNet 与层次变分推断（hierarchical variational inference, HVI）在�
 4. **Proposition 1 的理想化**：等价性把 \(Z\) 当作 oracle 常数；实际 TB 训练中 \(\log Z_\theta\) 与策略参数联合优化，动力学并不等同 reverse KL。
 5. **代码未开源**，CV 实现细节（式 (6) 的 ε、baseline 更新时机）只能靠正文复现。
 
-## 7. 对后续研究的启示
+## 对后续研究的启示
 
 1. **「目标 vs 估计器」要分开归因**：一个训练目标被实验否定时，先检查梯度估计的方差与偏差，再下结论。这一方法论教训在 GFlowNet 文献中被反复引用。
 2. **散度选择是探索—利用旋钮**：α 参数为按任务调节 mode-seeking 程度提供了原则化接口，直接启发 T49 的 α 家族与 T46 的 α-GFN。

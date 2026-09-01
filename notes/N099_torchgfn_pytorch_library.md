@@ -7,7 +7,7 @@
 
 torchgfn 把 GFlowNet 训练拆成环境（Env）、状态/动作（States/Actions）、估计器（Estimator）、采样器（Sampler）、损失（GFlowNet 类）五层可互换组件，是当前 GFlowNet 社区事实上的通用实验协议层——用它换一个训练目标只需换一个类名。
 
-## 1. 要解决的问题
+## 问题与动机
 
 GFlowNet 研究扩张后，开源实现碎片化：多数代码是单项目定制（bespoke），已有的库各有强绑定的领域偏向——
 
@@ -17,7 +17,7 @@ GFlowNet 研究扩张后，开源实现碎片化：多数代码是单项目定�
 
 结果是：想在标准基准上测试一个新损失函数或新采样策略的研究者，要么重写整个训练循环，要么被某个领域库的假设锁死。torchgfn 的目标是提供领域无关（domain-agnostic）、以可扩展性为第一优先级的通用工具箱，把"验证一个 GFlowNet 方法学想法"的成本降到最低。
 
-## 2. 核心方法
+## 方法核心
 
 ### 2.1 五层解耦架构（论文 Figure 1 / 附录 Figure 2）
 
@@ -51,11 +51,11 @@ pointed DAG 上的 MDP 由以下组件交互实现，每层可独立替换：
 
 图生成一等公民支持（torch_geometric 集成进 GraphStates）、条件 GFlowNet（conditioning tensors）、自定义采样器（如 LocalSearchSampler，Kim et al., 2024 的 Local Search GFlowNets）、循环策略（PolicyMixin 统一 rollout API）、扩散采样。
 
-## 3. 理论结果
+## 理论结果
 
 无。这是系统论文，贡献是软件架构而非定理。
 
-## 4. 实验与证据
+## 实验与证据
 
 ### 4.1 性能基准（附录 E.3，2026-02-10 快照）
 
@@ -80,14 +80,14 @@ tutorials/examples 含已发表结果的复现，且全部纳入 CI 测试：Loc
 - 315 stars；核心维护者 josephdviviano、younik、hyeok9855、saleml，另有社区贡献者（replay buffer 累积、mRNA 环境等）。
 - 依赖：python≥3.10，torch≥2.6.0，torch_geometric≥2.6.1，tensordict≥0.6.1。
 
-## 5. 在 GFlowNet 版图中的位置
+## 与谁对话
 
 - 作者阵容即血统：Lahlou（continuous GFlowNet 理论一作）、Bengio（GFlowNet 创始人）、Viviano/Younis/Choi 是 Mila 系维护主力。库是 GFNOrg 组织的旗舰项目。
 - 它扮演的角色类似 stable-baselines3 之于深度 RL：不是提出新算法，而是把 2021-2024 的方法结晶成受测试保护的标准组件，让"新损失 vs TB/DB/SubTB"的对照实验有公认协议。
 - 与本仓库其他条目的连接：N061（Deleu 博士论文）的 DAG-GFlowNet 在库里有官方复现（`train_bayesian_structure.py`）；扩散采样环境直接对接 Sendera et al. 2024（改进离策略扩散采样器）一线工作；RecurrentDiscretePolicyEstimator 与 PolicyMixin 的 carry 管理为 N082 这类非 Markov 策略（历史依赖的循环策略）提供了工程落点。
 - 竞争格局：JAX 阵营的 gfnx 主打速度（10-20× 快），torchgfn 主打可扩展性与生态。论文明确承认不指望完全追平 JAX，路线图（v3）是改造 States/Actions 结构以兼容 torch.compile。
 
-## 6. 局限与批判
+## 局限与批判
 
 - 性能天花板：States/Actions 的动态结构与 torch.compile 不兼容（论文自述），JIT 差距短期无法弥合；对大规模训练（如语言模型 posterior 采样）不是首选。
 - 环境定义仍然重：用户需要正确实现 States 子类、掩码更新、Preprocessor，论文也把"简化环境定义"列为未来工作第一条。掩码实现错误是静默失败的重灾区——论文承认无掩码时无效轨迹会多到损失无法在合理墙钟时间内收敛，但库无法替用户验证掩码语义正确性。
@@ -95,7 +95,7 @@ tutorials/examples 含已发表结果的复现，且全部纳入 CI 测试：Loc
 - 论文版本与库现实脱节快：arXiv 版描述 v2.3.0 依赖图，而库已到 v2.4.1（RTB 损失、条件重构未入论文）；引用它作为"库的定义"时需注明版本。
 - 缺 RL 基线：与 MaxEnt RL / SAC 系方法的对照（GFlowNet 文献常见争论点）要靠外部实现，论文将其列为未来工作第 5 条。
 
-## 7. 对后续研究的启示
+## 对后续研究的启示
 
 - 方法学论文的实验部分应默认用 torchgfn 落地：新损失写成 `GFlowNet` 子类、新采样策略写成 `Sampler` 子类即可获得全套环境与 CI 保护的对照组，审稿人可复跑。
 - `benchmark/` 目录的"可再计算基准"值得推广为社区规范——性能声明随 commit 更新而非定格在论文表格里。

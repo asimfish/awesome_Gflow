@@ -7,7 +7,7 @@
 
 把 PIS/DDS/DIS 与连续 GFlowNet 各种训练目标放进同一个基准库逐一对照，证伪了部分前人声称（FL-SubTB 的优势不可复现），证实了另一部分（离策略探索与 Langevin 参数化确实有效），并提出目标空间并行 MALA 局部搜索 + 回放缓冲区这一新探索技术，在多数任务上取得最优或持平的采样质量。
 
-## 1. 要解决的问题
+## 问题与动机
 
 给定可微能量函数 \(\mathcal E:\mathbb R^d\to\mathbb R\)，令奖励 \(R(\mathbf x)=\exp(-\mathcal E(\mathbf x))\)、配分函数 \(Z=\int_{\mathbb R^d}R(\mathbf x)\,d\mathbf x\)，目标是只靠查询 \(\mathcal E\)（及其梯度）训练一个扩散模型，从 Boltzmann 密度 \(p_{\text{target}}(\mathbf x)=R(\mathbf x)/Z\) 采样并估计 \(Z\)。没有目标分布的样本可用，经典 MCMC（MALA/HMC）在多峰高维分布上混合缓慢，这促使人们转向摊销变分推断（amortized variational inference）。
 
@@ -16,7 +16,7 @@
 1. **基准混乱**：既有工作（PIS、DDS、DIS、DGFS 等）架构不一、超参数未公开、甚至对同一个目标密度的定义都不一致（附录 B.1）；作者明确指出 DGFS（Zhang et al., ICLR 2024）在对比实验中修改了关键实验变量、报告了不可复现的结果。
 2. **训练难题未解**：离策略采样模型的两大瓶颈是探索效率（发现高奖励区域）与信用分配（credit assignment，把终端奖励信号传播回早期采样步的参数）。
 
-## 2. 核心方法
+## 方法核心
 
 **设定：Euler–Maruyama 分层采样即 GFlowNet。** 生成过程为神经 SDE
 
@@ -53,7 +53,7 @@ Z_\theta\, p_F(\tau;\theta) = R(\mathbf x_1)\, p_B(\tau\mid \mathbf x_1;\psi), \
 
 **新提出：目标空间局部搜索 + 回放缓冲区（LS）。** 先从当前采样器抽 \(M\) 个终端候选 \(\{\mathbf x^{(1)},\dots,\mathbf x^{(M)}\}\sim p_F^\top\)，以其为初始状态并行跑 \(M\) 条 MALA 链各 \(K\) 步，弃掉 \(K_{\text{burn-in}}\) 步后把接受样本存入缓冲区 \(\mathcal D_{\mathrm{LS}}\)。训练时交替两步：Step A 用在策略/探索性前向轨迹训练，Step B 从 \(\mathcal D_{\mathrm{LS}}\) 抽终端样本 \(\mathbf x\)、用 \(p_B\) 回溯出轨迹 \(\tau\) 再做 TB 梯度更新。MALA 高度可并行且只需偶尔执行（缓冲区远大于 batch），故每条训练轨迹不增加额外计算开销——这是相对 FL（要学状态流）和 LP（每步要算 \(\nabla\mathcal E\)）的直接卖点。
 
-## 3. 理论结果
+## 理论结果
 
 本文以实证为主，理论内容为引述与一个猜想：
 
@@ -61,7 +61,7 @@ Z_\theta\, p_F(\tau;\theta) = R(\mathbf x_1)\, p_B(\tau\mid \mathbf x_1;\psi), \
 - 在策略采样时 TB 梯度是 KL 梯度的无偏估计（引自 Malkin et al. 2023 等）：\(\mathbb E_{\tau\sim p_F}[\nabla_{\theta'}\mathcal L_{\mathrm{TB}}(\tau;\theta,\psi)]=2\nabla_{\theta'} D_{\mathrm{KL}}(p_F(\tau;\theta)\,\|\,p_{\text{target}}(\mathbf x_1)p_B(\tau\mid\mathbf x_1;\psi))\)，其中 \(\nabla_{\theta'}\) 不含 \(Z_\theta\)。该估计方差高于 PIS 的重参数化估计，但免去穿越模拟的反传。
 - **猜想（未证明）**：当 \(\mathrm{NN}_1\) 不依赖 \(\mathbf x_t\) 时，LP（式 14）与 FL 状态流（式 13）在 \(\Delta t\to 0\) 极限下等价（诱导相同的短子轨迹 SubTB 残差渐近）。作者把严格分析留给后续工作；终版附注指出 Berner et al.（arXiv:2501.06148）随后建立了这些算法族的连续时间极限与渐近等价。
 
-## 4. 实验与证据
+## 实验与证据
 
 **任务**：无条件——25GMM（\(d=2\)，25 峰高斯混合）、Funnel（\(d=10\)）、Manywell（\(d=32\)）、LGCP（\(d=1600\)，log-Gaussian Cox 过程）；条件——预训练 MNIST VAE 的 20 维隐变量后验采样。基线三类：MCMC 系（SMC、GGNS 嵌套采样）、模拟驱动变分系（DIS/DDS/PIS）、GFlowNet 系（TB/VarGrad/FL-SubTB 及其增强）。所有神经方法统一架构。
 
@@ -83,14 +83,14 @@ Z_\theta\, p_F(\tau;\theta) = R(\mathbf x_1)\, p_B(\tau\mid \mathbf x_1;\psi), \
 
 **关键训练细节（附录 D）**：基础扩散率 \(\sigma^2\)：25GMM 取 5、Funnel/Manywell 取 1、LGCP 扫描 \(\{1,3,5\}\) 后取 5；学习率 \(10^{-3}\)（流参数 TB 下 \(10^{-1}\)、SubTB 下 \(10^{-2}\)）；探索因子 0.2、前半程线性衰减；batch 300；普通模型训 25,000 迭代、带 Langevin 的训 10,000 迭代以对齐总计算量；对 LP 的能量得分做 \(\pm10^2\)、对策略网络输出做 \(\pm10^4\) 裁剪（式 17）。附录 C.2 用 VP（Ornstein–Uhlenbeck）噪声过程（式 16，\(\beta_{\min}=0.01,\beta_{\max}=4.0\)）替换 Brownian bridge，Manywell 上结果与 Brownian 相近。
 
-## 5. 在 GFlowNet 版图中的位置
+## 与谁对话
 
 - 这是"连续 GFlowNet = 扩散采样器"这条桥的**实证支柱**：理论骨架由 Lahlou et al. (ICML 2023) 给出，本文把 TB/SubTB/VarGrad 与 PIS/DDS/DIS 放到同一实现下对拍，直接催生了 Berner et al. (2025) 的连续时间极限定理。
 - 它把离散 GFlowNet 社区的探索工具（局部搜索 GFlowNet、回放缓冲区、GGNS 的 backward-trace 训练）系统性地搬到连续域，其中 LS 的设计明确借鉴 Kim et al. (ICLR 2024) 的 Local Search GFlowNets，但把 MCMC 核从"策略诱导"换成目标空间 MALA。
 - `gfn-diffusion` 库成为后续 diffusion sampler 工作的公共基准（含 25GMM/Funnel/Manywell/LGCP/VAE 任务与统一指标），此后论文普遍以它的 TB+Expl.+LS / +LP 作为对照组。
 - 对社区内部，它扮演"复现警察"角色：附录 B.1 逐条指出 DGFS 与 PIS 等论文在目标密度定义、超参数、评测口径上的不一致。
 
-## 6. 局限与批判
+## 局限与批判
 
 - 主实验继承前人设定：\(p_B\) 固定为 Brownian bridge、前向方差固定、\(T=100\)——学习 backward/方差/噪声调度只给了初步证据（§5.3、附录 C.2），未进主表。
 - LP 与 LS 都依赖 \(\nabla\mathcal E\) 可得且便宜：LP 每步采样都要算梯度（慢 2–3 倍），LS 的 MALA 同样需要梯度；对黑盒（不可微）能量两者都失效，此时本文的结论退化为"TB+探索方差"。
@@ -99,7 +99,7 @@ Z_\theta\, p_F(\tau;\theta) = R(\mathbf x_1)\, p_B(\tau\mid \mathbf x_1;\psi), \
 - FL≈LP 的连续时间等价只是猜想；论文自己的显著性判定（Welch t 检验，5 次运行）在若干列上把多个方法同时标为"最优不可区分"，区分度有限。
 - 基准全部是合成能量或小规模 VAE，最高维 LGCP（\(d=1600\)）结构规则，与真实科学应用（如分子 Boltzmann 分布）尚有距离；且 \(d=512\) 的 Manywell 上没有任何方法真正可用，高维仍是开放问题。
 
-## 7. 对后续研究的启示
+## 对后续研究的启示
 
 - **基准先行**：该库统一了任务/指标/架构，使后续方法（如 Berner et al. 2025 的加速训练）可以做 apples-to-apples 比较；做新采样器先接入该库已成惯例。
 - **探索与信用分配解耦**：LS 证明"把探索外包给目标空间 MCMC + 回放"比改损失函数（SubTB）更划算；这一"采样器管摊销、MCMC 管探索"的分工被后续 Boltzmann 采样与 LLM 推理微调工作反复复用。
