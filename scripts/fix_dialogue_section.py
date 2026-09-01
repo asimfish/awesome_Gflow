@@ -79,12 +79,13 @@ def gen_section(pid, title, brief):
 
 
 def needs_fix(body: str) -> bool:
-    items = [l for l in body.splitlines() if re.match(r"^\s*[-*]|\s*\d+\.", l)]
-    if len(items) < 8:
+    """判定该节是否只是编号清单而没说清关系。"""
+    items = [l.strip() for l in body.splitlines() if re.match(r"^\s*(?:[-*]|\d+\.)", l)]
+    if len(items) < 3:
         return False
-    # 抄清单特征：条目多且平均长度短
-    avg = sum(len(i) for i in items) / max(1, len(items))
-    return avg < 60
+    avg = sum(len(i) for i in items) / len(items)
+    # 平均条目短于 48 字符 → 只有「编号 + 论文简称」，没有关系说明
+    return avg < 48
 
 
 def main():

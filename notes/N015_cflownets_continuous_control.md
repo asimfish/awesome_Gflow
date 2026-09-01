@@ -62,10 +62,9 @@ $$L_\theta(\tau) = \sum_{s_t = s_1}^{s_f} \left[ \sum_{k=1}^K F_\theta(G_\phi(s_
 4. **泛化能力**：CFlowNets 在特定任务上的表现较好，但在不同任务间的泛化能力有待验证。
 
 ## 与谁对话
-- T01：GFlowNet 原始论文，讨论了 GFlowNets 的基本原理和离散任务的应用。
-- T12：连续 GFlowNets 理论，探讨了 GFlowNets 在连续空间中的应用。
-- T19：非无环理论，讨论了 GFlowNets 在非无环图中的应用。
-- T32：何时学对分布，讨论了 GFlowNets 学习正确分布的条件。
+- **T01**（GFlowNet 原始论文）：CFlowNets 扩展了 GFlowNets 的原始框架，使其适用于连续状态和动作空间的任务，解决了原框架仅限于离散任务的局限性。
+- **T12**（连续 GFlowNet 理论）：CFlowNets 借鉴了 T12 中关于测度空间上流守恒的理论，进一步发展了连续状态空间中的流量定义和平衡条件。
+- **T07**（Towards Understanding GFN Training）：CFlowNets 在理解 GFlowNets 训练过程中遇到的损失函数与分布误差之间的鸿沟方面进行了改进，提出了更有效的训练策略来应对连续控制任务中的探索问题。
 
 ## 对后续研究的启示
 1. **理论拓展**：进一步拓展 CFlowNets 的理论基础，使其适用于更广泛的连续任务。

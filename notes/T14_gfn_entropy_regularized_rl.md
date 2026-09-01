@@ -49,13 +49,10 @@
 4. **泛化能力**：虽然在几个任务上取得了较好的结果，但其在更复杂任务上的泛化能力仍需验证。
 
 ## 与谁对话
-- T01：GFlowNet原始论文(NeurIPS2021)，讨论了GFlowNet的基本原理和初步应用。
-- T03：Trajectory Balance，提出了轨迹平衡损失函数。
-- T05：SubTB，提出了一种轨迹平衡的推广形式。
-- T07：Towards Understanding GFN Training，探讨了GFlowNet训练的理解。
-- T14：GFN=熵正则RL，本文的核心内容。
-- T17：散度训练，讨论了基于散度的训练方法。
-- N019：FlowRL，讨论了基于流的强化学习方法。
+- **T01**（GFlowNet 原始论文）：本文基于原始GFlowNet的工作，进一步揭示了GFlowNet与熵正则化RL之间的深层联系，扩展了其理论基础。
+- **T02**（GFlowNet Foundations）：本文继承了GFlowNet统一数学框架的成果，将其与熵正则化RL结合，提供了新的视角和理解。
+- **T12**（连续 GFlowNet 理论）：本文与连续GFlowNet理论相呼应，展示了如何在连续空间中应用熵正则化RL的概念，进一步拓展了GFlowNet的应用范围。
+- **O01**（最优传输讲义）：本文借鉴了最优传输中的熵正则OT和Sinkhorn算法的思想，将这些概念引入到GFlowNet的学习过程中，提供了理论依据和技术支持。
 
 ## 对后续研究的启示
 1. **扩展到连续空间**：将本文的方法扩展到连续空间中的GFlowNet，以处理更复杂的生成任务。

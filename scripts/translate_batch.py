@@ -34,7 +34,7 @@ def translate_one(en_pdf: Path) -> str:
         "--model", "qwen2.5-32b-awq",
         "--api-key-env", "VLLM_KEY",
         "--preserve-graphics-text",
-        "--timeout", "900",
+        "--timeout", "300",
         "--max-batch-chars", "800",
         "--cache-file", str(ZH / f"{pid}.cache.jsonl"),
     ]
