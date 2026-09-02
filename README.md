@@ -1,6 +1,6 @@
 # Awesome GFlowNets [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
 
-精选的 GFlowNet（Generative Flow Networks）论文、代码、课程与深度解读清单。收录论文 **217** 篇（主体检索截止 2026-08-25，含 2026-09-01 趋势、失效边界与应用覆盖审计补录 11 篇），其中 **35** 篇核心论文配有中文深度解读（已完成 35 篇）与保版式中文翻译 PDF（全文 32 篇 + 章节节选 2 篇，由 [SuperTranslate](https://github.com/asimfish/super_translate) + Qwen2.5-32B 生成）。
+精选的 GFlowNet（Generative Flow Networks）论文、代码、课程与深度解读清单。收录论文 **218** 篇（主体检索截止 2026-08-25，含 2026-09-01 趋势、失效边界与应用覆盖审计补录 11 篇），其中 **35** 篇核心论文配有中文深度解读（已完成 35 篇）与保版式中文翻译 PDF（全文 32 篇 + 章节节选 2 篇，由 [SuperTranslate](https://github.com/asimfish/super_translate) + Qwen2.5-32B 生成）。
 
 A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Legend: 📝 深度解读 in-depth note · 🇨🇳 中文PDF Chinese translation · 📄 英文PDF original PDF.
 
@@ -29,7 +29,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   - [其他应用 · Other Applications](#其他应用--other-applications) (3)
 - **生态 Ecosystem**
   - [评测基准与软件 · Benchmarks & Software](#评测基准与软件--benchmarks--software) (2)
-  - [审查流水线补录 · Additional Curated Papers](#审查流水线补录--additional-curated-papers) (36)
+  - [审查流水线补录 · Additional Curated Papers](#审查流水线补录--additional-curated-papers) (37)
 - [趋势洞察 Trends & Insights](#趋势洞察-trends--insights)
 - [复现实验 Reproducible Experiment](#复现实验-reproducible-experiment)
 - [课程与教程 Courses & Tutorials](#课程与教程-courses--tutorials)
@@ -544,6 +544,8 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   用 GFlowNet 按批次奖励（批次与模型参数的联合互信息 JMI）比例采样数据点集合。
 - `N117` [Why Pool When You Can Flow? Active Learning with GFlowNets](https://ai4d3.github.io/2025/papers/31_Why_Pool_When_You_Can_Flow_.pdf) · *NeurIPS 2025 AI4D3 Workshop*  
   把主动学习从「在固定池里挑」改成「直接生成」：BALD-GFlowNet 用互信息作奖励、RTB 损失训练，初始池 174 万的分子任务上做 30 轮采集（每轮 100 个），代理为 MoLFormer + MC Dropout。
+- `N118` [AlphaSAGE: Structure-Aware Alpha Mining via GFlowNets for Robust Exploration](https://arxiv.org/abs/2509.25055) · *ICLR 2026 主会*  
+  把公式化 alpha 挖掘从 RL 换成 GFlowNet，直指 RL 路线的三个结构性问题：奖励稀疏（只有完整公式才有反馈）、把数学表达式当序列处理丢掉结构、以及最大化期望回报天然收敛到单一模态——而量化实践要的恰是一组互不相关的 alpha。
 
 ## 趋势洞察 Trends & Insights
 

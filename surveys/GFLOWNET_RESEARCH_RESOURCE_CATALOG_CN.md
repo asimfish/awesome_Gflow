@@ -772,3 +772,13 @@ P^\star(x)=\frac{R(x)}{Z},
 | **N117** | [Why Pool When You Can Flow? Active Learning with GFlowNets](https://ai4d3.github.io/2025/papers/31_Why_Pool_When_You_Can_Flow_.pdf) · NeurIPS 2025 AI4D3 Workshop | 把主动学习从「在固定池里挑」改成「直接生成」：BALD-GFlowNet 用互信息作奖励、RTB 损失训练，初始池 174 万的分子任务上做 30 轮采集（每轮 100 个），代理为 MoLFormer + MC Dropout。 | 选读：与 N116 是同一思路的两代（前者受池约束、后者放弃池化）；附录给全了超参，便于复现 <sub>来源 应用覆盖审计</sub> |
 
 **方法论备注**：本次补录暴露了一个查重陷阱——A19《Let the Flows Tell: Solving Graph Combinatorial **Problems**...》与原论文题名《...Combinatorial **Optimization** Problems...》差一个词，按精确标题查重会误判为漏收。已固化 `scripts/check_duplicate.py`（arXiv/DOI 号命中 + 标题模糊相似度，阈值 0.75），补录前应先跑它。
+
+### 11.26 应用覆盖二次审计补录（2026-09-02，1 篇）
+
+用 `scripts/audit_coverage.py` 复扫 12 个应用方向，金融/量化仍只有 2 篇（N079 投稿中、N094 预印本），与该方向的工业动机不符。深挖后发现漏掉了一篇**主会**论文。
+
+| 编号 | 论文与状态 | 简介 | 建议 |
+|---|---|---|---|
+| **N118** | [AlphaSAGE: Structure-Aware Alpha Mining via GFlowNets for Robust Exploration](https://arxiv.org/abs/2509.25055) · ICLR 2026 主会 | 把公式化 alpha 挖掘从 RL 换成 GFlowNet，直指 RL 路线的三个结构性问题：奖励稀疏（只有完整公式才有反馈）、把数学表达式当序列处理丢掉结构、以及最大化期望回报天然收敛到单一模态——而量化实践要的恰是一组互不相关的 alpha。三项设计：RGCN 结构感知编码器（公式当 AST 图而非 token 序列）、TB 目标训练的生成器、$R_{IC}$（预测能力）$+ R_{SA}$（结构对齐）$+ R_{NOV}$（与参考集低相关）三段稠密奖励加熵正则。评测用 IC/ICIR/RIC/RICIR 与年化收益/最大回撤/夏普，数据覆盖 CSI300 等三个子集；组合阶段沿用 AlphaForge 的动态重选线性组合。 | **优先读**：目前金融方向唯一的主会论文，且是「奖励成比例采样打败奖励最大化」这个论点在非分子领域最完整的实例；有官方代码（github.com/BerkinChen/AlphaSAGE） <sub>来源 insights/trends_applications.md 二次审计</sub> |
+
+**漏收根因**（与 §11.24、§11.25 的根因不同，值得单列）：这篇标题含 GFlowNets、发表在 ICLR 2026 主会、有官方代码——按任何一条常规检索都该命中。它被漏掉是因为原检索的关键词组合偏向「GFlowNet + 理论/分子/LLM」，没有单独扫过「GFlowNet + 金融/量化」这个组合。**教训是：按方向做覆盖审计（而非只按关键词检索）才能发现这类缺口**，这也是 `audit_coverage.py` 存在的理由。
