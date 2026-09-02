@@ -31,6 +31,7 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
   - [评测基准与软件 · Benchmarks & Software](#评测基准与软件--benchmarks--software) (2)
   - [审查流水线补录 · Additional Curated Papers](#审查流水线补录--additional-curated-papers) (36)
 - [趋势洞察 Trends & Insights](#趋势洞察-trends--insights)
+- [复现实验 Reproducible Experiment](#复现实验-reproducible-experiment)
 - [课程与教程 Courses & Tutorials](#课程与教程-courses--tutorials)
 - [代码库 Codebases](#代码库-codebases)
 
@@ -546,10 +547,21 @@ A curated list of GFlowNet papers, code, courses and in-depth Chinese notes. Leg
 
 ## 趋势洞察 Trends & Insights
 
+- [repro verification](insights/repro_verification.md)
 - [trends applications](insights/trends_applications.md)
 - [trends failure modes](insights/trends_failure_modes.md)
 - [trends methods](insights/trends_methods.md)
 - [trends neighbors](insights/trends_neighbors.md)
+
+## 复现实验 Reproducible Experiment
+
+`scripts/repro_hypergrid.py` 是一个只依赖 numpy、CPU 两分钟可跑完的最小实验：在可枚举的 8×8 HyperGrid 上用 TB 训练 GFlowNet，精确算出 TV 误差，实证验证两件事——**系统性欠拟合**（回归斜率 0.596，与 T01 报的 0.58 吻合）与**流行指标不反映分布正确性**（一个 TV 误差 0.454 的模型，平均奖励比 1.009、模态数 4/4 满分）。
+
+```bash
+python3 scripts/repro_hypergrid.py --H 8 --D 2 --iters 4000
+```
+
+结论与逐项数字见 [insights/repro_verification.md](insights/repro_verification.md)，原始输出在 [artifacts/](artifacts/)。
 
 ## 课程与教程 Courses & Tutorials
 

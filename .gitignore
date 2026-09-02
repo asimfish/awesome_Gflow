@@ -29,6 +29,3 @@ __pycache__/
 # PDF 文本提取的中间产物（可由脚本重建）
 tmp/
 
-# 未验证的复现实验产物（结果发散，见 DELIVERY 说明）
-artifacts/
-scripts/repro_hypergrid.py

@@ -12,7 +12,8 @@
 | 中文深度解读 | `notes/*.md` | 35 篇 | 本地 vLLM（Qwen2.5-32B-AWQ）读 PDF 全文生成初稿，固定 8 节模板 |
 | 英文原文 PDF | `pdfs/en/` | 35 篇 | `scripts/download_core_pdfs.py`（arXiv API 标题检索；T32 从 ICLR proceedings 直取） |
 | 中文翻译 PDF | `pdfs/zh/` | 见 README 计数 | SuperTranslate 保版式引擎 + 同一 vLLM 后端 |
-| 趋势与失效边界报告 | `insights/` | 4 份 | web 检索 + GitHub/PyPI API 实测，每条附来源链接与日期 |
+| 趋势与失效边界报告 | `insights/` | 5 份 | web 检索 + GitHub/PyPI API 实测，每条附来源链接与日期 |
+| 复现实验 | `scripts/repro_hypergrid.py`, `artifacts/` | 1 套 | 纯 numpy 手写 TB 训练，CPU 两分钟；结论见 `insights/repro_verification.md` |
 | HTML 汇报 | `slides/index.html` | 15 页 | 手写，键盘 ←/→ 翻页 |
 | Beamer PDF 汇报 | `slides/awesome_gflownets_report.pdf` | 18 页 | XeLaTeX，源码 `slides/awesome_gflownets_report.tex` |
 

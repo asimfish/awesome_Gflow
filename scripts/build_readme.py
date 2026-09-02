@@ -140,6 +140,7 @@ def main():
             if key in keys and papers:
                 out.append(f"  - [{label}](#{anchor(label)}) ({len(papers)})")
     out.append("- [趋势洞察 Trends & Insights](#趋势洞察-trends--insights)")
+    out.append("- [复现实验 Reproducible Experiment](#复现实验-reproducible-experiment)")
     out.append("- [课程与教程 Courses & Tutorials](#课程与教程-courses--tutorials)")
     out.append("- [代码库 Codebases](#代码库-codebases)")
     out.append("")
@@ -182,6 +183,14 @@ def main():
     out.append("")
 
     # 课程与代码：直接指向目录文档锚点
+    out.append("## 复现实验 Reproducible Experiment\n")
+    out.append("`scripts/repro_hypergrid.py` 是一个只依赖 numpy、CPU 两分钟可跑完的最小实验："
+               "在可枚举的 8×8 HyperGrid 上用 TB 训练 GFlowNet，精确算出 TV 误差，"
+               "实证验证两件事——**系统性欠拟合**（回归斜率 0.596，与 T01 报的 0.58 吻合）与"
+               "**流行指标不反映分布正确性**（一个 TV 误差 0.454 的模型，平均奖励比 1.009、模态数 4/4 满分）。\n")
+    out.append("```bash\npython3 scripts/repro_hypergrid.py --H 8 --D 2 --iters 4000\n```\n")
+    out.append("结论与逐项数字见 [insights/repro_verification.md](insights/repro_verification.md)，"
+               "原始输出在 [artifacts/](artifacts/)。\n")
     out.append("## 课程与教程 Courses & Tutorials\n")
     out.append("见 [资源目录 §6 课程、教程与博客](surveys/GFLOWNET_RESEARCH_RESOURCE_CATALOG_CN.md#6-课程教程与博客)，"
                "含 Mila IFT6167、Edward Hu 教程、torchgfn tutorial 等。\n")
